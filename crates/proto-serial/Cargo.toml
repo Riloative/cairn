@@ -10,11 +10,15 @@ authors.workspace = true
 publish = false
 
 [dependencies]
+cairn-core.workspace = true
+parking_lot.workspace = true
 serde.workspace = true
+serialport.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

@@ -4,7 +4,7 @@ Source of truth: [docs/SPEC.md](docs/SPEC.md). Work on the first unchecked miles
 A milestone is checked only when every task is done, all tests pass, CI is green on
 both platforms, and there are no stubs/TODOs left inside it.
 
-## M0 – Scaffolding
+## M0 – Scaffolding ✅
 
 - [x] `docs/SPEC.md`, `ROADMAP.md`, `CLAUDE.md`, `docs/DECISIONS.md`, `docs/PROGRESS.md`
 - [x] Cargo workspace with `crates/{core,proto-ssh,proto-serial,proto-telnet,proto-rdp,tftp,export}` and `src-tauri`
@@ -21,7 +21,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Release workflow on `v*` tags attaching the bundles to a GitHub Release
 - [x] CI verified green on both platforms (run 2: lint/test on ubuntu-24.04 + macos-14, `.deb` + `.dmg` artifacts)
 
-## M1 – Core and shell
+## M1 – Core and shell ✅
 
 - [x] `core::kdf`: Argon2id (64 MiB, calibrated to ~0.7 s), random salt, params in `vault.json`; `zeroize` secrets
 - [x] SQLCipher database (`rusqlite` + `bundled-sqlcipher-vendored-openssl`), raw-key mode, versioned migrations
@@ -39,9 +39,9 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Tests: Rust (vault, db, migrations, audit tamper detection, settings, autolock) and Vitest (stores, actions, components, full UI flows on a mocked IPC); Xvfb UI smoke test against the real backend in CI
 - [x] CI green on both platforms for M1
 
-## M2 – Terminal and SSH
+## M2 – Terminal and SSH ✅
 
-- [ ] CI green on both platforms for the final M2 commit
+- [x] CI green on both platforms for the final M2 commit (run 12)
 
 - [x] xterm.js (WebGL, fit, search, unicode11, web-links, serialize, image) over binary Tauri Channels
 - [x] Session manager in Rust (session IDs, lifecycle events; raw-body input, raw-channel output)
@@ -70,10 +70,12 @@ both platforms, and there are no stubs/TODOs left inside it.
 
 ## M3 – Serial and Telnet
 
-- [ ] Serial port discovery + hotplug + USB VID/PID friendly names; prefer `/dev/cu.*` on macOS
-- [ ] Full line settings, live DTR/RTS, BREAK, local echo, newline mapping
-- [ ] Xmodem / Xmodem-1K / Ymodem send & receive with progress
-- [ ] Permission problem detection with per-OS fixes
+- [x] Serial port discovery + USB VID/PID friendly names; prefer `/dev/cu.*` on macOS (crate)
+- [ ] Hotplug events to the UI
+- [x] Full line settings, live DTR/RTS, BREAK, local echo, newline mapping (crate)
+- [x] Xmodem / Xmodem-1K / Ymodem send & receive with progress (crate; tested against lrzsz)
+- [x] Permission problem detection with per-OS fixes
+- [ ] Serial UI: connect dialog, header controls (DTR/RTS/BREAK), transfer dialog with progress
 - [ ] Telnet: IAC/option negotiation, NAWS, terminal type
 - [ ] Reverse Telnet via console server (server X, port Y)
 - [ ] Integration tests: socat PTY pairs (incl. Xmodem), local telnet server
