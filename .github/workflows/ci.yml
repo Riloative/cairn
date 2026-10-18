@@ -58,11 +58,13 @@ jobs:
       - run: npm run build
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Start test servers (OpenSSH modern + legacy; socat/lrzsz for serial)
+      - name: Start test servers (OpenSSH modern + legacy; socat/lrzsz for serial; telnetd)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get install -y --no-install-recommends openssh-server openssh-client socat lrzsz
+          sudo apt-get install -y --no-install-recommends openssh-server openssh-client socat lrzsz inetutils-telnetd
           sudo scripts/test-sshd.sh /tmp/cairn-sshd
+          sudo scripts/test-telnetd.sh 2323
+          echo "CAIRN_TELNET_PORT=2323" >> "$GITHUB_ENV"
           sed 's/^export //' /tmp/cairn-sshd/env >> "$GITHUB_ENV"
           echo "CAIRN_SSH_TESTS=1" >> "$GITHUB_ENV"
       - run: cargo test --workspace --locked

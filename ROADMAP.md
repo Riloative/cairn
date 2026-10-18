@@ -76,9 +76,10 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Xmodem / Xmodem-1K / Ymodem send & receive with progress (crate; tested against lrzsz)
 - [x] Permission problem detection with per-OS fixes
 - [ ] Serial UI: connect dialog, header controls (DTR/RTS/BREAK), transfer dialog with progress
-- [ ] Telnet: IAC/option negotiation, NAWS, terminal type
-- [ ] Reverse Telnet via console server (server X, port Y)
-- [ ] Integration tests: socat PTY pairs (incl. Xmodem), local telnet server
+- [x] Telnet: IAC/option negotiation (loop-safe), NAWS, terminal type, BREAK, raw TCP mode (crate)
+- [x] Reverse Telnet port mapping for console servers (Opengear, Cisco lines, Avocent, Lantronix, Digi)
+- [ ] Telnet / console-server UI in the connect dialog
+- [x] Integration tests: socat PTY pairs (incl. Xmodem/Ymodem vs lrzsz), real telnetd + scripted server
 
 ## M4 – Inventory
 
