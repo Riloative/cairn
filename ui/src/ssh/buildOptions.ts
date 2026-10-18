@@ -34,6 +34,8 @@ export interface QuickConnectForm {
   proxy: string;
   agentForwarding: boolean;
   keepaliveSecs: number;
+  /** Highlighting vendor for the session. */
+  vendor: string;
 }
 
 export const EMPTY_FORM: QuickConnectForm = {
@@ -47,6 +49,7 @@ export const EMPTY_FORM: QuickConnectForm = {
   proxy: "",
   agentForwarding: false,
   keepaliveSecs: 30,
+  vendor: "generic",
 };
 
 export type FormErrors = Partial<

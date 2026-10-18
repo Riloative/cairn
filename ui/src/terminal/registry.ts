@@ -131,4 +131,7 @@ export function applyOptions(handle: TerminalHandle, profile: TerminalProfile, p
   for (const [k, v] of Object.entries(opts)) {
     (handle.term.options as Record<string, unknown>)[k] = v;
   }
+  // Colors are baked into the WebGL glyph atlas; rebuild it and repaint everything.
+  handle.webgl?.clearTextureAtlas();
+  handle.term.refresh(0, handle.term.rows - 1);
 }

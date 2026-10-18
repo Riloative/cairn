@@ -14,11 +14,15 @@ import { usePrompts } from "@/stores/prompts";
 import { backoffDelay, useReconnect } from "@/stores/reconnect";
 import { useSessions, type SessionProtocol } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
+import { useUi } from "@/stores/ui";
 import { customPalettes, profileById, useTerminalPrefs } from "@/stores/terminalPrefs";
 import { encodeBinary, encodeInput } from "./encoding";
 import { desktopNotify } from "./notify";
 import type { Palette } from "./palette";
 import { defaultPaletteFor, findPalette } from "./palettes";
+import { rulesForVendor, type CompiledRule } from "./highlight/engine";
+import { Highlighter } from "./highlight/highlighter";
+import { BUILTIN_RULESETS } from "./highlight/rulesets";
 import { compilePatterns, trackPrivilege } from "./privilege";
 import {
   allTerminals,
@@ -39,6 +43,21 @@ const untrack = new Map<string, () => void>();
 /** SSH connection handles (options and credentials stay in Rust). */
 const connections = new Map<string, string>();
 const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const highlighters = new Map<string, Highlighter>();
+/** Compiled rules per vendor, invalidated when prefs change. */
+const ruleCache = new Map<string, CompiledRule[]>();
+
+function rulesFor(tabId: string): CompiledRule[] {
+  const prefs = useTerminalPrefs.getState().prefs;
+  if (!prefs.highlightEnabled) return [];
+  const vendor = tabOf(tabId)?.vendor ?? "generic";
+  let rules = ruleCache.get(vendor);
+  if (!rules) {
+    rules = rulesForVendor(vendor, BUILTIN_RULESETS, prefs.highlightSets);
+    ruleCache.set(vendor, rules);
+  }
+  return rules;
+}
 
 let compiled: { source: readonly string[]; patterns: RegExp[] } | null = null;
 function privilegePatterns(): RegExp[] {
@@ -192,6 +211,8 @@ function callbacks(tabId: string): ipc.SessionCallbacks {
 interface OpenOptions {
   title: string;
   protocol: SessionProtocol;
+  /** Highlighting vendor (defaults to generic). */
+  vendor?: string;
   profileId?: string | null;
   /** True when the session is usable as soon as `start` resolves (local shells). */
   readyOnStart: boolean;
@@ -207,9 +228,21 @@ export async function openTerminalTab(opts: OpenOptions): Promise<string> {
   profiles.set(tabId, profile.id);
   wireInput(tabId, handle);
   untrack.set(tabId, trackPrivilege(tabId, handle.term, privilegePatterns));
-  useSessions
-    .getState()
-    .open({ id: tabId, title: opts.title, protocol: opts.protocol, state: "connecting" });
+  highlighters.set(
+    tabId,
+    new Highlighter(
+      handle.term,
+      () => rulesFor(tabId),
+      () => paletteFor(profileById(useTerminalPrefs.getState().prefs, profiles.get(tabId))).colors,
+    ),
+  );
+  useSessions.getState().open({
+    id: tabId,
+    title: opts.title,
+    protocol: opts.protocol,
+    state: "connecting",
+    vendor: opts.vendor ?? "generic",
+  });
   try {
     const id = await opts.start(tabId, handle.term.cols, handle.term.rows, callbacks(tabId));
     if (!tabOf(tabId)) {
@@ -245,11 +278,16 @@ export function openLocalShell(spec: ShellSpec | null = null, title = "Local she
 }
 
 /** Open an SSH session. Credentials in `options` are handed to Rust and not kept here. */
-export function openSsh(options: ConnectOptions, title: string, profileId?: string | null) {
+export function openSsh(
+  options: ConnectOptions,
+  title: string,
+  extra: { profileId?: string | null; vendor?: string } = {},
+) {
   return openTerminalTab({
     title,
     protocol: "ssh",
-    profileId,
+    profileId: extra.profileId,
+    vendor: extra.vendor,
     readyOnStart: false,
     start: async (tabId, cols, rows, cb) => {
       const opened = await ipc.sshOpen(options, cols, rows, cb);
@@ -319,6 +357,8 @@ export function closeTab(tabId: string) {
   profiles.delete(tabId);
   untrack.get(tabId)?.();
   untrack.delete(tabId);
+  highlighters.get(tabId)?.dispose();
+  highlighters.delete(tabId);
   clearTimeout(reconnectTimers.get(tabId));
   reconnectTimers.delete(tabId);
   useReconnect.getState().clear(tabId);
@@ -331,10 +371,17 @@ export function closeTab(tabId: string) {
   useSessions.getState().close(tabId);
 }
 
-/** Give keyboard focus back to the active terminal (after dialogs close). */
+/**
+ * Give keyboard focus back to the active terminal (after the palette or a dialog closes),
+ * unless another dialog has taken focus in the meantime.
+ */
 export function focusActiveTerminal() {
-  const id = useSessions.getState().activeId;
-  if (id) requestAnimationFrame(() => getTerminal(id)?.term.focus());
+  requestAnimationFrame(() => {
+    const id = useSessions.getState().activeId;
+    if (!id || useUi.getState().view !== "sessions") return;
+    if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+    getTerminal(id)?.term.focus();
+  });
 }
 
 export function backendSessionId(tabId: string): string | undefined {
@@ -345,13 +392,21 @@ export function canReconnect(tabId: string): boolean {
   return connections.has(tabId) && !backendIds.has(tabId);
 }
 
-/** Re-apply profiles and palettes to every open terminal (prefs or app theme changed). */
+/** Re-apply profiles, palettes and highlighting to every open terminal. */
 export function refreshTerminals() {
   const prefs = useTerminalPrefs.getState().prefs;
+  ruleCache.clear();
   for (const h of allTerminals()) {
     const profile = profileById(prefs, profiles.get(h.tabId));
     applyOptions(h, profile, paletteFor(profile));
+    highlighters.get(h.tabId)?.reset();
   }
+}
+
+/** Switch the highlighting rule set of a tab. */
+export function setTabVendor(tabId: string, vendor: string) {
+  useSessions.getState().setVendor(tabId, vendor);
+  highlighters.get(tabId)?.reset();
 }
 
 /** Send bytes to a tab's session (used by paste, snippets and broadcast). */

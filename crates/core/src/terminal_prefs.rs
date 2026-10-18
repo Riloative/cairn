@@ -169,6 +169,61 @@ impl CustomPalette {
     }
 }
 
+/// A keyword highlighting rule (regex → style). Colors are palette ANSI names or `#rrggbb`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HighlightRule {
+    pub id: String,
+    pub name: String,
+    pub pattern: String,
+    pub case_insensitive: bool,
+    pub fg: Option<String>,
+    pub bg: Option<String>,
+    pub bold: bool,
+    pub underline: bool,
+    pub enabled: bool,
+}
+
+/// A user rule set; replaces the built-in set with the same id.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HighlightRuleSet {
+    pub id: String,
+    pub name: String,
+    pub vendors: Vec<String>,
+    pub rules: Vec<HighlightRule>,
+}
+
+fn is_color(c: &str) -> bool {
+    is_hex_color(c) || PALETTE_KEYS[4..].contains(&c)
+}
+
+impl HighlightRuleSet {
+    fn validate(&self) -> Result<(), CoreError> {
+        let bad = |m: String| Err(CoreError::Validation(m));
+        if self.id.trim().is_empty() || self.name.trim().is_empty() {
+            return bad("Highlighting rule sets need a name.".into());
+        }
+        if self.rules.len() > 200 {
+            return bad(format!("\"{}\" has more than 200 rules.", self.name));
+        }
+        for r in &self.rules {
+            if r.pattern.is_empty() || r.pattern.len() > 500 {
+                return bad(format!(
+                    "Rule \"{}\" needs a pattern under 500 characters.",
+                    r.name
+                ));
+            }
+            for c in [&r.fg, &r.bg].into_iter().flatten() {
+                if !is_color(c) {
+                    return bad(format!("Rule \"{}\" has an invalid color {c}.", r.name));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct TerminalPrefs {
@@ -179,6 +234,9 @@ pub struct TerminalPrefs {
     pub privileged_prompt_patterns: Vec<String>,
     /// Ask before pasting text with more than one line.
     pub confirm_multiline_paste: bool,
+    pub highlight_enabled: bool,
+    /// User-edited or added highlighting rule sets.
+    pub highlight_sets: Vec<HighlightRuleSet>,
 }
 
 /// Defaults: Cisco/Aruba/HP privileged exec (`hostname#`), Juniper root shell
@@ -203,6 +261,8 @@ impl Default for TerminalPrefs {
                 .map(|s| (*s).to_owned())
                 .collect(),
             confirm_multiline_paste: true,
+            highlight_enabled: true,
+            highlight_sets: Vec::new(),
         }
     }
 }
@@ -235,6 +295,14 @@ impl TerminalPrefs {
         }
         for p in &self.custom_palettes {
             p.validate()?;
+        }
+        if self.highlight_sets.len() > 50 {
+            return Err(CoreError::Validation(
+                "At most 50 highlighting rule sets.".into(),
+            ));
+        }
+        for set in &self.highlight_sets {
+            set.validate()?;
         }
         if self
             .privileged_prompt_patterns
@@ -329,6 +397,38 @@ mod tests {
         assert!(p.validate().is_err(), "duplicate ids");
         let mut p = TerminalPrefs::default();
         p.profiles.clear();
+        assert!(p.validate().is_err());
+    }
+
+    #[test]
+    fn validates_highlight_sets() {
+        let rule = HighlightRule {
+            id: "r".into(),
+            name: "r".into(),
+            pattern: "Gi\\d+".into(),
+            case_insensitive: false,
+            fg: Some("brightBlue".into()),
+            bg: Some("#112233".into()),
+            bold: true,
+            underline: false,
+            enabled: true,
+        };
+        let set = |rules| HighlightRuleSet {
+            id: "cisco".into(),
+            name: "Cisco".into(),
+            vendors: vec!["cisco".into()],
+            rules,
+        };
+        let mut p = TerminalPrefs::default();
+        p.highlight_sets.push(set(vec![rule.clone()]));
+        assert!(p.validate().is_ok());
+        let mut bad = rule.clone();
+        bad.fg = Some("chartreuse".into());
+        p.highlight_sets = vec![set(vec![bad])];
+        assert!(p.validate().is_err());
+        let mut bad = rule;
+        bad.pattern = String::new();
+        p.highlight_sets = vec![set(vec![bad])];
         assert!(p.validate().is_err());
     }
 

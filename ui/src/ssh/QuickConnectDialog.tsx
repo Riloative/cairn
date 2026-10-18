@@ -21,6 +21,7 @@ import {
   type AuthChoice,
   type QuickConnectForm,
 } from "./buildOptions";
+import { VENDORS } from "@/terminal/highlight/rulesets";
 import { parseTarget } from "./parse";
 
 const AUTH_OPTIONS: readonly { value: AuthChoice; label: string }[] = [
@@ -58,7 +59,7 @@ export function QuickConnectDialog() {
     if (!built) return;
     close();
     setView("sessions");
-    void openSsh(built.options, built.title);
+    void openSsh(built.options, built.title, { vendor: form.vendor });
   }
 
   async function browseKey() {
@@ -201,6 +202,19 @@ export function QuickConnectDialog() {
                   ))}
                 </div>
               </fieldset>
+              <Field label="Vendor" description="Selects keyword highlighting for this session.">
+                <select
+                  value={form.vendor}
+                  onChange={(e) => set("vendor", e.target.value)}
+                  className="h-8 rounded-md border border-border bg-surface px-2 text-[13px]"
+                >
+                  {VENDORS.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
               <Field
                 label="Jump hosts"
                 error={errors.jumps}

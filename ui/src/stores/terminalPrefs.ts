@@ -35,6 +35,8 @@ export const DEFAULT_TERMINAL_PREFS: TerminalPrefs = {
   customPalettes: [],
   privilegedPromptPatterns: DEFAULT_PRIVILEGED_PATTERNS,
   confirmMultilinePaste: true,
+  highlightEnabled: true,
+  highlightSets: [],
 };
 
 interface TerminalPrefsState {

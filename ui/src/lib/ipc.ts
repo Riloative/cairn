@@ -1,5 +1,6 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { HighlightRuleSet } from "@/terminal/highlight/types";
 import type { ThemeId, ThemeSetting } from "./theme";
 
 /**
@@ -349,6 +350,9 @@ export interface TerminalPrefs {
   customPalettes: CustomPaletteDto[];
   privilegedPromptPatterns: string[];
   confirmMultilinePaste: boolean;
+  highlightEnabled: boolean;
+  /** User-edited/added sets; replace built-in sets with the same id. */
+  highlightSets: HighlightRuleSet[];
 }
 
 export const terminalPrefsGet = () => call<TerminalPrefs>("terminal_prefs_get");

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Shortcut } from "@/components/ui/Kbd";
 import { availableActions, useActions, type Action } from "@/lib/actions";
 import { useUi } from "@/stores/ui";
+import { focusActiveTerminal } from "@/terminal/controller";
 
 function groupBy(actions: Action[]): [string, Action[]][] {
   const groups = new Map<string, Action[]>();
@@ -22,12 +23,19 @@ export function CommandPalette() {
   const run = (a: Action) => {
     setOpen(false);
     void a.run();
+    // Actions that open dialogs move focus themselves; otherwise type into the terminal.
+    focusActiveTerminal();
+  };
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) focusActiveTerminal();
   };
 
   return (
     <Command.Dialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={onOpenChange}
       label="Command palette"
       loop
       overlayClassName="fixed inset-0 z-40 bg-black/30 animate-fade-in"

@@ -55,7 +55,8 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Keepalive, auto-reconnect with backoff, reconnect overlay
 - [x] Quick-connect dialog (`Mod+N`), host-key and credential prompts, known-hosts manager in Settings
 - [ ] Session logging with timestamps
-- [ ] Keyword highlighting overlay engine + vendor rule sets (IOS/IOS-XE/NX-OS, Junos, FortiOS, AOS-CX, ProCurve, Comware, UniFi/EdgeOS), editable
+- [x] Keyword highlighting overlay engine (xterm decorations; byte stream untouched) + vendor rule sets (IOS/IOS-XE/NX-OS, Junos, FortiOS, AOS-CX, ProCurve, Comware, UniFi/EdgeOS, Linux), per-tab vendor, validated custom sets in prefs
+- [ ] Highlighting rule editor in Settings
 - [ ] Scrollback search (regex/case/whole word)
 - [ ] Paste safety dialog + per-line delay
 - [ ] Tab overview grid with live thumbnails

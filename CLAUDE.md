@@ -53,6 +53,7 @@ Run from the repo root.
 
 | Task | Command |
 |---|---|
+| **Everything CI checks** | `scripts/check.sh` |
 | Install JS deps | `npm ci` |
 | Dev app | `npm run tauri dev` |
 | Frontend only | `npm run dev` |
@@ -65,6 +66,7 @@ Run from the repo root.
 | Frontend format | `npm run format` (check: `npm run format:check`) |
 | Typecheck | `npm run typecheck` |
 | Frontend tests | `npm test` |
+| SSH integration tests (Linux, root) | `sudo scripts/test-sshd.sh && source /tmp/cairn-sshd/env && CAIRN_SSH_TESTS=1 cargo test -p cairn-proto-ssh` |
 | UI smoke test (Linux, needs Xvfb + xdotool) | `npm run tauri build -- --bundles deb && scripts/ui-smoke.sh target/release/cairn screenshots` |
 
 Linux build deps: `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libudev-dev libssl-dev pkg-config build-essential patchelf`.

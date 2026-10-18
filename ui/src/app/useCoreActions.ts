@@ -7,7 +7,9 @@ import { useSessions } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
 import { useVault } from "@/stores/vault";
-import { closeTab, openLocalShell } from "@/terminal/controller";
+import { closeTab, openLocalShell, setTabVendor } from "@/terminal/controller";
+import { VENDORS } from "@/terminal/highlight/rulesets";
+import { useTerminalPrefs } from "@/stores/terminalPrefs";
 import { NAV_ITEMS } from "./nav";
 
 /** Build the app-wide actions. Pure so it can be tested without React. */
@@ -151,6 +153,29 @@ export function coreActions(): Action[] {
       },
     },
     ...themes,
+    {
+      id: "highlight.toggle",
+      title: "Toggle keyword highlighting",
+      group: "Terminal",
+      keywords: ["highlight", "colors", "keywords"],
+      run: () => {
+        const prefs = useTerminalPrefs.getState();
+        prefs
+          .update({ highlightEnabled: !prefs.prefs.highlightEnabled })
+          .catch((e: unknown) => notifications().notifyError(e, "Could not save"));
+      },
+    },
+    ...VENDORS.map((v) => ({
+      id: `highlight.vendor.${v.id}`,
+      title: `Highlighting: ${v.label}`,
+      group: "Terminal",
+      keywords: ["highlight", "vendor", "rules"],
+      enabled: () => sessions().activeId !== null,
+      run: () => {
+        const id = sessions().activeId;
+        if (id) setTabVendor(id, v.id);
+      },
+    })),
   ];
 }
 

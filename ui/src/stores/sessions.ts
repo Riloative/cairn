@@ -10,6 +10,8 @@ export interface SessionTab {
   state: SessionState;
   /** Short progress or error text (e.g. "Authenticating as admin"). */
   detail?: string;
+  /** Vendor id selecting the highlighting rule set (see terminal/highlight/rulesets). */
+  vendor?: string;
 }
 
 interface SessionsStore {
@@ -20,6 +22,7 @@ interface SessionsStore {
   activate: (id: string) => void;
   activateRelative: (offset: number) => void;
   setState: (id: string, state: SessionState, detail?: string) => void;
+  setVendor: (id: string, vendor: string) => void;
 }
 
 export const useSessions = create<SessionsStore>((set, get) => ({
@@ -47,6 +50,8 @@ export const useSessions = create<SessionsStore>((set, get) => ({
     const next = tabs[(idx + offset + tabs.length) % tabs.length];
     if (next) set({ activeId: next.id });
   },
+  setVendor: (id, vendor) =>
+    set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, vendor } : t)) }),
   setState: (id, state, detail) =>
     set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, state, detail } : t)) }),
 }));
