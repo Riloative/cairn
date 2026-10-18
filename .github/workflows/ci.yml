@@ -57,6 +57,13 @@ jobs:
       - run: npm run build
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Start OpenSSH test servers (modern + legacy)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y --no-install-recommends openssh-server openssh-client
+          sudo scripts/test-sshd.sh /tmp/cairn-sshd
+          sed 's/^export //' /tmp/cairn-sshd/env >> "$GITHUB_ENV"
+          echo "CAIRN_SSH_TESTS=1" >> "$GITHUB_ENV"
       - run: cargo test --workspace --locked
 
   supply-chain:
