@@ -12,6 +12,7 @@ import type {
   VaultStatus,
 } from "@/lib/ipc";
 import { DEFAULT_TERMINAL_PREFS } from "@/stores/terminalPrefs";
+import { FakeInventory } from "./fakeInventory";
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
@@ -42,6 +43,10 @@ export class FakeBackend {
   ports: PortInfo[] = [];
   /** Hotplug channel registered by `serial_ports_watch`. */
   portWatch: Channel<PortsChanged> | null = null;
+  inventory = new FakeInventory(
+    (kind, payload) => this.log(kind, payload),
+    (payload) => this.fail(payload),
+  );
   /** What the native open dialog returns. */
   dialogResult: string | string[] | null = null;
 
@@ -100,6 +105,14 @@ export class FakeBackend {
 
   handle(cmd: string, args: Record<string, unknown>): unknown {
     this.calls.push({ cmd, args });
+    if (
+      cmd.startsWith("inventory_") ||
+      /^(location|vendor|device|interfaces?|vlan|field|view|credential)_/.test(cmd)
+    ) {
+      this.requireUnlocked();
+      const r = this.inventory.handle(cmd, args);
+      if (r.handled) return r.result;
+    }
     switch (cmd) {
       case "app_info":
         return { name: "Cairn", version: "0.1.0", os: "linux", arch: "x86_64" };

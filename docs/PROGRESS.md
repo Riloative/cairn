@@ -96,3 +96,32 @@ notifications (permission prompt on first disconnect), and WebGL rendering on yo
 including hotplug and the Linux `dialout` hint; BREAK into ROMMON on a Cisco device;
 an Xmodem image upload in ROMMON; reverse Telnet through an Opengear/Avocent/Cisco
 terminal server; on macOS, that only `/dev/cu.*` ports are listed.
+
+### M4 (session 3, continued)
+
+- M3 closed: CI run 16 green on both platforms.
+- Schema v3 and `core::inventory`: sites → buildings → floors → rooms → racks, devices
+  (all spec fields, connection methods, VLANs, tags, Markdown notes, custom fields),
+  interfaces with bulk creation from patterns, VLAN registry with colors, custom field
+  definitions, saved table views, user vendors. Every change is audited with a
+  field-level diff; rack positions cannot overlap; duplicate IPs/hostnames warn.
+- Credential profiles with secrets kept write-only (D-026): reveal and copy are audited;
+  copy goes from Rust to the clipboard and is cleared after 30 s.
+- Connect from inventory (D-027): `device_connect` builds SSH, Telnet, console-server
+  and serial sessions in Rust from the device's profile; `core::login` answers
+  Username/Password prompts and enters enable mode once, never retrying.
+- UI: Inventory view with Devices / Locations / VLANs / Credentials / Fields; a
+  virtualized TanStack table with full-text search, facet filters, grouping, sorting,
+  column chooser and saved views; side sheet with overview (connect buttons, legacy-SSH
+  badge, Markdown notes) and interfaces; device form with inline validation, cascading
+  location pickers, connection editor and custom fields; palette actions per device.
+- Verified in the release build under Xvfb: SSH to a device logs in with the vault
+  password (TOFU prompt only); Telnet to a scripted Cisco-style login logs in and
+  reaches `sw1#` automatically; duplicate-IP warning; audit entries for each step.
+
+**Next:** confirm CI green for M4, then M5 (map).
+
+**Test manually:** a real Cisco/Aruba switch with a credential profile (SSH with
+auto-enable, and Telnet/console-server login); copy a password and check that the
+clipboard clears after 30 s and that clipboard managers (GNOME/KDE, macOS) don't keep
+it; an inventory of a few hundred devices for table speed.

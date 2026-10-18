@@ -85,16 +85,18 @@ both platforms, and there are no stubs/TODOs left inside it.
 
 ## M4 – Inventory
 
-- [ ] Location hierarchy: Site → Building → Floor → Room → Rack (U height)
-- [ ] Devices with all fields, IP validation + duplicate warnings, connection methods
-- [ ] Interfaces + bulk create from patterns (`Gi1/0/1-48`)
-- [ ] VLAN registry with colors
-- [ ] Credential profiles (secrets in vault only, reveal/copy audited, clipboard clear 30 s)
-- [ ] Custom fields (text, number, select, multi-select, date, URL, IP, boolean)
-- [ ] Inventory table: filter, group, sort, column chooser, saved views, full-text search
-- [ ] Side-sheet detail view, minimal forms with validation + keyboard nav
-- [ ] Duplicate device with interfaces
-- [ ] Field-level diff audit for inventory CRUD
+- [x] Location hierarchy: Site → Building → Floor → Room → Rack (U height)
+- [x] Devices with all fields, IP validation + duplicate warnings, connection methods
+- [x] Interfaces + bulk create from patterns (`Gi1/0/1-48`, `xe-0/[0-1]/[0-3]`)
+- [x] VLAN registry with colors
+- [x] Credential profiles (secrets in vault only, reveal/copy audited, clipboard clear 30 s)
+- [x] Custom fields (text, number, select, multi-select, date, URL, IP, boolean)
+- [x] Inventory table: filter, group, sort, column chooser, saved views, full-text search
+- [x] Side-sheet detail view, minimal forms with validation + keyboard nav
+- [x] Duplicate device with interfaces
+- [x] Field-level diff audit for inventory CRUD
+- [x] Connect from inventory (resolved in Rust from the credential profile), auto login / enable
+- [ ] CI green on both platforms for M4
 
 ## M5 – Map
 

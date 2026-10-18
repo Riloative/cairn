@@ -5,6 +5,7 @@ import { THEMES } from "@/lib/theme";
 import { useNotifications } from "@/stores/notifications";
 import { useSessions } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
+import { useInventory } from "@/stores/inventory";
 import { useUi } from "@/stores/ui";
 import { useVault } from "@/stores/vault";
 import { isMac } from "@/lib/platform";
@@ -137,11 +138,39 @@ export function coreActions(): Action[] {
       id: "ssh.quickConnect",
       title: "New connection…",
       group: "Sessions",
-      keywords: ["ssh", "telnet", "serial", "connect", "host", "device", "jump", "proxy"],
+      keywords: ["ssh", "telnet", "serial", "connect", "host", "address", "jump", "proxy"],
       shortcut: "Mod+N",
       // Opens on the protocol used last.
       run: () => ui().setQuickConnectOpen(true),
     },
+    {
+      id: "inventory.newDevice",
+      title: "New device…",
+      group: "Inventory",
+      keywords: ["add", "device", "switch", "router", "inventory"],
+      run: () => {
+        ui().setView("inventory");
+        useInventory.getState().setSection("devices");
+        useInventory.getState().setSheet({ mode: "new" });
+      },
+    },
+    ...(
+      [
+        ["locations", "Locations", ["building", "floor", "room", "rack", "site"]],
+        ["vlans", "VLANs", ["vlan", "subnet"]],
+        ["credentials", "Credential profiles", ["password", "key", "enable", "credentials"]],
+        ["fields", "Custom fields", ["custom", "attribute", "fields"]],
+      ] as const
+    ).map(([section, title, keywords]) => ({
+      id: `inventory.section.${section}`,
+      title: `Inventory: ${title}`,
+      group: "Inventory",
+      keywords: [...keywords],
+      run: () => {
+        ui().setView("inventory");
+        useInventory.getState().setSection(section);
+      },
+    })),
     {
       id: "telnet.connect",
       title: "New Telnet connection…",

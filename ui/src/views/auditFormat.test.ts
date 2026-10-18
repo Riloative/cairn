@@ -17,6 +17,32 @@ describe("audit summaries", () => {
       expect(LABELS[kind]).toBeTruthy();
   });
 
+  it("summarizes inventory changes and secret access", () => {
+    expect(
+      summarize(
+        entry("inventory_changed", {
+          entity: "device",
+          name: "sw1",
+          action: "updated",
+          changes: [{ field: "model" }, { field: "mgmtIp" }],
+        }),
+      ),
+    ).toBe("device sw1 updated: model, mgmtIp");
+    expect(
+      summarize(
+        entry("inventory_changed", {
+          entity: "custom_field",
+          name: "Owner",
+          action: "deleted",
+          changes: [],
+        }),
+      ),
+    ).toBe("custom field Owner deleted");
+    expect(summarize(entry("credential_copied", { name: "Lab", field: "password" }))).toBe(
+      "password of Lab",
+    );
+  });
+
   it("summarizes sessions and transfers", () => {
     expect(
       summarize(entry("session_started", { protocol: "serial", target: "/dev/ttyUSB0 9600 8N1" })),

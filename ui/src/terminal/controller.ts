@@ -15,6 +15,7 @@ import { useNotifications } from "@/stores/notifications";
 import { usePrompts } from "@/stores/prompts";
 import { backoffDelay, useReconnect } from "@/stores/reconnect";
 import { useSerial } from "@/stores/serial";
+import { highlightVendor } from "@/views/inventory/labels";
 import { useSessions, type SessionProtocol } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
@@ -387,6 +388,46 @@ export function openSerial(
       reopeners.set(tabId, start);
       useSerial.getState().resetLines(tabId);
       return start(cols, rows, cb);
+    },
+  });
+}
+
+/**
+ * Connect to an inventory device with one of its connection methods (default: the
+ * first). Options and credentials are resolved in Rust from the device's profile.
+ */
+export function openDevice(
+  device: { id: number; hostname: string; vendor: string; connections: { kind: string }[] },
+  method = 0,
+  extra: { profileId?: string | null } = {},
+) {
+  const kind = device.connections[method]?.kind;
+  const protocol: SessionProtocol =
+    kind === "telnet" || kind === "console-server"
+      ? "telnet"
+      : kind === "serial"
+        ? "serial"
+        : "ssh";
+  const start: Starter = async (cols, rows, cb) => {
+    const opened = await ipc.deviceConnect(device.id, method, cols, rows, cb);
+    return opened.sessionId;
+  };
+  return openTerminalTab({
+    title: device.hostname,
+    protocol,
+    profileId: extra.profileId,
+    vendor: highlightVendor(device.vendor),
+    readyOnStart: protocol === "serial",
+    start: async (tabId, cols, rows, cb) => {
+      const opened = await ipc.deviceConnect(device.id, method, cols, rows, cb);
+      if (opened.connectionId) {
+        const connectionId = opened.connectionId;
+        connections.set(tabId, connectionId);
+        reopeners.set(tabId, (c, r, callbacks) => ipc.sshReconnect(connectionId, c, r, callbacks));
+      } else {
+        reopeners.set(tabId, start);
+      }
+      return opened.sessionId;
     },
   });
 }

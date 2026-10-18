@@ -1,4 +1,4 @@
-import { Map as MapIcon, Server } from "lucide-react";
+import { Map as MapIcon } from "lucide-react";
 import { useEffect } from "react";
 import { AuditView } from "@/views/AuditView";
 import { SessionsView } from "@/views/SessionsView";
@@ -13,6 +13,8 @@ import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
 import { useActivityPing } from "./useActivityPing";
 import { useCoreActions } from "./useCoreActions";
+import { useDeviceActions } from "./useDeviceActions";
+import { useInventory } from "@/stores/inventory";
 import { useGlobalShortcuts } from "./useGlobalShortcuts";
 import { useTerminalSetup } from "@/terminal/useTerminalSetup";
 import { QuickConnectDialog } from "@/ssh/QuickConnectDialog";
@@ -20,19 +22,15 @@ import { TransferDialog } from "@/terminal/TransferDialog";
 import { SessionPrompts } from "@/ssh/SessionPrompts";
 import { PasteConfirmDialog } from "@/terminal/PasteConfirmDialog";
 import { TabOverview } from "@/terminal/TabOverview";
+import { InventoryView } from "@/views/inventory/InventoryView";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 function ActiveView({ view }: { view: View }) {
   switch (view) {
     case "sessions":
       return <SessionsView />;
     case "inventory":
-      return (
-        <UpcomingView
-          icon={<Server size={20} />}
-          title="Inventory"
-          description="Sites, racks, devices, interfaces and VLANs arrive in milestone 4."
-        />
-      );
+      return <InventoryView />;
     case "map":
       return (
         <UpcomingView
@@ -55,12 +53,15 @@ export function Shell() {
   const notifyError = useNotifications((s) => s.notifyError);
 
   useCoreActions();
+  useDeviceActions();
   useGlobalShortcuts();
   useActivityPing();
   useTerminalSetup();
 
   useEffect(() => {
     load().catch((e: unknown) => notifyError(e, "Could not load settings"));
+    // Devices feed the command palette even before the inventory view is opened.
+    void useInventory.getState().load();
   }, [load, notifyError]);
 
   return (
@@ -82,6 +83,7 @@ export function Shell() {
       <PasteConfirmDialog />
       <TabOverview />
       <TransferDialog />
+      <ConfirmDialog />
     </div>
   );
 }

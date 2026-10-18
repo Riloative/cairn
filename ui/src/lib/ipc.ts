@@ -475,3 +475,274 @@ export interface TerminalPrefs {
 export const terminalPrefsGet = () => call<TerminalPrefs>("terminal_prefs_get");
 export const terminalPrefsUpdate = (prefs: TerminalPrefs) =>
   call<TerminalPrefs>("terminal_prefs_update", { prefs });
+
+// ── Inventory ──────────────────────────────────────────────────────────────────────
+
+export interface Site {
+  id: number;
+  name: string;
+  notes: string;
+}
+
+export interface Building {
+  id: number;
+  siteId: number;
+  name: string;
+  code: string;
+  address: string;
+  notes: string;
+}
+
+export interface Floor {
+  id: number;
+  buildingId: number;
+  name: string;
+  level: number;
+  notes: string;
+}
+
+export interface Room {
+  id: number;
+  floorId: number;
+  name: string;
+  notes: string;
+}
+
+export interface Rack {
+  id: number;
+  floorId: number;
+  roomId: number | null;
+  name: string;
+  heightU: number;
+  notes: string;
+}
+
+export type LocationKind = "site" | "building" | "floor" | "room" | "rack";
+
+export type LocationInput =
+  | ({ kind: "site" } & Site)
+  | ({ kind: "building" } & Building)
+  | ({ kind: "floor" } & Floor)
+  | ({ kind: "room" } & Room)
+  | ({ kind: "rack" } & Rack);
+
+export type DeviceType =
+  | "switch"
+  | "router"
+  | "firewall"
+  | "server"
+  | "access-point"
+  | "wireless-controller"
+  | "storage"
+  | "hypervisor"
+  | "pdu"
+  | "ups"
+  | "patch-panel"
+  | "camera"
+  | "ip-phone"
+  | "generic";
+
+/** Mirrors `cairn_core::inventory::ConnectionMethod`. The first one is the default. */
+export type ConnectionMethod =
+  | {
+      kind: "ssh";
+      port: number;
+      username: string;
+      legacy: LegacyAlgorithm[];
+      jumps: string;
+      agentForwarding: boolean;
+    }
+  | { kind: "telnet"; port: number; raw: boolean }
+  | {
+      kind: "serial";
+      path: string;
+      settings: LineSettings;
+      newline: { transmit: Newline; receive: Newline };
+      localEcho: boolean;
+    }
+  | { kind: "console-server"; host: string; server: ConsoleServerKind; port: number; raw: boolean }
+  | { kind: "rdp"; port: number; username: string }
+  | { kind: "web"; url: string };
+
+export type CustomValue = string | number | boolean | string[] | null;
+
+export interface Device {
+  id: number;
+  hostname: string;
+  mgmtIp: string;
+  deviceType: DeviceType;
+  vendor: string;
+  model: string;
+  serial: string;
+  firmware: string;
+  buildingId: number | null;
+  floorId: number | null;
+  roomId: number | null;
+  rackId: number | null;
+  rackU: number | null;
+  uHeight: number;
+  credentialId: number | null;
+  connections: ConnectionMethod[];
+  vlans: number[];
+  tags: string[];
+  notes: string;
+  custom: Record<string, CustomValue>;
+  interfaceCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DeviceSaveResult {
+  device: Device;
+  warnings: string[];
+}
+
+export type InterfaceKind =
+  "copper" | "sfp" | "sfp-plus" | "qsfp" | "fiber" | "wireless" | "virtual" | "lag";
+export type InterfaceMode = "access" | "trunk" | "routed";
+
+export interface Interface {
+  id: number;
+  deviceId: number;
+  name: string;
+  kind: InterfaceKind;
+  speed: string;
+  mode: InterfaceMode;
+  accessVlan: number | null;
+  nativeVlan: number | null;
+  allowedVlans: string;
+  lag: string;
+  description: string;
+  enabled: boolean;
+  position: number;
+}
+
+export interface BulkResult {
+  created: Interface[];
+  skipped: string[];
+}
+
+export interface Vlan {
+  id: number;
+  vid: number;
+  name: string;
+  subnet: string;
+  gateway: string;
+  description: string;
+  color: string;
+}
+
+export type FieldKind =
+  "text" | "number" | "select" | "multi-select" | "date" | "url" | "ip" | "boolean";
+
+export interface CustomField {
+  id: number;
+  key: string;
+  label: string;
+  kind: FieldKind;
+  options: string[];
+  position: number;
+}
+
+/** Profile metadata; secret values never reach the frontend unless revealed. */
+export interface CredentialProfile {
+  id: number;
+  name: string;
+  username: string;
+  keyPath: string | null;
+  autoEnable: boolean;
+  notes: string;
+  hasPassword: boolean;
+  hasKeyData: boolean;
+  hasKeyPassphrase: boolean;
+  hasEnableSecret: boolean;
+}
+
+export type SecretField = "password" | "keyData" | "keyPassphrase" | "enableSecret";
+
+export type SecretUpdate =
+  { action: "keep" } | { action: "clear" } | { action: "set"; value: string };
+
+export interface CredentialInput {
+  id: number;
+  name: string;
+  username: string;
+  keyPath: string | null;
+  autoEnable: boolean;
+  notes: string;
+  password: SecretUpdate;
+  keyData: SecretUpdate;
+  keyPassphrase: SecretUpdate;
+  enableSecret: SecretUpdate;
+}
+
+export interface SavedView {
+  id: number;
+  name: string;
+  state: Record<string, unknown>;
+}
+
+export interface InventorySnapshot {
+  sites: Site[];
+  buildings: Building[];
+  floors: Floor[];
+  rooms: Room[];
+  racks: Rack[];
+  vendors: string[];
+  credentials: CredentialProfile[];
+  vlans: Vlan[];
+  fields: CustomField[];
+  devices: Device[];
+  views: SavedView[];
+}
+
+export const inventorySnapshot = () => call<InventorySnapshot>("inventory_snapshot");
+export const locationSave = (location: LocationInput) =>
+  call<LocationInput>("location_save", { location });
+export const locationDelete = (kind: LocationKind, id: number) =>
+  call<null>("location_delete", { kind, id });
+export const vendorAdd = (name: string) => call<string>("vendor_add", { name });
+export const deviceSave = (device: Device) => call<DeviceSaveResult>("device_save", { device });
+export const deviceDelete = (id: number) => call<null>("device_delete", { id });
+export const deviceDuplicate = (id: number) => call<DeviceSaveResult>("device_duplicate", { id });
+export const interfacesList = (deviceId: number) =>
+  call<Interface[]>("interfaces_list", { deviceId });
+export const interfaceSave = (iface: Interface) =>
+  call<Interface>("interface_save", { interface: iface });
+export const interfacesBulkCreate = (deviceId: number, pattern: string, template: Interface) =>
+  call<BulkResult>("interfaces_bulk_create", { deviceId, pattern, template });
+export const interfacesDelete = (deviceId: number, ids: number[]) =>
+  call<number>("interfaces_delete", { deviceId, ids });
+export const interfacesExpand = (pattern: string) =>
+  call<string[]>("interfaces_expand", { pattern });
+export const vlanSave = (vlan: Vlan) => call<Vlan>("vlan_save", { vlan });
+export const vlanDelete = (id: number) => call<null>("vlan_delete", { id });
+export const fieldSave = (field: CustomField) => call<CustomField>("field_save", { field });
+export const fieldDelete = (id: number) => call<null>("field_delete", { id });
+export const viewSave = (view: SavedView) => call<SavedView>("view_save", { view });
+export const viewDelete = (id: number) => call<null>("view_delete", { id });
+export const credentialSave = (credential: CredentialInput) =>
+  call<CredentialProfile>("credential_save", { credential });
+export const credentialDelete = (id: number) => call<null>("credential_delete", { id });
+/** Audited. Returns the secret for display only; do not store it. */
+export const credentialReveal = (id: number, field: SecretField) =>
+  call<string>("credential_reveal", { id, field });
+/** Audited. Rust writes the clipboard and clears it after 30 s. */
+export const credentialCopy = (id: number, field: SecretField) =>
+  call<null>("credential_copy", { id, field });
+
+export interface DeviceOpened {
+  sessionId: string;
+  connectionId: string | null;
+  protocol: "ssh" | "telnet" | "serial";
+  title: string;
+  vendor: string;
+}
+
+export const deviceConnect = (
+  deviceId: number,
+  method: number,
+  cols: number,
+  rows: number,
+  cb: SessionCallbacks,
+) => call<DeviceOpened>("device_connect", { deviceId, method, cols, rows, ...channels(cb) });

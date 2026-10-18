@@ -174,3 +174,46 @@ frontend passes the paths to Rust, which reads/writes them (64 MiB send limit, r
 files only). Names announced by a Ymodem sender are reduced to a bare file name, and a
 received file never replaces an existing one (`name (2).ext`, opened with `create_new`).
 Every transfer, successful or not, is audited as `file_transferred`.
+
+## D-024 · Inventory schema: relational core, JSON for flexible parts (M4)
+
+Locations, devices, interfaces, VLANs, credential profiles and custom field definitions
+are relational tables (foreign keys with `ON DELETE CASCADE / SET NULL`, UNIQUE
+constraints mapped to friendly messages). Per-device data whose shape varies or grows
+(connection methods, tags, VLAN ids, custom field values) is JSON text validated in Rust
+on every save. A device stores every location level (building, floor, room, rack);
+`core` fills parents from the most specific one, so they cannot disagree, and rejects
+overlapping rack positions. Rooms and racks cannot move to another floor (move devices
+instead), which keeps those invariants simple.
+
+## D-025 · Inventory search and filtering run on the client snapshot (M4)
+
+`inventory_snapshot` returns the whole inventory (without interfaces, loaded per device)
+in one call; search, facet filters, grouping and sorting run in the frontend over that
+snapshot. At the target size (300+ devices) this is a few hundred kB and filters in well
+under a frame, avoids an FTS index inside SQLCipher, and lets search cover derived text
+(location labels, credential names, custom field values) exactly as displayed. The table
+is virtualized (TanStack Virtual). Revisit with SQLite FTS5 if inventories grow by
+orders of magnitude.
+
+## D-026 · Credential secrets are write-only over IPC (M4)
+
+Secrets live in `credential_secrets` (inside the encrypted database), separate from the
+profile metadata the UI lists. Saves send `{action: keep | clear | set}` per secret, so
+an unchanged form never re-sends a secret. Audit diffs record `set` / `changed`
+markers, never values. Reveal returns the value once (audited `credential_revealed`);
+the UI hides it again after 30 s. Copy never sends the value to the webview: Rust writes
+it to the clipboard with the plugin's `write_secret` (excluded from clipboard-manager
+history), keeps only its SHA-256, and clears the clipboard after 30 s if it still holds
+that value (audited `credential_copied`).
+
+## D-027 · Connecting to devices is resolved in Rust, with one-shot auto-login (M4)
+
+`device_connect(deviceId, method)` builds SSH / Telnet / console-server / serial options
+from the device and its credential profile in Rust, so stored secrets never reach the
+frontend. SSH uses the profile's key (vault or file), password, then interactive
+fallbacks. For Telnet, console and serial logins, and for "enter enable mode on
+connect", `core::login::LoginAutomator` watches the first 64 kB of output and answers
+`Username:` / `Password:` / `>`-then-enable prompts. Each secret is typed at most once
+and it stops on a failure message or a repeated prompt, so a wrong stored password can
+never cause repeated attempts and lockouts.

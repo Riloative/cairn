@@ -21,7 +21,7 @@ function useForm<T extends object>(initial: T) {
 }
 
 const DESCRIPTIONS: Record<ConnectProtocol, string> = {
-  ssh: "Connect to a device by address. Saved devices arrive with the inventory.",
+  ssh: "Connect by address. Saved devices connect from the inventory or the palette.",
   telnet: "Telnet or raw TCP, including console-server ports (reverse Telnet).",
   serial: "A console cable on this machine. The port list follows plugging and unplugging.",
 };

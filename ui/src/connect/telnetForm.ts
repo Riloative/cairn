@@ -32,6 +32,7 @@ export const CONSOLE_SERVERS: readonly { value: ConsoleChoice; label: string; ba
 
 /** TCP port for a console-server port (mirrors `ConsoleServerKind::tcp_port`). */
 export function consoleTcpPort(kind: ConsoleChoice, port: number): number | null {
+  if (kind === "custom") return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : null;
   const base = CONSOLE_SERVERS.find((c) => c.value === kind)?.base;
   if (base === undefined || !Number.isInteger(port) || port < 1) return null;
   const tcp = base + port;
