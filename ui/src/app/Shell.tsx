@@ -18,6 +18,7 @@ import { useTerminalSetup } from "@/terminal/useTerminalSetup";
 import { QuickConnectDialog } from "@/ssh/QuickConnectDialog";
 import { SessionPrompts } from "@/ssh/SessionPrompts";
 import { PasteConfirmDialog } from "@/terminal/PasteConfirmDialog";
+import { TabOverview } from "@/terminal/TabOverview";
 
 function ActiveView({ view }: { view: View }) {
   switch (view) {
@@ -78,6 +79,7 @@ export function Shell() {
       <QuickConnectDialog />
       <SessionPrompts />
       <PasteConfirmDialog />
+      <TabOverview />
     </div>
   );
 }

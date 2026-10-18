@@ -38,6 +38,11 @@ pub struct Settings {
     pub read_openssh_known_hosts: bool,
     /// Desktop notification when a session drops unexpectedly.
     pub notify_on_disconnect: bool,
+    /// Write raw session output with timestamps to `<data dir>/logs`.
+    pub session_logging: bool,
+    /// Notify when a command (OSC 133 shell integration) runs at least this long while
+    /// its tab is in the background; 0 disables.
+    pub long_command_notify_secs: u32,
 }
 
 impl Default for Settings {
@@ -52,6 +57,8 @@ impl Default for Settings {
             reduce_motion: false,
             read_openssh_known_hosts: true,
             notify_on_disconnect: true,
+            session_logging: false,
+            long_command_notify_secs: 10,
         }
     }
 }

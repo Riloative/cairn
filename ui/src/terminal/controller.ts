@@ -26,6 +26,7 @@ import { defaultPaletteFor, findPalette } from "./palettes";
 import { rulesForVendor, type CompiledRule } from "./highlight/engine";
 import { Highlighter } from "./highlight/highlighter";
 import { BUILTIN_RULESETS } from "./highlight/rulesets";
+import { formatDuration, trackCommands } from "./osc133";
 import { compilePatterns, trackPrivilege } from "./privilege";
 import {
   allTerminals,
@@ -192,6 +193,15 @@ function wireExtras(tabId: string, handle: TerminalHandle) {
     writeText(handle.term.getSelection()).catch(() => {
       // Copy-on-select is a convenience; a failed write is not worth a toast.
     });
+  });
+  trackCommands(handle.term, (ms, exitCode) => {
+    const threshold = useSettings.getState().settings?.longCommandNotifySecs ?? 10;
+    const background = document.hidden || useSessions.getState().activeId !== tabId;
+    if (threshold <= 0 || ms < threshold * 1000 || !background) return;
+    const title = tabOf(tabId)?.title ?? "Terminal";
+    const result =
+      exitCode === null ? "finished" : exitCode === 0 ? "succeeded" : `failed (exit ${exitCode})`;
+    void desktopNotify(`Command ${result} in ${title}`, `Ran for ${formatDuration(ms)}.`);
   });
   handle.term.onBell(() => {
     const bell = profile().bell;

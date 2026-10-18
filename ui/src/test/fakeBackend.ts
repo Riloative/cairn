@@ -13,6 +13,8 @@ export const DEFAULT_SETTINGS: Settings = {
   reduceMotion: false,
   readOpensshKnownHosts: true,
   notifyOnDisconnect: true,
+  sessionLogging: false,
+  longCommandNotifySecs: 10,
 };
 
 /**

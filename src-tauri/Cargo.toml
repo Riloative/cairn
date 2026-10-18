@@ -21,6 +21,7 @@ tauri-build = { version = "2", features = [] }
 cairn-core.workspace = true
 cairn-proto-ssh.workspace = true
 cairn-pty.workspace = true
+chrono.workspace = true
 futures.workspace = true
 parking_lot.workspace = true
 serde.workspace = true

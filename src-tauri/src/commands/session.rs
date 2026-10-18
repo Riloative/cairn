@@ -2,6 +2,7 @@
 
 use crate::error::{CommandError, CommandResult};
 use crate::prompts::PromptAnswer;
+use crate::sessions::log::{log_path, LoggingOutput};
 use crate::sessions::output::{AuditedOutput, ChannelOutput};
 use crate::sessions::{SessionId, SessionManager, SessionMessage, SessionOutput};
 use crate::state::AppState;
@@ -26,11 +27,29 @@ pub(crate) fn audited_output(
     on_data: Channel<InvokeResponseBody>,
     on_event: Channel<SessionMessage>,
 ) -> Arc<dyn SessionOutput> {
+    let channel: Arc<dyn SessionOutput> = Arc::new(ChannelOutput {
+        data: on_data,
+        events: on_event,
+    });
+    let logging = state
+        .vault
+        .lock()
+        .with_conn(cairn_core::settings::load)
+        .map(|s| s.session_logging)
+        .unwrap_or(false);
+    let inner = match (logging, state.vault.lock().dir().to_path_buf()) {
+        (true, dir) => {
+            let path = log_path(&dir.join("logs"), protocol, target, session_id);
+            match LoggingOutput::create(channel.clone(), &path) {
+                Ok(l) => Arc::new(l) as Arc<dyn SessionOutput>,
+                // Never block a session because its log cannot be written.
+                Err(_) => channel,
+            }
+        }
+        (false, _) => channel,
+    };
     Arc::new(AuditedOutput {
-        inner: Arc::new(ChannelOutput {
-            data: on_data,
-            events: on_event,
-        }),
+        inner,
         vault: state.vault.clone(),
         audit: state.audit.clone(),
         session_id: session_id.to_owned(),

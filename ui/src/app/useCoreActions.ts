@@ -135,6 +135,15 @@ export function coreActions(): Action[] {
       run: () => ui().setQuickConnectOpen(true),
     },
     {
+      id: "tabs.overview",
+      title: "Session overview",
+      group: "Sessions",
+      keywords: ["tabs", "grid", "thumbnails", "expose"],
+      shortcut: "Mod+Shift+O",
+      enabled: hasTabs,
+      run: () => useTerminalUi.getState().setOverviewOpen(true),
+    },
+    {
       id: "tabs.next",
       title: "Next tab",
       group: "Sessions",

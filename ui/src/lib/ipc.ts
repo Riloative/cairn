@@ -102,6 +102,8 @@ export interface Settings {
   reduceMotion: boolean;
   readOpensshKnownHosts: boolean;
   notifyOnDisconnect: boolean;
+  sessionLogging: boolean;
+  longCommandNotifySecs: number;
 }
 
 export const settingsGet = () => call<Settings>("settings_get");

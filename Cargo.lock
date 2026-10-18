@@ -494,6 +494,7 @@ dependencies = [
  "cairn-core",
  "cairn-proto-ssh",
  "cairn-pty",
+ "chrono",
  "futures",
  "parking_lot",
  "serde",

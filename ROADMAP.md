@@ -41,6 +41,8 @@ both platforms, and there are no stubs/TODOs left inside it.
 
 ## M2 – Terminal and SSH
 
+- [ ] CI green on both platforms for the final M2 commit
+
 - [x] xterm.js (WebGL, fit, search, unicode11, web-links, serialize, image) over binary Tauri Channels
 - [x] Session manager in Rust (session IDs, lifecycle events; raw-body input, raw-channel output)
 - [x] Local shell tabs (`portable-pty`, new `crates/pty`); Linux Podman/Toolbox/Distrobox quick-launch
@@ -54,16 +56,16 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Jump host chains, SOCKS5/HTTP proxy
 - [x] Keepalive, auto-reconnect with backoff, reconnect overlay
 - [x] Quick-connect dialog (`Mod+N`), host-key and credential prompts, known-hosts manager in Settings
-- [ ] Session logging with timestamps
+- [x] Session logging with timestamps (raw output, per-line timestamps, opt-in in Settings → Security)
 - [x] Keyword highlighting overlay engine (xterm decorations; byte stream untouched) + vendor rule sets (IOS/IOS-XE/NX-OS, Junos, FortiOS, AOS-CX, ProCurve, Comware, UniFi/EdgeOS, Linux), per-tab vendor, validated custom sets in prefs
 - [x] Highlighting rule editor in Settings
 - [x] Scrollback search (regex/case/whole word, match count, `Mod+F`)
 - [x] Paste safety dialog (line count + preview) + per-line delay; copy/paste shortcuts per platform
-- [ ] Tab overview grid with live thumbnails
+- [x] Tab overview grid with live thumbnails (`Mod+Shift+O`)
 - [x] Context-colored header bar + privilege prompt regexes (defaults for Cisco/Aruba/HP `#`, Junos, Linux root, Comware)
 - [x] Settings UI for terminal profiles, palettes and prompt patterns
 - [x] Disconnect notifications (desktop, when the tab is in the background)
-- [ ] OSC 133 long-command notifications
+- [x] OSC 133 long-command notifications (threshold in Settings)
 - [x] Integration tests against local openssh-server (modern + legacy config) — 16 tests in CI
 
 ## M3 – Serial and Telnet

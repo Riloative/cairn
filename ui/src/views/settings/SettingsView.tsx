@@ -219,6 +219,33 @@ function Security({ s, update }: { s: Settings; update: (p: Partial<Settings>) =
           onCheckedChange={(v) => update({ notifyOnDisconnect: v })}
         />
       </Row>
+      <Row
+        title="Session logging"
+        description="Save raw session output with timestamps to the logs folder in Cairn's data directory. Typed input is not logged."
+      >
+        <Switch
+          aria-label="Session logging"
+          checked={s.sessionLogging}
+          onCheckedChange={(v) => update({ sessionLogging: v })}
+        />
+      </Row>
+      <Row
+        title="Long command notifications"
+        description="With shell integration (OSC 133), notify when a background command runs longer than this."
+      >
+        <select
+          aria-label="Long command notifications"
+          value={s.longCommandNotifySecs}
+          onChange={(e) => update({ longCommandNotifySecs: Number(e.target.value) })}
+          className="h-8 rounded-md border border-border bg-surface px-2 text-[13px]"
+        >
+          {[0, 10, 30, 60, 300].map((v) => (
+            <option key={v} value={v}>
+              {v === 0 ? "Off" : v < 60 ? `${v} seconds` : `${v / 60} min`}
+            </option>
+          ))}
+        </select>
+      </Row>
       <div className="py-4">
         <p className="font-medium">Known hosts</p>
         <p className="mb-2 text-xs text-fg-muted">

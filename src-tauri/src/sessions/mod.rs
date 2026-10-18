@@ -4,6 +4,7 @@
 //! (`InvokeResponseBody::Raw`), never JSON arrays. Lifecycle messages (closed, …) use a
 //! second, JSON channel. Input arrives as a raw request body (see `commands::session`).
 
+pub mod log;
 pub mod output;
 pub mod ssh;
 
