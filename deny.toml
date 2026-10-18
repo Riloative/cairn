@@ -5,7 +5,12 @@ all-features = false
 [advisories]
 # Unmaintained-crate notices are reviewed case by case; vulnerabilities always fail.
 unmaintained = "workspace"
-ignore = []
+ignore = [
+  # Marvin timing attack in `rsa` (via russh/ssh-key); no fixed release exists. Cairn only
+  # signs SSH user-auth challenges (one signature per login), which does not give an
+  # attacker the many timing samples the attack needs. See docs/DECISIONS.md D-019.
+  { id = "RUSTSEC-2023-0071", reason = "no fix available; only low-volume SSH client signing (D-019)" },
+]
 
 [licenses]
 # Permissive licenses only (plus MPL-2.0, file-level copyleft, used by Servo-derived

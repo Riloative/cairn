@@ -291,7 +291,7 @@ pub async fn connect(
         let mut handle = clock
             .timeout(timeout, handshake)
             .await
-            .map_err(|()| timed_out())??;
+            .map_err(|_| timed_out())??;
 
         interact.progress(Progress::Authenticating {
             index,
@@ -305,7 +305,7 @@ pub async fn connect(
         clock
             .timeout(timeout, authenticate(&mut handle, hop, &prompts))
             .await
-            .map_err(|()| timed_out())??;
+            .map_err(|_| timed_out())??;
         host_key = slot.lock().await.clone();
         jumps.push(handle);
     }

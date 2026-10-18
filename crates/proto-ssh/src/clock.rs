@@ -8,6 +8,10 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+/// The network part of a connection attempt took longer than allowed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Elapsed;
+
 #[derive(Debug, Default)]
 pub struct PromptClock {
     waiting: AtomicU32,
@@ -35,8 +39,8 @@ impl PromptClock {
         self.waited.lock().map(|w| *w).unwrap_or_default()
     }
 
-    /// Like `tokio::time::timeout`, excluding paused time. `Err(())` on timeout.
-    pub async fn timeout<F: Future>(&self, limit: Duration, fut: F) -> Result<F::Output, ()> {
+    /// Like `tokio::time::timeout`, excluding paused time.
+    pub async fn timeout<F: Future>(&self, limit: Duration, fut: F) -> Result<F::Output, Elapsed> {
         let start = Instant::now();
         tokio::pin!(fut);
         loop {
@@ -45,7 +49,7 @@ impl PromptClock {
                 () = tokio::time::sleep(Duration::from_millis(100)) => {
                     let spent = start.elapsed().saturating_sub(self.waited());
                     if !self.waiting() && spent > limit {
-                        return Err(());
+                        return Err(Elapsed);
                     }
                 }
             }

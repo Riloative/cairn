@@ -132,3 +132,20 @@ The xterm.js image addon (sixel/iTerm inline images, required by SPEC §2) decod
 with WebAssembly. `script-src 'self' 'wasm-unsafe-eval'` permits compiling the bundled
 WASM module only; JavaScript `eval`/`new Function` remain blocked and scripts still load
 only from the app origin.
+
+## D-019 · Accepting RUSTSEC-2023-0071 (rsa "Marvin" timing attack) (M2)
+
+`russh` and `ssh-key` depend on the RustCrypto `rsa` crate, whose PKCS#1 v1.5 operations
+are not constant-time (RUSTSEC-2023-0071); there is no fixed release. Cairn uses RSA only
+on the client side to sign user-authentication challenges with RSA keys: one signature
+per login, timed only by the server being logged into. The attack needs a large number
+of precise timing measurements of private-key operations, which this usage does not
+provide. The advisory is ignored in `deny.toml` and `.cargo/audit.toml` with this
+justification; revisit when `rsa` ships a constant-time release. ed25519/ECDSA keys are
+recommended in the UI.
+
+## D-020 · Pinned Rust toolchain (M2)
+
+`rust-toolchain.toml` pins the compiler (currently 1.99.1) so local builds and CI run the
+same clippy lints; a newer stable in CI introduced a lint the local toolchain did not
+know. Bump deliberately.
