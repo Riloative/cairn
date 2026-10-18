@@ -155,7 +155,7 @@ it; an inventory of a few hundred devices for table speed.
   racks; PNG and PDF export (fonts embedded, matches the canvas); PDF floor plan
   upload, fit and reload after restart.
 
-**Next:** M6 (power tools) once M5 CI is green.
+**Next:** M6 (power tools). M5 CI run 21 is green on both platforms.
 
 **Test manually:** the map with a real inventory of a few hundred devices (drag
 performance, auto-layout time, readability of routes); PDF export opened in a PDF

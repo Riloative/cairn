@@ -98,7 +98,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Connect from inventory (resolved in Rust from the credential profile), auto login / enable
 - [x] CI green on both platforms for M4 (run 18)
 
-## M5 – Map
+## M5 – Map ✅
 
 - [x] Campus / Building / Floor / Rack views with breadcrumbs
 - [x] Original SVG icon set for all device types, vendor badge
@@ -111,7 +111,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Floor plan backgrounds (PNG/JPG/SVG/PDF page) with scale/opacity
 - [x] Rack elevation with collision-free drag
 - [x] Export PNG (1x/2x/4x), SVG, PDF (Rust `svg2pdf`) with title/legend/date, theme or forced light
-- [ ] CI green on both platforms for M5
+- [x] CI green on both platforms for M5 (run 21)
 
 ## M6 – Power tools
 
