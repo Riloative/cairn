@@ -38,6 +38,76 @@ impl ErrorPayload {
     }
 }
 
+/// Errors from the core crate (vault, database, audit, settings).
+#[derive(Debug, thiserror::Error)]
+pub enum CoreError {
+    #[error("The master password is incorrect.")]
+    WrongPassword,
+    #[error("Cairn has not been set up yet.")]
+    NotInitialized,
+    #[error("Cairn is already set up.")]
+    AlreadyInitialized,
+    #[error("Cairn is locked.")]
+    Locked,
+    #[error("The vault metadata file is damaged: {0}")]
+    CorruptVaultFile(String),
+    #[error("A cryptographic operation failed: {0}")]
+    Crypto(String),
+    #[error("Database error: {0}")]
+    Database(#[from] rusqlite::Error),
+    #[error("Could not access {path}: {source}")]
+    Io {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Data could not be encoded or decoded: {0}")]
+    Json(#[from] serde_json::Error),
+    #[error("{0}")]
+    Validation(String),
+    #[error("The database was created by a newer version of Cairn (schema {found}, this build supports {supported}).")]
+    SchemaTooNew { found: i64, supported: i64 },
+}
+
+impl CoreError {
+    pub(crate) fn io(path: &std::path::Path, source: std::io::Error) -> Self {
+        Self::Io {
+            path: path.display().to_string(),
+            source,
+        }
+    }
+}
+
+impl UserFacingError for CoreError {
+    fn code(&self) -> &'static str {
+        match self {
+            CoreError::WrongPassword => "vault.wrong_password",
+            CoreError::NotInitialized => "vault.not_initialized",
+            CoreError::AlreadyInitialized => "vault.already_initialized",
+            CoreError::Locked => "vault.locked",
+            CoreError::CorruptVaultFile(_) => "vault.corrupt",
+            CoreError::Crypto(_) => "crypto",
+            CoreError::Database(_) => "db",
+            CoreError::Io { .. } => "io",
+            CoreError::Json(_) => "json",
+            CoreError::Validation(_) => "validation",
+            CoreError::SchemaTooNew { .. } => "db.schema_too_new",
+        }
+    }
+
+    fn hint(&self) -> Option<String> {
+        match self {
+            CoreError::WrongPassword => Some(
+                "Check Caps Lock and keyboard layout. A lost master password cannot be recovered; restore from a backup instead.".into(),
+            ),
+            CoreError::Locked => Some("Unlock Cairn with your master password.".into()),
+            CoreError::SchemaTooNew { .. } => Some("Update Cairn to the latest version.".into()),
+            CoreError::Io { .. } => Some("Check that the folder exists and that you have permission to write to it.".into()),
+            _ => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,6 +131,13 @@ mod tests {
         assert_eq!(p.code, "test.denied");
         assert_eq!(p.message, "Permission denied on /dev/ttyUSB0");
         assert_eq!(p.hint.as_deref(), Some("sudo usermod -aG dialout $USER"));
+    }
+
+    #[test]
+    fn core_errors_have_codes_and_hints() {
+        let p = ErrorPayload::from_error(&CoreError::WrongPassword);
+        assert_eq!(p.code, "vault.wrong_password");
+        assert!(p.hint.is_some());
     }
 
     #[test]
