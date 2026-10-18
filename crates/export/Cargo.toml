@@ -10,11 +10,15 @@ authors.workspace = true
 publish = false
 
 [dependencies]
+cairn-core.workspace = true
+resvg.workspace = true
+svg2pdf.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

@@ -5,6 +5,7 @@ pub mod app;
 pub mod audit;
 pub mod devices;
 pub mod inventory;
+pub mod map;
 pub mod serial;
 pub mod session;
 pub mod settings;

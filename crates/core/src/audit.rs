@@ -101,6 +101,13 @@ pub enum AuditEvent {
         action: ChangeAction,
         changes: Vec<FieldChange>,
     },
+    /// Something was exported to a file (map diagram now; data and backups in M8).
+    #[serde(rename_all = "camelCase")]
+    DataExported {
+        what: String,
+        format: String,
+        path: String,
+    },
     /// A stored secret was shown in the UI.
     #[serde(rename_all = "camelCase")]
     CredentialRevealed {
@@ -143,6 +150,7 @@ impl AuditEvent {
             AuditEvent::FileTransferred { .. } => "file_transferred",
             AuditEvent::InventoryChanged { .. } => "inventory_changed",
             AuditEvent::CredentialRevealed { .. } => "credential_revealed",
+            AuditEvent::DataExported { .. } => "data_exported",
             AuditEvent::CredentialCopied { .. } => "credential_copied",
         }
     }
@@ -482,6 +490,11 @@ mod tests {
                 profile_id: 1,
                 name: "lab".into(),
                 field: "password".into(),
+            },
+            AuditEvent::DataExported {
+                what: "map".into(),
+                format: "pdf".into(),
+                path: "/tmp/x.pdf".into(),
             },
             AuditEvent::SessionStarted {
                 session_id: "s1".into(),

@@ -1,9 +1,9 @@
 //! Export for Cairn: diagram export (SVG → PDF), readable data export (JSON/CSV) and
 //! encrypted backups.
 //!
-//! Renderers and the backup archive land in M5 and M8. This crate currently defines the
-//! export options shared by the map export dialog.
+//! The backup archive lands in M8.
 
 pub mod options;
+pub mod render;
 
 pub use options::{DiagramFormat, DiagramOptions, ExportTheme, RasterScale};

@@ -11,6 +11,7 @@ pub mod inventory;
 pub mod kdf;
 pub mod known_hosts;
 pub mod login;
+pub mod map;
 pub mod protocol;
 pub mod secret;
 pub mod settings;

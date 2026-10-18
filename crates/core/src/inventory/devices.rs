@@ -552,6 +552,7 @@ pub fn delete(conn: &Connection, id: i64) -> Result<(), CoreError> {
     let tx = conn.unchecked_transaction()?;
     let old = get(&tx, id)?.ok_or_else(|| gone("device"))?;
     tx.execute("DELETE FROM devices WHERE id = ?1", [id])?;
+    crate::map::layout::forget_node(&tx, &format!("d:{id}"))?;
     record(&tx, "device", id, &old.hostname, Some(&old), None)?;
     tx.commit()?;
     Ok(())

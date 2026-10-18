@@ -515,6 +515,9 @@ pub fn delete(conn: &Connection, kind: LocationKind, id: i64) -> Result<(), Core
         tx.execute("UPDATE devices SET rack_u = NULL WHERE rack_id = ?1", [id])?;
     }
     tx.execute(&format!("DELETE FROM {} WHERE id = ?1", kind.table()), [id])?;
+    if kind == LocationKind::Building {
+        crate::map::layout::forget_node(&tx, &format!("b:{id}"))?;
+    }
     tx.execute(
         "UPDATE devices SET rack_u = NULL WHERE rack_id IS NULL AND rack_u IS NOT NULL",
         [],
