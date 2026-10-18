@@ -119,7 +119,7 @@ terminal server; on macOS, that only `/dev/cu.*` ports are listed.
   password (TOFU prompt only); Telnet to a scripted Cisco-style login logs in and
   reaches `sw1#` automatically; duplicate-IP warning; audit entries for each step.
 
-**Next:** confirm CI green for M4, then M5 (map).
+**Next:** M5 (map). M4 CI run 18 is green on both platforms.
 
 **Test manually:** a real Cisco/Aruba switch with a credential profile (SSH with
 auto-enable, and Telnet/console-server login); copy a password and check that the

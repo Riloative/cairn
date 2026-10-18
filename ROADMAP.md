@@ -83,7 +83,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] CI green on both platforms for M3 (run 16)
 - [x] Integration tests: socat PTY pairs (incl. Xmodem/Ymodem vs lrzsz), real telnetd + scripted server
 
-## M4 – Inventory
+## M4 – Inventory ✅
 
 - [x] Location hierarchy: Site → Building → Floor → Room → Rack (U height)
 - [x] Devices with all fields, IP validation + duplicate warnings, connection methods
@@ -96,7 +96,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Duplicate device with interfaces
 - [x] Field-level diff audit for inventory CRUD
 - [x] Connect from inventory (resolved in Rust from the credential profile), auto login / enable
-- [ ] CI green on both platforms for M4
+- [x] CI green on both platforms for M4 (run 18)
 
 ## M5 – Map
 
