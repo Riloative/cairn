@@ -68,7 +68,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] OSC 133 long-command notifications (threshold in Settings)
 - [x] Integration tests against local openssh-server (modern + legacy config) — 16 tests in CI
 
-## M3 – Serial and Telnet
+## M3 – Serial and Telnet ✅
 
 - [x] Serial port discovery + USB VID/PID friendly names; prefer `/dev/cu.*` on macOS (crate)
 - [x] Hotplug events to the UI (live port list in the connect dialog)
@@ -80,7 +80,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Reverse Telnet port mapping for console servers (Opengear, Cisco lines, Avocent, Lantronix, Digi)
 - [x] Telnet / console-server UI in the connect dialog
 - [x] Unplug/replug and dropped Telnet sessions reconnect with backoff (D-022)
-- [ ] CI green on both platforms for M3
+- [x] CI green on both platforms for M3 (run 16)
 - [x] Integration tests: socat PTY pairs (incl. Xmodem/Ymodem vs lrzsz), real telnetd + scripted server
 
 ## M4 – Inventory

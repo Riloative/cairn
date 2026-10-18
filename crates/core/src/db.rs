@@ -11,6 +11,7 @@ use zeroize::Zeroizing;
 const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0001_init.sql"),
     include_str!("migrations/0002_known_hosts.sql"),
+    include_str!("migrations/0003_inventory.sql"),
 ];
 
 /// Latest schema version this build knows.

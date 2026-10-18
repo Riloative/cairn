@@ -14,6 +14,15 @@ use sha2::{Digest, Sha256};
 /// Hash used as `prev_hash` of the first entry.
 pub const GENESIS_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
+/// What happened to an inventory entity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChangeAction {
+    Created,
+    Updated,
+    Deleted,
+}
+
 /// Why the app locked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -83,6 +92,29 @@ pub enum AuditEvent {
         ok: bool,
         error: Option<String>,
     },
+    /// An inventory entity was created, updated or deleted, with a field-level diff.
+    #[serde(rename_all = "camelCase")]
+    InventoryChanged {
+        entity: String,
+        entity_id: i64,
+        name: String,
+        action: ChangeAction,
+        changes: Vec<FieldChange>,
+    },
+    /// A stored secret was shown in the UI.
+    #[serde(rename_all = "camelCase")]
+    CredentialRevealed {
+        profile_id: i64,
+        name: String,
+        field: String,
+    },
+    /// A stored secret was copied to the clipboard (cleared again after 30 s).
+    #[serde(rename_all = "camelCase")]
+    CredentialCopied {
+        profile_id: i64,
+        name: String,
+        field: String,
+    },
     #[serde(rename_all = "camelCase")]
     SessionEnded {
         session_id: String,
@@ -109,6 +141,9 @@ impl AuditEvent {
             AuditEvent::SessionStarted { .. } => "session_started",
             AuditEvent::SessionEnded { .. } => "session_ended",
             AuditEvent::FileTransferred { .. } => "file_transferred",
+            AuditEvent::InventoryChanged { .. } => "inventory_changed",
+            AuditEvent::CredentialRevealed { .. } => "credential_revealed",
+            AuditEvent::CredentialCopied { .. } => "credential_copied",
         }
     }
 }
@@ -430,6 +465,23 @@ mod tests {
                 port: 22,
                 fingerprint: "f".into(),
                 changed: true,
+            },
+            AuditEvent::InventoryChanged {
+                entity: "device".into(),
+                entity_id: 1,
+                name: "sw1".into(),
+                action: ChangeAction::Created,
+                changes: vec![],
+            },
+            AuditEvent::CredentialRevealed {
+                profile_id: 1,
+                name: "lab".into(),
+                field: "password".into(),
+            },
+            AuditEvent::CredentialCopied {
+                profile_id: 1,
+                name: "lab".into(),
+                field: "password".into(),
             },
             AuditEvent::SessionStarted {
                 session_id: "s1".into(),

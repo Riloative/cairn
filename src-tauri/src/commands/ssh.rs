@@ -3,15 +3,26 @@
 use super::session::{audited_output, require_unlocked};
 use crate::error::{CommandError, CommandResult};
 use crate::sessions::ssh::{SessionContext, TauriInteract};
-use crate::sessions::{SessionId, SessionManager, SessionMessage};
+use crate::sessions::{autologin, SessionId, SessionManager, SessionMessage};
 use crate::state::AppState;
 use cairn_core::known_hosts::{self, KnownHost};
+use cairn_core::login::LoginPlan;
 use cairn_core::terminal::TerminalSession;
 use cairn_proto_ssh::{ConnectOptions, SshSession};
 use serde::Serialize;
 use std::sync::Arc;
 use tauri::ipc::{Channel, InvokeResponseBody};
 use tauri::State;
+
+/// What a (re)connect needs: options with credentials, kept in Rust only.
+#[derive(Debug)]
+pub struct SshTarget {
+    pub opts: ConnectOptions,
+    /// Inventory device name, for audit entries.
+    pub device: Option<String>,
+    /// Enable-secret answering for devices with "auto-enter enable".
+    pub login: LoginPlan,
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -21,7 +32,7 @@ pub struct SshOpened {
     pub connection_id: String,
 }
 
-fn validate(opts: &ConnectOptions) -> CommandResult<()> {
+pub(crate) fn validate(opts: &ConnectOptions) -> CommandResult<()> {
     let bad = |m: &str| Err(cairn_core::CoreError::Validation(m.into()).into());
     if opts.hops.is_empty() {
         return bad("Enter a host to connect to.");
@@ -52,19 +63,21 @@ fn validate(opts: &ConnectOptions) -> CommandResult<()> {
 fn start(
     state: &AppState,
     sessions: &Arc<SessionManager>,
-    opts: Arc<ConnectOptions>,
+    target: Arc<SshTarget>,
     cols: u16,
     rows: u16,
     on_data: Channel<InvokeResponseBody>,
     on_event: Channel<SessionMessage>,
 ) -> CommandResult<SessionId> {
+    let opts = &target.opts;
     let last = opts
         .hops
         .last()
         .ok_or_else(|| CommandError::internal("no destination"))?;
-    let target = last.target();
+    let target_label = last.target();
     let id = sessions.allocate_id();
-    let output = audited_output(state, &id, "ssh", &target, on_data, on_event);
+    let output = audited_output(state, &id, "ssh", &target_label, on_data, on_event);
+    let output = autologin::wrap(output, target.login.clone(), sessions, &id);
     let interact = Arc::new(TauriInteract {
         output: output.clone(),
         broker: state.prompts.clone(),
@@ -72,21 +85,53 @@ fn start(
         audit: state.audit.clone(),
         ctx: SessionContext {
             session_id: id.clone(),
-            target,
+            target: target_label,
             username: last.username.clone(),
-            device: None,
+            device: target.device.clone(),
         },
     });
     let runtime = tokio::runtime::Handle::current();
     sessions.open_with_id::<CommandError>(id, output, move |sink| {
         Ok(Arc::new(SshSession::start(
             &runtime,
-            (*opts).clone(),
+            target.opts.clone(),
             cols,
             rows,
             interact,
             sink,
         )) as Arc<dyn TerminalSession>)
+    })
+}
+
+/// Start a session and remember its target for `ssh_reconnect`.
+pub(crate) fn open(
+    state: &AppState,
+    sessions: &Arc<SessionManager>,
+    target: SshTarget,
+    cols: u16,
+    rows: u16,
+    on_data: Channel<InvokeResponseBody>,
+    on_event: Channel<SessionMessage>,
+) -> CommandResult<SshOpened> {
+    validate(&target.opts)?;
+    let target = Arc::new(target);
+    let session_id = start(
+        state,
+        sessions,
+        target.clone(),
+        cols,
+        rows,
+        on_data,
+        on_event,
+    )?;
+    let connection_id = format!("c-{session_id}");
+    state
+        .ssh_connections
+        .lock()
+        .insert(connection_id.clone(), target);
+    Ok(SshOpened {
+        session_id,
+        connection_id,
     })
 }
 
@@ -102,26 +147,12 @@ pub async fn ssh_open(
     on_event: Channel<SessionMessage>,
 ) -> CommandResult<SshOpened> {
     require_unlocked(&state)?;
-    validate(&options)?;
-    let opts = Arc::new(options);
-    let session_id = start(
-        &state,
-        &sessions,
-        opts.clone(),
-        cols,
-        rows,
-        on_data,
-        on_event,
-    )?;
-    let connection_id = format!("c-{session_id}");
-    state
-        .ssh_connections
-        .lock()
-        .insert(connection_id.clone(), opts);
-    Ok(SshOpened {
-        session_id,
-        connection_id,
-    })
+    let target = SshTarget {
+        opts: options,
+        device: None,
+        login: LoginPlan::default(),
+    };
+    open(&state, &sessions, target, cols, rows, on_data, on_event)
 }
 
 /// Reconnect a dropped session with the same options (and stored credentials).
@@ -136,13 +167,13 @@ pub async fn ssh_reconnect(
     on_event: Channel<SessionMessage>,
 ) -> CommandResult<SessionId> {
     require_unlocked(&state)?;
-    let opts = state
+    let target = state
         .ssh_connections
         .lock()
         .get(&connection_id)
         .cloned()
         .ok_or_else(|| CommandError::internal("this connection is no longer available"))?;
-    start(&state, &sessions, opts, cols, rows, on_data, on_event)
+    start(&state, &sessions, target, cols, rows, on_data, on_event)
 }
 
 /// Drop stored connection options (tab closed). Secrets are zeroized on drop.

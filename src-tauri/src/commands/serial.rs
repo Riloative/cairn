@@ -4,10 +4,11 @@
 use super::session::{audited_output, require_unlocked};
 use crate::error::{CommandError, CommandResult};
 use crate::sessions::{
-    Extra, SerialControl, SessionId, SessionManager, SessionMessage, TransferStatus,
+    autologin, Extra, SerialControl, SessionId, SessionManager, SessionMessage, TransferStatus,
 };
 use crate::state::AppState;
 use cairn_core::audit::AuditEvent;
+use cairn_core::login::LoginPlan;
 use cairn_core::terminal::TerminalSession;
 use cairn_proto_serial::ports::{self, PortInfo};
 use cairn_proto_serial::xmodem::{OutgoingFile, Progress, Variant};
@@ -158,10 +159,32 @@ pub async fn serial_open(
     on_event: Channel<SessionMessage>,
 ) -> CommandResult<SessionId> {
     require_unlocked(&state)?;
+    start(
+        &state,
+        &sessions,
+        options,
+        None,
+        LoginPlan::default(),
+        on_data,
+        on_event,
+    )
+}
+
+/// Open a serial session (also used for inventory devices).
+pub(crate) fn start(
+    state: &AppState,
+    sessions: &Arc<SessionManager>,
+    options: SerialOptions,
+    device: Option<String>,
+    login: LoginPlan,
+    on_data: Channel<InvokeResponseBody>,
+    on_event: Channel<SessionMessage>,
+) -> CommandResult<SessionId> {
     validate(&options)?;
     let target = format!("{} {}", options.path, options.settings.summary());
     let id = sessions.allocate_id();
-    let output = audited_output(&state, &id, "serial", &target, on_data, on_event);
+    let output = audited_output(state, &id, "serial", &target, on_data, on_event);
+    let output = autologin::wrap(output, login, sessions, &id);
     let mut control = None;
     let id = sessions.open_with_id::<CommandError>(id, output, |sink| {
         let s = SerialSession::open(&options, sink)?;
@@ -184,7 +207,7 @@ pub async fn serial_open(
             protocol: "serial".into(),
             target,
             username: None,
-            device: None,
+            device,
             host_key_fingerprint: None,
         },
     );

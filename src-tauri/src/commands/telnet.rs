@@ -2,9 +2,10 @@
 
 use super::session::{audited_output, require_unlocked};
 use crate::error::{CommandError, CommandResult};
-use crate::sessions::{Extra, SessionId, SessionManager, SessionMessage};
+use crate::sessions::{autologin, Extra, SessionId, SessionManager, SessionMessage};
 use crate::state::AppState;
 use cairn_core::audit::AuditEvent;
+use cairn_core::login::LoginPlan;
 use cairn_core::terminal::TerminalSession;
 use cairn_proto_telnet::console::ConsoleServerKind;
 use cairn_proto_telnet::{TelnetOptions, TelnetSession};
@@ -92,10 +93,37 @@ pub async fn telnet_open(
 ) -> CommandResult<SessionId> {
     require_unlocked(&state)?;
     let opts = resolve(&request)?;
+    start(
+        &state,
+        &sessions,
+        opts,
+        None,
+        LoginPlan::default(),
+        cols,
+        rows,
+        on_data,
+        on_event,
+    )
+}
+
+/// Start a Telnet session (also used for inventory devices).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn start(
+    state: &AppState,
+    sessions: &Arc<SessionManager>,
+    opts: TelnetOptions,
+    device: Option<String>,
+    login: LoginPlan,
+    cols: u16,
+    rows: u16,
+    on_data: Channel<InvokeResponseBody>,
+    on_event: Channel<SessionMessage>,
+) -> CommandResult<SessionId> {
     let protocol = if opts.raw { "raw" } else { "telnet" };
     let target = opts.target();
     let id = sessions.allocate_id();
-    let output = audited_output(&state, &id, protocol, &target, on_data, on_event);
+    let output = audited_output(state, &id, protocol, &target, on_data, on_event);
+    let output = autologin::wrap(output, login, sessions, &id);
     let (vault, audit) = (state.vault.clone(), state.audit.clone());
     let (out, sid, tgt) = (output.clone(), id.clone(), target.clone());
     let on_connected = Box::new(move || {
@@ -106,7 +134,7 @@ pub async fn telnet_open(
                 protocol: protocol.into(),
                 target: tgt,
                 username: None,
-                device: None,
+                device,
                 host_key_fingerprint: None,
             },
         );
