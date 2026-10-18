@@ -1,46 +1,90 @@
 import { useEffect } from "react";
-import { useAppInfo } from "@/stores/appInfo";
+import { TooltipProvider } from "@/components/ui/Tooltip";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { CommandError, isTauri, onVaultLocked } from "@/lib/ipc";
+import { applyTheme, cachedThemePrefs, watchSystemTheme } from "@/lib/theme";
+import { LockScreen } from "@/screens/LockScreen";
+import { SetupScreen } from "@/screens/SetupScreen";
+import { useSettings } from "@/stores/settings";
+import { useUi } from "@/stores/ui";
+import { useVault } from "@/stores/vault";
+import { Shell } from "./Shell";
+import { Toaster } from "./Toaster";
 
-const SECTIONS = ["Sessions", "Inventory", "Map", "Audit", "Settings"] as const;
+function Loading() {
+  return (
+    <div className="flex h-full" aria-busy>
+      <div className="w-60 bg-bg-subtle p-4">
+        <Skeleton className="mb-6 h-5 w-24" />
+        {Array.from({ length: 5 }, (_, i) => (
+          <Skeleton key={i} className="mb-2 h-7" />
+        ))}
+      </div>
+      <div className="flex-1 bg-bg-subtle p-2 pt-10">
+        <Skeleton className="h-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
 
-/**
- * M0 placeholder shell: proves the design tokens, fonts, Tailwind and the IPC bridge are
- * wired. The real shell (sidebar, tabs, palette) arrives in M1.
- */
-export function App() {
-  const { info, error, load } = useAppInfo();
+function OutsideShell() {
+  return (
+    <div className="flex h-full items-center justify-center p-8 text-center text-fg-muted">
+      Not running inside the Cairn desktop shell. Start the app with{" "}
+      <code className="mx-1 font-mono">npm run tauri dev</code>.
+    </div>
+  );
+}
+
+function Gate() {
+  const info = useVault((s) => s.info);
+  const refresh = useVault((s) => s.refresh);
+  const lockedByBackend = useVault((s) => s.lockedByBackend);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    refresh().catch((e: unknown) => console.error(CommandError.from(e).message));
+    const unlisten = onVaultLocked((reason) => {
+      lockedByBackend(reason);
+      useSettings.getState().clear();
+      useUi.setState({ paletteOpen: false, notificationsOpen: false });
+    });
+    return () => void unlisten.then((fn) => fn());
+  }, [refresh, lockedByBackend]);
+
+  useEffect(() => {
+    if (info?.status === "locked") useSettings.getState().clear();
+  }, [info?.status]);
+
+  if (!info) return <Loading />;
+  switch (info.status) {
+    case "uninitialized":
+      return <SetupScreen />;
+    case "locked":
+      return <LockScreen />;
+    case "unlocked":
+      return <Shell />;
+  }
+}
+
+export function App() {
+  useEffect(() => {
+    applyTheme(cachedThemePrefs());
+    return watchSystemTheme(() => {
+      const s = useSettings.getState().settings;
+      return s
+        ? {
+            theme: s.theme,
+            systemDarkTheme: s.systemDarkTheme,
+            systemLightTheme: s.systemLightTheme,
+          }
+        : cachedThemePrefs();
+    });
+  }, []);
 
   return (
-    <div className="flex h-full">
-      <nav
-        aria-label="Sections"
-        className="flex w-56 shrink-0 flex-col gap-1 bg-bg-subtle p-2 pt-4 text-fg-muted"
-      >
-        <div className="px-2 pb-4 text-sm font-semibold tracking-tight text-fg">Cairn</div>
-        {SECTIONS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            className="h-8 rounded-md px-2 text-left hover:bg-surface-raised hover:text-fg"
-          >
-            {s}
-          </button>
-        ))}
-      </nav>
-      <main className="flex flex-1 flex-col items-center justify-center gap-4 bg-bg">
-        <h1 className="text-xl font-semibold tracking-tight">Welcome to Cairn</h1>
-        <p className="max-w-sm text-center text-fg-muted">
-          This is the scaffolding build. Sessions, inventory and the map arrive in the next
-          milestones.
-        </p>
-        <p className="font-mono text-xs text-fg-subtle" data-testid="app-version">
-          {info ? `v${info.version} · ${info.os}/${info.arch}` : (error ?? "")}
-        </p>
-      </main>
-    </div>
+    <TooltipProvider delayDuration={500}>
+      {isTauri() ? <Gate /> : <OutsideShell />}
+      <Toaster />
+    </TooltipProvider>
   );
 }

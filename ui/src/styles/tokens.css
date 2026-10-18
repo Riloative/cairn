@@ -1,8 +1,10 @@
 /*
  * Design tokens. Components never use raw colors; they use Tailwind utilities that map to
  * these variables (see `@theme inline` in index.css). Spacing follows an 8 px grid
- * (Tailwind's 4 px base step, used in even multiples). Themes override the color and
- * shadow tokens via [data-theme] on <html>.
+ * (Tailwind's 4 px base step, used in even multiples). Each theme sets the color and
+ * shadow tokens under [data-theme] on <html>; `lib/theme.ts` resolves "system".
+ *
+ * tokens.test.ts checks WCAG contrast for every theme, so adjust colors there too.
  */
 :root {
   --radius-sm: 4px;
@@ -23,7 +25,7 @@
   --font-ui: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
 
-  /* Protocol accents (used for tab dots and terminal header tint). */
+  /* Protocol accents (tab dots, terminal header tint). Same in every theme. */
   --proto-ssh: #8b7cf6;
   --proto-telnet: #a78bfa;
   --proto-serial: #f59e0b;
@@ -31,27 +33,141 @@
   --proto-local: #94a3b8;
 }
 
-/* Midnight — the default dark theme. Remaining themes land in M1. */
 :root,
 [data-theme="midnight"] {
   color-scheme: dark;
   --bg: #0d0e12;
   --bg-subtle: #121318;
-  --surface: #16171d;
-  --surface-raised: #1c1d24;
-  --border: #25262e;
-  --border-strong: #33343d;
-  --fg: #e6e7eb;
-  --fg-muted: #9a9ca7;
-  --fg-subtle: #6b6d78;
-  --accent: #7c6cf2;
+  --surface: #17181e;
+  --surface-raised: #1e1f26;
+  --border: #26272f;
+  --border-strong: #353641;
+  --fg: #e7e8ec;
+  --fg-muted: #a3a5b0;
+  --fg-subtle: #7a7c88;
+  --accent: #6a5ae0;
   --accent-fg: #ffffff;
-  --accent-subtle: #7c6cf21f;
-  --success: #3fb97f;
+  --accent-subtle: rgb(106 90 224 / 0.18);
+  --success: #45c286;
   --warning: #e5a33a;
-  --danger: #e5534b;
-  --focus-ring: #8b7cf6;
+  --danger: #ef6b63;
+  --focus-ring: #9d90f8;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md: 0 4px 16px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-lg: 0 12px 40px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 16px 48px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
+}
+
+[data-theme="graphite"] {
+  color-scheme: dark;
+  --bg: #1a1a1c;
+  --bg-subtle: #202022;
+  --surface: #242427;
+  --surface-raised: #2b2b2f;
+  --border: #323236;
+  --border-strong: #414146;
+  --fg: #ececee;
+  --fg-muted: #a9a9b0;
+  --fg-subtle: #808087;
+  --accent: #3b6fd4;
+  --accent-fg: #ffffff;
+  --accent-subtle: rgb(59 111 212 / 0.2);
+  --success: #4cc38a;
+  --warning: #e8a840;
+  --danger: #f0716a;
+  --focus-ring: #7aa5f5;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 4px 16px rgb(0 0 0 / 0.3), 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 16px 48px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.35);
+}
+
+[data-theme="obsidian"] {
+  color-scheme: dark;
+  --bg: #050506;
+  --bg-subtle: #0a0a0c;
+  --surface: #0f0f12;
+  --surface-raised: #16161a;
+  --border: #1f1f24;
+  --border-strong: #2c2c33;
+  --fg: #f2f2f4;
+  --fg-muted: #a6a6b0;
+  --fg-subtle: #7c7c87;
+  --accent: #2fb5a5;
+  --accent-fg: #04110f;
+  --accent-subtle: rgb(47 181 165 / 0.16);
+  --success: #43c47f;
+  --warning: #e7a53c;
+  --danger: #f06a62;
+  --focus-ring: #4fd0c0;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.6);
+  --shadow-md: 0 4px 16px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 16px 48px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.6);
+}
+
+[data-theme="paper"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-subtle: #f7f7f8;
+  --surface: #ffffff;
+  --surface-raised: #f2f2f4;
+  --border: #e6e6ea;
+  --border-strong: #d4d4da;
+  --fg: #1b1b1f;
+  --fg-muted: #5e5f69;
+  --fg-subtle: #7a7b85;
+  --accent: #6253e1;
+  --accent-fg: #ffffff;
+  --accent-subtle: rgb(98 83 225 / 0.1);
+  --success: #1f8a57;
+  --warning: #a8640a;
+  --danger: #cc3a32;
+  --focus-ring: #6253e1;
+  --shadow-sm: 0 1px 2px rgb(16 18 30 / 0.06);
+  --shadow-md: 0 4px 16px rgb(16 18 30 / 0.08), 0 1px 2px rgb(16 18 30 / 0.06);
+  --shadow-lg: 0 16px 48px rgb(16 18 30 / 0.12), 0 2px 6px rgb(16 18 30 / 0.06);
+}
+
+[data-theme="porcelain"] {
+  color-scheme: light;
+  --bg: #f4f6f9;
+  --bg-subtle: #eceff4;
+  --surface: #fbfcfd;
+  --surface-raised: #e7ebf1;
+  --border: #dde2ea;
+  --border-strong: #c9d0db;
+  --fg: #18202c;
+  --fg-muted: #535d6c;
+  --fg-subtle: #6b7584;
+  --accent: #2d6fd6;
+  --accent-fg: #ffffff;
+  --accent-subtle: rgb(45 111 214 / 0.1);
+  --success: #1b8452;
+  --warning: #9f6008;
+  --danger: #c4362f;
+  --focus-ring: #2d6fd6;
+  --shadow-sm: 0 1px 2px rgb(20 30 50 / 0.06);
+  --shadow-md: 0 4px 16px rgb(20 30 50 / 0.08), 0 1px 2px rgb(20 30 50 / 0.06);
+  --shadow-lg: 0 16px 48px rgb(20 30 50 / 0.12), 0 2px 6px rgb(20 30 50 / 0.06);
+}
+
+[data-theme="sand"] {
+  color-scheme: light;
+  --bg: #f6f1e9;
+  --bg-subtle: #efe8dd;
+  --surface: #fbf8f3;
+  --surface-raised: #ebe3d6;
+  --border: #e0d6c6;
+  --border-strong: #cfc2ad;
+  --fg: #2a241c;
+  --fg-muted: #5f5546;
+  --fg-subtle: #776c5c;
+  --accent: #b4532a;
+  --accent-fg: #ffffff;
+  --accent-subtle: rgb(180 83 42 / 0.12);
+  --success: #2f7d4b;
+  --warning: #95600b;
+  --danger: #b8372d;
+  --focus-ring: #b4532a;
+  --shadow-sm: 0 1px 2px rgb(60 40 20 / 0.07);
+  --shadow-md: 0 4px 16px rgb(60 40 20 / 0.09), 0 1px 2px rgb(60 40 20 / 0.07);
+  --shadow-lg: 0 16px 48px rgb(60 40 20 / 0.13), 0 2px 6px rgb(60 40 20 / 0.07);
 }

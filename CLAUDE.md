@@ -37,7 +37,11 @@ ui/              React frontend (Vite root)
   src/app/       app shell, routing between views
   src/components/ui/  design-system primitives (Radix-based)
   src/styles/    tokens.css (design tokens), themes, fonts
-  src/lib/       IPC wrappers (typed), utilities
+  src/lib/       IPC wrappers (typed), theme, shortcuts, action registry
+  src/stores/    Zustand stores (vault, settings, sessions, notifications, ui)
+  src/screens/   setup and lock screens
+  src/views/     main-area views (sessions, audit, settings, …)
+  src/test/      test setup and FakeBackend (mockIPC stand-in for src-tauri)
   public/fonts/  bundled Inter + JetBrains Mono (OFL licenses alongside)
 docs/            SPEC.md, DECISIONS.md, PROGRESS.md
 .github/workflows/  ci.yml, release.yml
@@ -61,6 +65,7 @@ Run from the repo root.
 | Frontend format | `npm run format` (check: `npm run format:check`) |
 | Typecheck | `npm run typecheck` |
 | Frontend tests | `npm test` |
+| UI smoke test (Linux, needs Xvfb + xdotool) | `npm run tauri build -- --bundles deb && scripts/ui-smoke.sh target/release/cairn screenshots` |
 
 Linux build deps: `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libudev-dev libssl-dev pkg-config build-essential patchelf`.
 
@@ -78,6 +83,12 @@ Linux build deps: `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-ap
 - Styling only via design tokens (CSS variables in `ui/src/styles/tokens.css`) exposed
   through Tailwind theme names. No raw hex colors in components. 8 px spacing grid.
 - Transitions 120–200 ms; skeletons instead of spinners; empty states with one CTA.
+- Every user command is an `Action` in the registry (`ui/src/lib/actions.ts`); the
+  palette, global shortcuts and the Settings shortcut list all read from it.
+- New IPC commands: add to `src-tauri/src/commands`, register in `lib.rs`, add a typed
+  wrapper in `ui/src/lib/ipc.ts` and a case in `ui/src/test/fakeBackend.ts`.
+- Schema changes: append a new `crates/core/src/migrations/NNNN_*.sql`; never edit a
+  released migration.
 - Do not leave stubs/TODOs in a milestone marked complete.
 - Do not put model identifiers in commits, PRs or code.
 

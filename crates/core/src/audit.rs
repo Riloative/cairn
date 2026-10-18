@@ -64,6 +64,7 @@ impl AuditEvent {
 
 /// A stored audit entry.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuditEntry {
     pub seq: i64,
     pub ts: String,
@@ -75,6 +76,7 @@ pub struct AuditEntry {
 
 /// Result of an integrity check.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntegrityReport {
     pub ok: bool,
     pub entries: u64,

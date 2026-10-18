@@ -80,7 +80,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: scripts/install-linux-deps.sh
-      - run: sudo apt-get install -y --no-install-recommends xvfb imagemagick x11-utils
+      - run: sudo apt-get install -y --no-install-recommends xvfb imagemagick x11-utils xdotool
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v5
@@ -89,17 +89,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run tauri build -- --bundles deb
-      - name: Screenshot the app under Xvfb
-        run: scripts/screenshot.sh target/release/cairn screenshots/shell.png
+      - name: UI smoke test with screenshots (Xvfb)
+        run: scripts/ui-smoke.sh target/release/cairn screenshots
       - uses: actions/upload-artifact@v4
         with:
           name: cairn-linux-deb
           path: target/release/bundle/deb/*.deb
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: screenshots-linux
-          path: screenshots/*.png
+          path: screenshots/
           if-no-files-found: error
 
   bundle-macos:

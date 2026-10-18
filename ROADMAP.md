@@ -19,24 +19,25 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] CI workflow: lint + test on ubuntu-24.04 and macos-14
 - [x] CI builds unsigned `.deb` (ubuntu-24.04) and `.dmg` (macos-14, `aarch64-apple-darwin`) as artifacts
 - [x] Release workflow on `v*` tags attaching the bundles to a GitHub Release
-- [ ] CI verified green on both platforms (needs a push + PR run)
+- [x] CI verified green on both platforms (run 2: lint/test on ubuntu-24.04 + macos-14, `.deb` + `.dmg` artifacts)
 
 ## M1 – Core and shell
 
-- [ ] `core::vault`: Argon2id KDF (calibrated ~0.5–1 s), salt + params file, verifier, `zeroize` secrets
-- [ ] SQLCipher database (`rusqlite` + `bundled-sqlcipher`), migrations framework with versioned SQL
-- [ ] Master password setup / unlock / lock / change; failed-attempt audit; idle auto-lock (default 15 min) and lock on system sleep
-- [ ] Password strength meter on setup + lost-password warning + offer encrypted backup after setup
-- [ ] Audit core: append-only table, SHA-256 hash chain, `verify_integrity`, typed event enum
-- [ ] Settings store (typed, versioned, audited changes)
-- [ ] Typed error type → user-friendly messages across IPC
-- [ ] Design system: tokens (color, radius, spacing 8px grid, shadow), 3 dark + 3 light themes + follow system
-- [ ] Primitives: Button, Input, Dialog, Sheet, Tooltip, DropdownMenu, ContextMenu, Tabs, Toast, Skeleton, EmptyState, Kbd
-- [ ] App shell: collapsible sidebar (Sessions, Inventory, Map, Audit, Settings + open sessions), top session tabs with protocol dot + state
-- [ ] Command palette (Cmd/Ctrl+K) with action registry
-- [ ] Toasts + notification center
-- [ ] Shortcut registry listed in Settings
-- [ ] Tests: vault, db migrations, audit chain tamper detection, settings, stores, components
+- [x] `core::kdf`: Argon2id (64 MiB, calibrated to ~0.7 s), random salt, params in `vault.json`; `zeroize` secrets
+- [x] SQLCipher database (`rusqlite` + `bundled-sqlcipher-vendored-openssl`), raw-key mode, versioned migrations
+- [x] Master password setup / unlock / lock / change (crash-safe rekey); failed attempts audited; idle auto-lock (default 15 min) and lock on system sleep
+- [x] Password strength meter on setup (zxcvbn-ts, lazy-loaded) + "no recovery" acknowledgment
+- [x] Audit core: append-only table (UPDATE/DELETE triggers), SHA-256 hash chain, `verify`, typed event enum
+- [x] Settings store (typed, serde defaults, validated, field-level diff audited)
+- [x] Typed errors (`CoreError` → `ErrorPayload {code, message, hint}`) across IPC
+- [x] Design system: tokens (color, radius, 8px spacing, shadow, motion), 3 dark + 3 light themes + follow system, WCAG contrast tests
+- [x] Primitives: Button, Input, Field, Dialog, Sheet, Tooltip, DropdownMenu, ContextMenu, Tabs, Switch, Popover, Toast, Skeleton, EmptyState, Kbd/Shortcut
+- [x] App shell: collapsible sidebar (Sessions, Inventory, Map, Audit, Settings + open sessions), top session tabs with protocol dot + state
+- [x] Command palette (Cmd/Ctrl+K) backed by the action registry
+- [x] Toasts + notification center
+- [x] Shortcut registry, listed in Settings → Shortcuts
+- [x] Tests: Rust (vault, db, migrations, audit tamper detection, settings, autolock) and Vitest (stores, actions, components, full UI flows on a mocked IPC); Xvfb UI smoke test against the real backend in CI
+- [x] CI green on both platforms for M1
 
 ## M2 – Terminal and SSH
 
@@ -121,6 +122,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [ ] Audit view: filters (time, device, event, protocol), verify integrity, CSV/JSON export, retention
 - [ ] asciicast v2 recording (per device / global), replay player (seek, speed), transcript export
 - [ ] Encrypted `.cairn-backup` full backup + restore
+- [ ] Offer an encrypted backup right after first-run setup (moved here from M1, see D-012)
 - [ ] JSON/CSV readable export (credentials opt-in with warning)
 
 ## M9 – Polish

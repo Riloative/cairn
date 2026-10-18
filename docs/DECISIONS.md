@@ -59,3 +59,59 @@ message mapping and `Protocol` (core), legacy algorithm policy (ssh), line setti
 (serial), IAC/option codes (telnet), display profile (rdp), RFC 1350 packet codec
 (tftp) and diagram export options (export). None of these are placeholders; they are
 complete for what they cover.
+
+## D-009 · No separate password verifier; SQLCipher raw key (M1)
+
+Argon2id(master password, salt) produces a 256-bit key passed to SQLCipher in raw-key
+form (`PRAGMA key = "x'…'"`), so SQLCipher skips its own PBKDF2. A wrong key is detected
+by SQLCipher's per-page HMAC on the first read (`SQLITE_NOTADB` → `WrongPassword`), so we
+store no verifier hash. `vault.json` holds only the format version, salt and Argon2
+costs (64 MiB, 1 lane, iterations calibrated at setup to ~0.7 s, minimum 3).
+
+## D-010 · Failed unlock attempts while locked (M1)
+
+The audit log lives in the encrypted database, which is unreadable while locked. Failed
+attempts are appended (timestamp only) to a plaintext `unlock-failures.json` sidecar and
+moved into the hash-chained log, with their original times, on the next successful
+unlock. Brute-force cost is bounded by Argon2id (~0.7 s per guess).
+
+## D-011 · Crash-safe master password change (M1)
+
+The new KDF parameters are written to `vault.json.next` before `PRAGMA rekey`, then
+renamed over `vault.json`. If the app dies between the rekey and the rename, unlock
+falls back to the pending parameters and finishes the rename, so the database is
+never left with a key nobody can derive.
+
+## D-012 · Post-setup backup offer moved to M8 (M1)
+
+SPEC §9 asks to offer an encrypted backup right after setup, but the `.cairn-backup`
+format is an M8 deliverable. Building a throwaway backup format in M1 would mean a
+second format to support later. M1 instead requires an explicit "there is no recovery"
+acknowledgment on setup; M8 adds the backup offer to the end of the setup flow.
+
+## D-013 · System sleep detection by clock drift (M1)
+
+Tauri has no cross-platform suspend event. A 5 s background tick compares wall-clock
+(`SystemTime`) and monotonic (`Instant`) elapsed time; `Instant` stops during suspend
+on Linux (CLOCK_MONOTONIC) and macOS (mach_absolute_time) while wall time keeps going,
+so a gap over 20 s means the machine slept and the vault locks. Idle time is measured
+from the last user input reported by the frontend (throttled to one ping per 30 s).
+
+## D-014 · Master password policy (M1)
+
+Backend minimum: 10 characters. The UI additionally requires a zxcvbn score ≥ 2
+("Fair") and shows the estimate. zxcvbn dictionaries (~1.5 MB) are lazy-loaded only on
+the setup/change-password screens to keep cold start fast.
+
+## D-015 · Audit append-only enforcement and future retention (M1)
+
+`audit_log` has BEFORE UPDATE/DELETE triggers that abort, and every entry hashes the
+previous entry, so edits outside the app are detectable via `verify`. Configurable
+retention (M8) will need pruning with a signed/hashed checkpoint entry that anchors the
+remaining chain; the triggers will be relaxed only for that migration-controlled path.
+
+## D-016 · Theme cached outside the vault (M1)
+
+Settings are encrypted, but the lock screen should already use the user's theme. The
+resolved theme preference (not sensitive) is cached in the webview's localStorage and
+applied before unlock.
