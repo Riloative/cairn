@@ -27,6 +27,18 @@ pub fn app_info() -> AppInfo {
     AppInfo::current()
 }
 
+/// Longest UI error message written to the log.
+const MAX_UI_ERROR: usize = 2000;
+
+/// Write an uncaught frontend error to stderr (the app log). Error texts never contain
+/// secrets: credentials stay in Rust and are never part of UI state.
+#[tauri::command]
+pub fn ui_log_error(message: String) {
+    let mut msg: String = message.chars().take(MAX_UI_ERROR).collect();
+    msg.retain(|c| c != '\n' && c != '\r');
+    eprintln!("[ui error] {msg}");
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -3,6 +3,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
 import { useSessions } from "@/stores/sessions";
 import { useUi } from "@/stores/ui";
+import { closeTab as close } from "@/terminal/controller";
 import { PROTOCOL_DOT, PROTOCOL_LABEL } from "./protocol";
 import { SessionStateIcon } from "./SessionStateIcon";
 
@@ -10,7 +11,6 @@ export function TabBar() {
   const tabs = useSessions((s) => s.tabs);
   const activeId = useSessions((s) => s.activeId);
   const activate = useSessions((s) => s.activate);
-  const close = useSessions((s) => s.close);
   const setView = useUi((s) => s.setView);
   const setPaletteOpen = useUi((s) => s.setPaletteOpen);
 

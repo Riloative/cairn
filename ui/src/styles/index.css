@@ -25,6 +25,9 @@
   --color-proto-serial: var(--proto-serial);
   --color-proto-rdp: var(--proto-rdp);
   --color-proto-local: var(--proto-local);
+  --color-tint-remote: var(--tint-remote);
+  --color-tint-serial: var(--tint-serial);
+  --color-tint-privileged: var(--tint-privileged);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);

@@ -34,7 +34,7 @@ license texts are copied to `ui/public/licenses/`.
 ## D-005 · Strict CSP and minimal capabilities (M0)
 
 `tauri.conf.json` sets a CSP with `default-src 'self'`, no remote origins,
-`object-src/frame-src 'none'`, and `freezePrototype: true`. `style-src` allows
+`object-src/frame-src 'none'`. (`freezePrototype` was on in M0 and turned off in M2, see D-017.) `style-src` allows
 `'unsafe-inline'` because Radix and xterm.js set inline styles; scripts remain
 `'self'` only. The only capability grants are the `core:app/event/window` defaults for
 the `main` window. Plugin permissions are added per feature, never wholesale.
@@ -115,3 +115,20 @@ remaining chain; the triggers will be relaxed only for that migration-controlled
 Settings are encrypted, but the lock screen should already use the user's theme. The
 resolved theme preference (not sensitive) is cached in the webview's localStorage and
 applied before unlock.
+
+## D-017 · `freezePrototype` disabled (M2)
+
+Tauri's `freezePrototype` freezes `Object.prototype`. xterm.js 6 bundles VS Code's
+`KeyCodeUtils` namespace, which assigns `toString` on a plain object; with a frozen
+prototype that assignment throws at module load and the whole UI fails to start (the
+"override mistake"). xterm.js is a hard requirement, so the option is off. Prototype
+pollution is still mitigated by the strict CSP (`script-src 'self'`, no remote content,
+no inline scripts), and nothing from the network is ever evaluated or rendered as HTML.
+`scripts/ui-smoke.sh` in CI catches a regression like this (blank window).
+
+## D-018 · CSP allows `'wasm-unsafe-eval'` (M2)
+
+The xterm.js image addon (sixel/iTerm inline images, required by SPEC §2) decodes images
+with WebAssembly. `script-src 'self' 'wasm-unsafe-eval'` permits compiling the bundled
+WASM module only; JavaScript `eval`/`new Function` remain blocked and scripts still load
+only from the app origin.

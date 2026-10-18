@@ -62,6 +62,17 @@ type_text "$PW"; xdotool key Return; sleep 4
 xdotool key ctrl+4; sleep 1.5
 shot 09-audit
 
+# Local terminal: colors, resize, a privileged-looking prompt, then exit closes the tab.
+xdotool key ctrl+t; sleep 3
+type_text 'printf "\033[1;32mgreen\033[0m \033[38;2;255;100;0mtruecolor\033[0m\n"; tput cols; tput lines'
+xdotool key Return; sleep 1.5
+shot 10-terminal
+type_text 'PS1="core-sw1# " sh'; xdotool key Return; sleep 1.5
+shot 11-terminal-privileged
+
+if grep -q "\[ui error\]" "$OUT/app.log"; then
+  echo "The UI reported errors:"; grep "\[ui error\]" "$OUT/app.log"; exit 1
+fi
 test -f "$XDG_DATA_HOME/app.cairn.desktop/vault.json" || { echo "vault.json missing"; exit 1; }
 test -f "$XDG_DATA_HOME/app.cairn.desktop/cairn.db" || { echo "cairn.db missing"; exit 1; }
 echo "UI smoke test passed; screenshots in $OUT"

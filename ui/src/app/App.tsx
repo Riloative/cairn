@@ -1,13 +1,15 @@
 import { useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/Tooltip";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { CommandError, isTauri, onVaultLocked } from "@/lib/ipc";
+import { CommandError, isTauri, logUiError, onVaultLocked } from "@/lib/ipc";
 import { applyTheme, cachedThemePrefs, watchSystemTheme } from "@/lib/theme";
 import { LockScreen } from "@/screens/LockScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
 import { useVault } from "@/stores/vault";
+import { useNotifications } from "@/stores/notifications";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { Shell } from "./Shell";
 import { Toaster } from "./Toaster";
 
@@ -66,7 +68,28 @@ function Gate() {
   }
 }
 
+/** Surface errors that escape event handlers and promises as notifications. */
+function useGlobalErrorReporting() {
+  useEffect(() => {
+    const report = (err: unknown) => {
+      console.error(err);
+      if (isTauri())
+        void logUiError(err instanceof Error ? `${err.message} ${err.stack ?? ""}` : String(err));
+      useNotifications.getState().notifyError(err, "Unexpected error");
+    };
+    const onError = (e: ErrorEvent) => report(e.error ?? e.message);
+    const onRejection = (e: PromiseRejectionEvent) => report(e.reason);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
+}
+
 export function App() {
+  useGlobalErrorReporting();
   useEffect(() => {
     applyTheme(cachedThemePrefs());
     return watchSystemTheme(() => {
@@ -83,7 +106,7 @@ export function App() {
 
   return (
     <TooltipProvider delayDuration={500}>
-      {isTauri() ? <Gate /> : <OutsideShell />}
+      <ErrorBoundary>{isTauri() ? <Gate /> : <OutsideShell />}</ErrorBoundary>
       <Toaster />
     </TooltipProvider>
   );

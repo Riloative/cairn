@@ -3,5 +3,7 @@
 
 pub mod app;
 pub mod audit;
+pub mod session;
 pub mod settings;
+pub mod terminal;
 pub mod vault;

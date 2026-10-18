@@ -31,6 +31,11 @@
   --proto-serial: #f59e0b;
   --proto-rdp: #38bdf8;
   --proto-local: #94a3b8;
+
+  /* Terminal header tints: translucent so they work on every theme. */
+  --tint-remote: rgb(139 124 246 / 0.16);
+  --tint-serial: rgb(245 158 11 / 0.18);
+  --tint-privileged: rgb(229 72 77 / 0.24);
 }
 
 :root,

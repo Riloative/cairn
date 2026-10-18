@@ -7,6 +7,7 @@ import { useSessions } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
 import { useVault } from "@/stores/vault";
+import { closeTab, openLocalShell } from "@/terminal/controller";
 import { NAV_ITEMS } from "./nav";
 
 /** Build the app-wide actions. Pure so it can be tested without React. */
@@ -104,6 +105,17 @@ export function coreActions(): Action[] {
       },
     },
     {
+      id: "terminal.newLocal",
+      title: "New local shell",
+      group: "Sessions",
+      keywords: ["terminal", "shell", "bash", "zsh", "local"],
+      shortcut: "Mod+T",
+      run: () => {
+        ui().setView("sessions");
+        void openLocalShell();
+      },
+    },
+    {
       id: "tabs.next",
       title: "Next tab",
       group: "Sessions",
@@ -127,7 +139,7 @@ export function coreActions(): Action[] {
       enabled: () => sessions().activeId !== null,
       run: () => {
         const id = sessions().activeId;
-        if (id) sessions().close(id);
+        if (id) closeTab(id);
       },
     },
     ...themes,

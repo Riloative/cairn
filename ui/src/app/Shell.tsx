@@ -14,6 +14,7 @@ import { TabBar } from "./TabBar";
 import { useActivityPing } from "./useActivityPing";
 import { useCoreActions } from "./useCoreActions";
 import { useGlobalShortcuts } from "./useGlobalShortcuts";
+import { useTerminalSetup } from "@/terminal/useTerminalSetup";
 
 function ActiveView({ view }: { view: View }) {
   switch (view) {
@@ -51,6 +52,7 @@ export function Shell() {
   useCoreActions();
   useGlobalShortcuts();
   useActivityPing();
+  useTerminalSetup();
 
   useEffect(() => {
     load().catch((e: unknown) => notifyError(e, "Could not load settings"));

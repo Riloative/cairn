@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { ThemeId, ThemeSetting } from "./theme";
 
@@ -62,6 +62,8 @@ export interface AppInfo {
 }
 
 export const getAppInfo = () => call<AppInfo>("app_info");
+/** Record an uncaught UI error in the app log (stderr). Never throws. */
+export const logUiError = (message: string) => invoke("ui_log_error", { message }).catch(() => {});
 
 // ── Vault ──────────────────────────────────────────────────────────────────────────
 
@@ -122,3 +124,112 @@ export interface IntegrityReport {
 
 export const auditRecent = (limit: number) => call<AuditEntry[]>("audit_recent", { limit });
 export const auditVerify = () => call<IntegrityReport>("audit_verify");
+
+// ── Sessions ───────────────────────────────────────────────────────────────────────
+
+export type CloseReason =
+  { kind: "exited"; code: number | null } | { kind: "closed" } | { kind: "error"; message: string };
+
+export type SessionMessage = { type: "closed"; reason: CloseReason };
+
+/** Mirrors `cairn_pty::ShellSpec`. */
+export interface ShellSpec {
+  program?: string | null;
+  args?: string[];
+  cwd?: string | null;
+  env?: [string, string][];
+}
+
+export interface Container {
+  name: string;
+  kind: "toolbox" | "distrobox" | "podman";
+  image: string;
+  running: boolean;
+  /** Command that opens a shell inside the container. */
+  spec: ShellSpec;
+}
+
+/** Header carrying the session id on `session_write` (see src-tauri commands/session.rs). */
+export const SESSION_HEADER = "x-cairn-session";
+
+function toBytes(payload: unknown): Uint8Array {
+  if (payload instanceof ArrayBuffer) return new Uint8Array(payload);
+  if (payload instanceof Uint8Array) return payload;
+  if (Array.isArray(payload)) return Uint8Array.from(payload as number[]);
+  return new Uint8Array();
+}
+
+export interface SessionCallbacks {
+  /** Raw output bytes, in order. */
+  onData: (bytes: Uint8Array) => void;
+  onMessage: (msg: SessionMessage) => void;
+}
+
+function channels(cb: SessionCallbacks) {
+  const onData = new Channel<ArrayBuffer>((payload) => cb.onData(toBytes(payload)));
+  const onEvent = new Channel<SessionMessage>(cb.onMessage);
+  return { onData, onEvent };
+}
+
+export const openLocalSession = (
+  spec: ShellSpec | null,
+  cols: number,
+  rows: number,
+  cb: SessionCallbacks,
+) => call<string>("session_open_local", { spec, cols, rows, ...channels(cb) });
+
+/** Send input as a raw binary body (no JSON encoding). */
+export async function sessionWrite(id: string, data: Uint8Array): Promise<void> {
+  try {
+    await invoke("session_write", data, { headers: { [SESSION_HEADER]: id } });
+  } catch (e) {
+    throw CommandError.from(e);
+  }
+}
+
+export const sessionResize = (id: string, cols: number, rows: number) =>
+  call<null>("session_resize", { id, cols, rows });
+export const sessionClose = (id: string) => call<null>("session_close", { id });
+export const localContainers = () => call<Container[]>("local_containers");
+export const localDefaultShell = () => call<string>("local_default_shell");
+
+// ── Terminal preferences ───────────────────────────────────────────────────────────
+
+export interface TerminalProfile {
+  id: string;
+  name: string;
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  cursorStyle: "block" | "bar" | "underline";
+  cursorBlink: boolean;
+  scrollback: number;
+  /** null follows the app theme. */
+  paletteId: string | null;
+  opacity: number;
+  bell: "none" | "visual" | "sound";
+  copyOnSelect: boolean;
+  pasteLineDelayMs: number;
+  shell: string | null;
+}
+
+export interface CustomPaletteDto {
+  id: string;
+  name: string;
+  scheme: "dark" | "light";
+  source: string;
+  license: string;
+  colors: Record<string, string>;
+}
+
+export interface TerminalPrefs {
+  profiles: TerminalProfile[];
+  defaultProfileId: string;
+  customPalettes: CustomPaletteDto[];
+  privilegedPromptPatterns: string[];
+  confirmMultilinePaste: boolean;
+}
+
+export const terminalPrefsGet = () => call<TerminalPrefs>("terminal_prefs_get");
+export const terminalPrefsUpdate = (prefs: TerminalPrefs) =>
+  call<TerminalPrefs>("terminal_prefs_update", { prefs });

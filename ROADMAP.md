@@ -41,11 +41,13 @@ both platforms, and there are no stubs/TODOs left inside it.
 
 ## M2 – Terminal and SSH
 
-- [ ] xterm.js (WebGL, fit, search, unicode11, web-links, serialize, image) over binary Tauri Channels
-- [ ] Session manager in Rust (session IDs, lifecycle events, backpressure)
-- [ ] Local shell tabs (`portable-pty`), profiles; Linux Podman/Toolbox/Distrobox quick-launch
-- [ ] Terminal profiles (font, size, line height, cursor, scrollback 10k, palette, opacity, bell, copy-on-select)
-- [ ] ≥15 bundled palettes with attribution; import iTerm2/Ghostty/Windows Terminal/Alacritty with live preview
+- [x] xterm.js (WebGL, fit, search, unicode11, web-links, serialize, image) over binary Tauri Channels
+- [x] Session manager in Rust (session IDs, lifecycle events; raw-body input, raw-channel output)
+- [x] Local shell tabs (`portable-pty`, new `crates/pty`); Linux Podman/Toolbox/Distrobox quick-launch
+- [x] Terminal profile model + validated storage (font, size, line height, cursor, scrollback 10k, palette, opacity, bell, copy-on-select, paste delay, shell)
+- [ ] Profile behaviors: bell (visual/sound), copy-on-select
+- [x] ≥15 bundled palettes with attribution (20, MIT; `ui/public/licenses/terminal-palettes.txt`)
+- [ ] Palette import: iTerm2/Ghostty/Windows Terminal/Alacritty with live preview
 - [ ] SSH: password, pubkey (ed25519/ECDSA/RSA, encrypted), keyboard-interactive, agent; agent forwarding toggle
 - [ ] Host keys: own known-hosts store, TOFU with fingerprint, changed-key full-screen warning ("accept"), optional `~/.ssh/known_hosts`
 - [ ] Legacy algorithms per device (dh-group1/14-sha1, ssh-rsa, aes-cbc) + warning badge
@@ -56,7 +58,8 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [ ] Scrollback search (regex/case/whole word)
 - [ ] Paste safety dialog + per-line delay
 - [ ] Tab overview grid with live thumbnails
-- [ ] Context-colored header bar + privilege prompt regexes
+- [x] Context-colored header bar + privilege prompt regexes (defaults for Cisco/Aruba/HP `#`, Junos, Linux root, Comware)
+- [ ] Settings UI for terminal profiles, palettes and prompt patterns
 - [ ] Disconnect notifications; OSC 133 long-command notifications
 - [ ] Integration tests against local openssh-server (modern + legacy config)
 

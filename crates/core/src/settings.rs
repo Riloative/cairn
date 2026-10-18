@@ -4,6 +4,7 @@ use crate::audit::{self, AuditEvent};
 use crate::diff;
 use crate::error::CoreError;
 use rusqlite::{params, Connection, OptionalExtension};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 /// App theme. `System` follows the OS light/dark preference.
@@ -80,30 +81,54 @@ const KEY: &str = "app";
 
 /// Load settings, falling back to defaults when none are stored.
 pub fn load(conn: &Connection) -> Result<Settings, CoreError> {
-    let raw: Option<String> = conn
-        .query_row("SELECT value FROM settings WHERE key = ?1", [KEY], |r| {
-            r.get(0)
-        })
-        .optional()?;
-    match raw {
-        Some(json) => Ok(serde_json::from_str(&json)?),
-        None => Ok(Settings::default()),
-    }
+    load_doc(conn, KEY)
 }
 
 /// Validate and save settings, auditing a field-level diff. Returns the saved settings.
 pub fn save(conn: &Connection, new: &Settings) -> Result<Settings, CoreError> {
     new.validate()?;
-    let old = load(conn)?;
-    let changes = diff::diff(&old, new)?;
+    save_doc(conn, KEY, None, new)
+}
+
+/// Load a JSON settings document stored under `key`, or its default.
+pub fn load_doc<T: DeserializeOwned + Default>(
+    conn: &Connection,
+    key: &str,
+) -> Result<T, CoreError> {
+    let raw: Option<String> = conn
+        .query_row("SELECT value FROM settings WHERE key = ?1", [key], |r| {
+            r.get(0)
+        })
+        .optional()?;
+    match raw {
+        Some(json) => Ok(serde_json::from_str(&json)?),
+        None => Ok(T::default()),
+    }
+}
+
+/// Save a settings document and audit the changed fields (prefixed with `prefix.` when
+/// given). Callers validate first. Unchanged documents are not written or audited.
+pub fn save_doc<T: Serialize + DeserializeOwned + Default + Clone>(
+    conn: &Connection,
+    key: &str,
+    prefix: Option<&str>,
+    new: &T,
+) -> Result<T, CoreError> {
+    let old: T = load_doc(conn, key)?;
+    let mut changes = diff::diff(&old, new)?;
     if changes.is_empty() {
         return Ok(old);
+    }
+    if let Some(prefix) = prefix {
+        for c in &mut changes {
+            c.field = format!("{prefix}.{}", c.field);
+        }
     }
     let tx = conn.unchecked_transaction()?;
     tx.execute(
         "INSERT INTO settings (key, value) VALUES (?1, ?2)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-        params![KEY, serde_json::to_string(new)?],
+        params![key, serde_json::to_string(new)?],
     )?;
     audit::append(&tx, &AuditEvent::SettingsChanged { changes })?;
     tx.commit()?;
