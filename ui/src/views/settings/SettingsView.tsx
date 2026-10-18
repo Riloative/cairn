@@ -19,6 +19,7 @@ import { useNotifications } from "@/stores/notifications";
 import { useSettings } from "@/stores/settings";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { KnownHosts } from "./KnownHosts";
+import { TerminalSettings } from "./terminal/TerminalSettings";
 
 const AUTO_LOCK_OPTIONS = [
   { value: 1, label: "1 minute" },
@@ -284,6 +285,7 @@ export function SettingsView() {
           <TabsList>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="terminal">Terminal</TabsTrigger>
             <TabsTrigger value="shortcuts">Shortcuts</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
@@ -302,6 +304,9 @@ export function SettingsView() {
               </TabsContent>
             </>
           )}
+          <TabsContent value="terminal">
+            <TerminalSettings />
+          </TabsContent>
           <TabsContent value="shortcuts">
             <Shortcuts />
           </TabsContent>

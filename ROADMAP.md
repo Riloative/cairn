@@ -47,7 +47,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Terminal profile model + validated storage (font, size, line height, cursor, scrollback 10k, palette, opacity, bell, copy-on-select, paste delay, shell)
 - [x] Profile behaviors: bell (visual/sound), copy-on-select
 - [x] ≥15 bundled palettes with attribution (20, MIT; `ui/public/licenses/terminal-palettes.txt`)
-- [ ] Palette import: iTerm2/Ghostty/Windows Terminal/Alacritty with live preview
+- [x] Palette import: iTerm2/Ghostty/Windows Terminal/Alacritty with live preview
 - [x] SSH: password, pubkey (ed25519/ECDSA/RSA, encrypted), keyboard-interactive, agent; agent forwarding toggle
 - [x] Host keys: own known-hosts store, TOFU with fingerprint, changed-key full-screen warning ("accept"), optional `~/.ssh/known_hosts`
 - [x] Legacy algorithms per connection (dh-group1/14/gex-sha1, ssh-rsa, aes-cbc, 3des-cbc, hmac-sha1) + warning badge in the connect dialog (per-device badge lands with inventory in M4)
@@ -56,12 +56,12 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Quick-connect dialog (`Mod+N`), host-key and credential prompts, known-hosts manager in Settings
 - [ ] Session logging with timestamps
 - [x] Keyword highlighting overlay engine (xterm decorations; byte stream untouched) + vendor rule sets (IOS/IOS-XE/NX-OS, Junos, FortiOS, AOS-CX, ProCurve, Comware, UniFi/EdgeOS, Linux), per-tab vendor, validated custom sets in prefs
-- [ ] Highlighting rule editor in Settings
+- [x] Highlighting rule editor in Settings
 - [x] Scrollback search (regex/case/whole word, match count, `Mod+F`)
 - [x] Paste safety dialog (line count + preview) + per-line delay; copy/paste shortcuts per platform
 - [ ] Tab overview grid with live thumbnails
 - [x] Context-colored header bar + privilege prompt regexes (defaults for Cisco/Aruba/HP `#`, Junos, Linux root, Comware)
-- [ ] Settings UI for terminal profiles, palettes and prompt patterns
+- [x] Settings UI for terminal profiles, palettes and prompt patterns
 - [x] Disconnect notifications (desktop, when the tab is in the background)
 - [ ] OSC 133 long-command notifications
 - [x] Integration tests against local openssh-server (modern + legacy config) — 16 tests in CI

@@ -158,6 +158,30 @@ describe("shell", () => {
     expect(screen.getByText("Lock Cairn")).toBeVisible();
   });
 
+  it("edits and saves a terminal profile", async () => {
+    const user = userEvent.setup();
+    useUi.setState({ view: "settings" });
+    render(<App />);
+    await user.click(await screen.findByRole("tab", { name: "Terminal" }));
+    const size = await screen.findByLabelText("Font size");
+    await user.clear(size);
+    await user.type(size, "15");
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
+    await waitFor(() => expect(backend.terminalPrefs.profiles[0]?.fontSize).toBe(15));
+  });
+
+  it("validates privileged prompt patterns before saving", async () => {
+    const user = userEvent.setup();
+    useUi.setState({ view: "settings" });
+    render(<App />);
+    await user.click(await screen.findByRole("tab", { name: "Terminal" }));
+    const area = await screen.findByLabelText("Privileged prompt patterns");
+    await user.clear(area);
+    await user.type(area, "(unclosed");
+    expect(await screen.findByText(/Line 1:/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save patterns" })).toBeDisabled();
+  });
+
   it("shows session tabs with protocol and state", async () => {
     useSessions.setState({
       tabs: [{ id: "a", title: "core-sw1", protocol: "ssh", state: "connected" }],

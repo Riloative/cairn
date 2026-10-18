@@ -1,6 +1,7 @@
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { emit } from "@tauri-apps/api/event";
-import type { AuditEntry, ErrorPayload, Settings, VaultStatus } from "@/lib/ipc";
+import type { AuditEntry, ErrorPayload, Settings, TerminalPrefs, VaultStatus } from "@/lib/ipc";
+import { DEFAULT_TERMINAL_PREFS } from "@/stores/terminalPrefs";
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
@@ -23,6 +24,7 @@ export class FakeBackend {
   password = "correct horse battery";
   failedAttempts = 0;
   settings: Settings = { ...DEFAULT_SETTINGS };
+  terminalPrefs: TerminalPrefs = structuredClone(DEFAULT_TERMINAL_PREFS);
   audit: AuditEntry[] = [];
   calls: { cmd: string; args: Record<string, unknown> }[] = [];
 
@@ -117,6 +119,17 @@ export class FakeBackend {
         this.settings = args.settings as Settings;
         this.log("settings_changed", { changes: [] });
         return this.settings;
+      case "terminal_prefs_get":
+        this.requireUnlocked();
+        return this.terminalPrefs;
+      case "terminal_prefs_update":
+        this.requireUnlocked();
+        this.terminalPrefs = args.prefs as TerminalPrefs;
+        this.log("settings_changed", { changes: [] });
+        return this.terminalPrefs;
+      case "local_containers":
+      case "known_hosts_list":
+        return [];
       case "audit_recent":
         this.requireUnlocked();
         return this.audit.slice(0, Number(args.limit));
