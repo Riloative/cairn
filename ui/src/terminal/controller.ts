@@ -16,6 +16,9 @@ import { useSessions, type SessionProtocol } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
 import { customPalettes, profileById, useTerminalPrefs } from "@/stores/terminalPrefs";
+import { flash, beep } from "./bell";
+import { pasteIntoTab, setPasteSender } from "./clipboard";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { encodeBinary, encodeInput } from "./encoding";
 import { desktopNotify } from "./notify";
 import type { Palette } from "./palette";
@@ -171,6 +174,32 @@ function onMessage(tabId: string, msg: SessionMessage) {
   }
 }
 
+/** Paste safety, copy-on-select and the bell for one terminal. */
+function wireExtras(tabId: string, handle: TerminalHandle) {
+  const profile = () => profileById(useTerminalPrefs.getState().prefs, profiles.get(tabId));
+  // Intercept native pastes (menu, middle click, Cmd+V) so paste safety always applies.
+  handle.element.addEventListener(
+    "paste",
+    (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void pasteIntoTab(tabId, e.clipboardData?.getData("text/plain") ?? "", profiles.get(tabId));
+    },
+    { capture: true },
+  );
+  handle.term.onSelectionChange(() => {
+    if (!profile().copyOnSelect || !handle.term.hasSelection()) return;
+    writeText(handle.term.getSelection()).catch(() => {
+      // Copy-on-select is a convenience; a failed write is not worth a toast.
+    });
+  });
+  handle.term.onBell(() => {
+    const bell = profile().bell;
+    if (bell === "sound") beep();
+    else if (bell === "visual") flash(handle.element);
+  });
+}
+
 function wireInput(tabId: string, handle: TerminalHandle) {
   const send = (bytes: Uint8Array) => {
     const id = backendIds.get(tabId);
@@ -227,6 +256,7 @@ export async function openTerminalTab(opts: OpenOptions): Promise<string> {
   const handle = createTerminal(tabId, profile, paletteFor(profile), openLink);
   profiles.set(tabId, profile.id);
   wireInput(tabId, handle);
+  wireExtras(tabId, handle);
   untrack.set(tabId, trackPrivilege(tabId, handle.term, privilegePatterns));
   highlighters.set(
     tabId,
@@ -413,4 +443,10 @@ export function setTabVendor(tabId: string, vendor: string) {
 export function writeToTab(tabId: string, bytes: Uint8Array): Promise<void> {
   const id = backendIds.get(tabId);
   return id ? ipc.sessionWrite(id, bytes) : Promise.resolve();
+}
+
+setPasteSender(writeToTab);
+
+export function profileIdOf(tabId: string): string | undefined {
+  return profiles.get(tabId);
 }

@@ -7,7 +7,10 @@ import { useSessions } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
 import { useVault } from "@/stores/vault";
-import { closeTab, openLocalShell, setTabVendor } from "@/terminal/controller";
+import { isMac } from "@/lib/platform";
+import { useTerminalUi } from "@/stores/terminalUi";
+import { copySelection, pasteFromClipboard } from "@/terminal/clipboard";
+import { closeTab, openLocalShell, profileIdOf, setTabVendor } from "@/terminal/controller";
 import { VENDORS } from "@/terminal/highlight/rulesets";
 import { useTerminalPrefs } from "@/stores/terminalPrefs";
 import { NAV_ITEMS } from "./nav";
@@ -19,6 +22,12 @@ export function coreActions(): Action[] {
   const settings = () => useSettings.getState();
   const notifications = () => useNotifications.getState();
   const hasTabs = () => sessions().tabs.length > 0;
+  const terminalActive = () => {
+    const id = sessions().activeId;
+    const tab = sessions().tabs.find((t) => t.id === id);
+    return ui().view === "sessions" && !!tab && tab.protocol !== "rdp";
+  };
+  const mac = isMac();
 
   const navigation: Action[] = NAV_ITEMS.map((item) => ({
     id: `view.${item.view}`,
@@ -153,6 +162,40 @@ export function coreActions(): Action[] {
       },
     },
     ...themes,
+    {
+      id: "terminal.find",
+      scope: "terminal",
+      title: "Find in terminal",
+      group: "Terminal",
+      keywords: ["search", "scrollback", "grep"],
+      shortcut: "Mod+F",
+      enabled: terminalActive,
+      run: () => useTerminalUi.getState().setSearchOpen(true),
+    },
+    {
+      id: "terminal.copy",
+      scope: "terminal",
+      title: "Copy selection",
+      group: "Terminal",
+      shortcut: mac ? "Mod+C" : "Mod+Shift+C",
+      enabled: terminalActive,
+      run: () => {
+        const id = sessions().activeId;
+        if (id) void copySelection(id);
+      },
+    },
+    {
+      id: "terminal.paste",
+      scope: "terminal",
+      title: "Paste",
+      group: "Terminal",
+      shortcut: mac ? "Mod+V" : "Mod+Shift+V",
+      enabled: terminalActive,
+      run: () => {
+        const id = sessions().activeId;
+        if (id) void pasteFromClipboard(id, profileIdOf(id));
+      },
+    },
     {
       id: "highlight.toggle",
       title: "Toggle keyword highlighting",

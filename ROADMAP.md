@@ -45,7 +45,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Session manager in Rust (session IDs, lifecycle events; raw-body input, raw-channel output)
 - [x] Local shell tabs (`portable-pty`, new `crates/pty`); Linux Podman/Toolbox/Distrobox quick-launch
 - [x] Terminal profile model + validated storage (font, size, line height, cursor, scrollback 10k, palette, opacity, bell, copy-on-select, paste delay, shell)
-- [ ] Profile behaviors: bell (visual/sound), copy-on-select
+- [x] Profile behaviors: bell (visual/sound), copy-on-select
 - [x] ≥15 bundled palettes with attribution (20, MIT; `ui/public/licenses/terminal-palettes.txt`)
 - [ ] Palette import: iTerm2/Ghostty/Windows Terminal/Alacritty with live preview
 - [x] SSH: password, pubkey (ed25519/ECDSA/RSA, encrypted), keyboard-interactive, agent; agent forwarding toggle
@@ -57,8 +57,8 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [ ] Session logging with timestamps
 - [x] Keyword highlighting overlay engine (xterm decorations; byte stream untouched) + vendor rule sets (IOS/IOS-XE/NX-OS, Junos, FortiOS, AOS-CX, ProCurve, Comware, UniFi/EdgeOS, Linux), per-tab vendor, validated custom sets in prefs
 - [ ] Highlighting rule editor in Settings
-- [ ] Scrollback search (regex/case/whole word)
-- [ ] Paste safety dialog + per-line delay
+- [x] Scrollback search (regex/case/whole word, match count, `Mod+F`)
+- [x] Paste safety dialog (line count + preview) + per-line delay; copy/paste shortcuts per platform
 - [ ] Tab overview grid with live thumbnails
 - [x] Context-colored header bar + privilege prompt regexes (defaults for Cisco/Aruba/HP `#`, Junos, Linux root, Comware)
 - [ ] Settings UI for terminal profiles, palettes and prompt patterns

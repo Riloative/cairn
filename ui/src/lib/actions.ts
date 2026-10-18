@@ -16,6 +16,11 @@ export interface Action {
   shortcut?: Shortcut;
   /** Hidden from the palette and shortcuts when this returns false. */
   enabled?: () => boolean;
+  /**
+   * `terminal` shortcuts are ignored while typing in a regular input (so Cmd+C/Cmd+V keep
+   * working in dialogs); `global` ones (default) work everywhere.
+   */
+  scope?: "global" | "terminal";
   run: () => unknown;
 }
 

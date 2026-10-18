@@ -17,6 +17,7 @@ import { useGlobalShortcuts } from "./useGlobalShortcuts";
 import { useTerminalSetup } from "@/terminal/useTerminalSetup";
 import { QuickConnectDialog } from "@/ssh/QuickConnectDialog";
 import { SessionPrompts } from "@/ssh/SessionPrompts";
+import { PasteConfirmDialog } from "@/terminal/PasteConfirmDialog";
 
 function ActiveView({ view }: { view: View }) {
   switch (view) {
@@ -76,6 +77,7 @@ export function Shell() {
       <NotificationCenter />
       <QuickConnectDialog />
       <SessionPrompts />
+      <PasteConfirmDialog />
     </div>
   );
 }

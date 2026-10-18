@@ -6,6 +6,7 @@ import { TerminalHeader } from "@/terminal/TerminalHeader";
 import { TerminalPane } from "@/terminal/TerminalPane";
 import { usePrivileged } from "@/terminal/privilege";
 import { ReconnectOverlay } from "@/terminal/ReconnectOverlay";
+import { SearchBar } from "@/terminal/SearchBar";
 
 export function SessionsView() {
   const tabs = useSessions((s) => s.tabs);
@@ -38,6 +39,7 @@ export function SessionsView() {
             <TerminalPane key={t.id} tabId={t.id} active={t.id === activeId} />
           ))}
         {active.protocol === "ssh" && <ReconnectOverlay tab={active} />}
+        <SearchBar key={active.id} tabId={active.id} />
       </div>
     </div>
   );

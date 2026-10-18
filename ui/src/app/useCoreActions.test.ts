@@ -44,3 +44,20 @@ describe("core actions", () => {
     expect(useSessions.getState().tabs).toHaveLength(0);
   });
 });
+
+describe("terminal-scoped shortcuts", () => {
+  it("are marked so text fields keep their own copy/paste", async () => {
+    const { isTypingInField } = await import("./useGlobalShortcuts");
+    for (const id of ["terminal.copy", "terminal.paste", "terminal.find"]) {
+      expect(byId(id).scope).toBe("terminal");
+    }
+    const input = document.createElement("input");
+    expect(isTypingInField(input)).toBe(true);
+    const xterm = document.createElement("div");
+    xterm.className = "xterm";
+    const helper = document.createElement("textarea");
+    xterm.appendChild(helper);
+    expect(isTypingInField(helper)).toBe(false);
+    expect(isTypingInField(document.createElement("div"))).toBe(false);
+  });
+});
