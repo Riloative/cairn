@@ -746,3 +746,132 @@ export const deviceConnect = (
   rows: number,
   cb: SessionCallbacks,
 ) => call<DeviceOpened>("device_connect", { deviceId, method, cols, rows, ...channels(cb) });
+
+// ── Map ────────────────────────────────────────────────────────────────────────────
+
+export type LinkMedia = "copper" | "sm-fiber" | "mm-fiber" | "dac" | "wireless";
+
+export interface LabelOverrides {
+  ports: boolean | null;
+  speed: boolean | null;
+  vlans: boolean | null;
+}
+
+/** Mirrors `cairn_core::map::Link`; device ids and interface names are filled when read. */
+export interface Link {
+  id: number;
+  aInterfaceId: number;
+  bInterfaceId: number;
+  aDeviceId: number;
+  bDeviceId: number;
+  aName: string;
+  bName: string;
+  media: LinkMedia;
+  speed: string;
+  vlans: string;
+  lag: string;
+  description: string;
+  labels: LabelOverrides;
+}
+
+export interface MapPosition {
+  view: string;
+  node: string;
+  x: number;
+  y: number;
+  locked: boolean;
+}
+
+export interface Zone {
+  id: number;
+  view: string;
+  name: string;
+  color: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  locked: boolean;
+}
+
+export interface FloorPlanInfo {
+  floorId: number;
+  name: string;
+  mime: string;
+  width: number;
+  height: number;
+  scale: number;
+  opacity: number;
+  x: number;
+  y: number;
+  bytes: number;
+}
+
+export type ColorBy = "media" | "speed" | "vlan";
+
+export interface MapPrefs {
+  labels: { ports: boolean; speed: boolean; vlans: boolean };
+  colorBy: ColorBy;
+  snapToGrid: boolean;
+  gridSize: number;
+  showMinimap: boolean;
+}
+
+export interface MapSnapshot {
+  links: Link[];
+  positions: MapPosition[];
+  zones: Zone[];
+  floorPlans: FloorPlanInfo[];
+  prefs: MapPrefs;
+}
+
+export type DiagramFormat = "png" | "svg" | "pdf";
+
+export const mapSnapshot = () => call<MapSnapshot>("map_snapshot");
+export const linkSave = (link: Link) => call<Link>("link_save", { link });
+export const linkDelete = (id: number) => call<null>("link_delete", { id });
+export const mapPositionsSave = (positions: MapPosition[]) =>
+  call<null>("map_positions_save", { positions });
+export const zoneSave = (zone: Zone) => call<Zone>("zone_save", { zone });
+export const zoneDelete = (id: number) => call<null>("zone_delete", { id });
+export const mapPrefsUpdate = (prefs: MapPrefs) => call<MapPrefs>("map_prefs_update", { prefs });
+export const floorPlanPlace = (
+  floorId: number,
+  placement: { scale: number; opacity: number; x: number; y: number },
+) => call<FloorPlanInfo>("floor_plan_place", { floorId, placement });
+export const floorPlanDelete = (floorId: number) => call<null>("floor_plan_delete", { floorId });
+
+/** The floor plan image bytes (raw binary response). */
+export async function floorPlanImage(floorId: number): Promise<Uint8Array> {
+  try {
+    const raw = await invoke<ArrayBuffer | number[]>("floor_plan_image", { floorId });
+    return raw instanceof ArrayBuffer ? new Uint8Array(raw) : Uint8Array.from(raw);
+  } catch (e) {
+    throw CommandError.from(e);
+  }
+}
+
+/** Upload a floor plan image as a raw body (no JSON byte arrays). */
+export async function floorPlanUpload(
+  floorId: number,
+  name: string,
+  data: Uint8Array,
+  width: number,
+  height: number,
+): Promise<FloorPlanInfo> {
+  try {
+    return await invoke<FloorPlanInfo>("floor_plan_upload", data, {
+      headers: {
+        "x-cairn-floor": String(floorId),
+        "x-cairn-name": encodeURIComponent(name),
+        "x-cairn-size": `${width}x${height}`,
+      },
+    });
+  } catch (e) {
+    throw CommandError.from(e);
+  }
+}
+
+/** Render and write a map export; resolves with the written path. Audited. */
+export const mapExport = (svg: string, format: DiagramFormat, scale: number, path: string) =>
+  call<string>("map_export", { svg, format, scale, path });

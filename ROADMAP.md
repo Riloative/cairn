@@ -100,17 +100,18 @@ both platforms, and there are no stubs/TODOs left inside it.
 
 ## M5 – Map
 
-- [ ] Campus / Building / Floor / Rack views with breadcrumbs
-- [ ] Original SVG icon set for all device types, vendor badge
-- [ ] Interface-to-interface links (media, speed, VLANs, LAG, description)
-- [ ] Link labels toggles (per link + global), color by media/speed/VLAN
-- [ ] Orthogonal routing + parallel link bundling
-- [ ] Snap-to-grid, alignment guides, multi-select, zones, lock, undo/redo
-- [ ] ELK auto-layout (whole/selection)
-- [ ] Context menu, hover card, double-click connect, search/focus, mini-map
-- [ ] Floor plan backgrounds (PNG/JPG/SVG/PDF page) with scale/opacity
-- [ ] Rack elevation with collision-free drag
-- [ ] Export PNG (1x/2x/4x), SVG, PDF (Rust `svg2pdf`) with title/legend/date, theme or forced light
+- [x] Campus / Building / Floor / Rack views with breadcrumbs
+- [x] Original SVG icon set for all device types, vendor badge
+- [x] Interface-to-interface links (media, speed, VLANs, LAG, description)
+- [x] Link labels toggles (per link + global), color by media/speed/VLAN
+- [x] Orthogonal routing + parallel link bundling
+- [x] Snap-to-grid, alignment guides, multi-select, zones, lock, undo/redo
+- [x] ELK auto-layout (whole/selection)
+- [x] Context menu, hover card, double-click connect, search/focus, mini-map
+- [x] Floor plan backgrounds (PNG/JPG/SVG/PDF page) with scale/opacity
+- [x] Rack elevation with collision-free drag
+- [x] Export PNG (1x/2x/4x), SVG, PDF (Rust `svg2pdf`) with title/legend/date, theme or forced light
+- [ ] CI green on both platforms for M5
 
 ## M6 – Power tools
 

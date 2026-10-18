@@ -24,7 +24,7 @@ export function useGlobalShortcuts() {
       const actions = availableActions(useActions.getState().actions);
       const hit = actions.find((a) => a.shortcut && matchesShortcut(a.shortcut, e, mac));
       if (!hit) return;
-      if (hit.scope === "terminal" && isTypingInField(e.target)) return;
+      if (hit.scope && hit.scope !== "global" && isTypingInField(e.target)) return;
       e.preventDefault();
       e.stopPropagation();
       void hit.run();

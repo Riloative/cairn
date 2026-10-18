@@ -6,6 +6,8 @@ import { applyTheme, cachedThemePrefs, watchSystemTheme } from "@/lib/theme";
 import { LockScreen } from "@/screens/LockScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
 import { useInventory } from "@/stores/inventory";
+import { useMap } from "@/stores/map";
+import { useMapUi } from "@/views/map/mapUi";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
 import { useVault } from "@/stores/vault";
@@ -50,6 +52,8 @@ function Gate() {
       lockedByBackend(reason);
       useSettings.getState().clear();
       useInventory.getState().clear();
+      useMap.getState().clear();
+      useMapUi.getState().reset();
       useUi.setState({ paletteOpen: false, notificationsOpen: false });
     });
     return () => void unlisten.then((fn) => fn());
@@ -59,6 +63,8 @@ function Gate() {
     if (info?.status === "locked") {
       useSettings.getState().clear();
       useInventory.getState().clear();
+      useMap.getState().clear();
+      useMapUi.getState().reset();
     }
   }, [info?.status]);
 

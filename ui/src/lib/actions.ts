@@ -17,10 +17,10 @@ export interface Action {
   /** Hidden from the palette and shortcuts when this returns false. */
   enabled?: () => boolean;
   /**
-   * `terminal` shortcuts are ignored while typing in a regular input (so Cmd+C/Cmd+V keep
-   * working in dialogs); `global` ones (default) work everywhere.
+   * `terminal` and `canvas` shortcuts are ignored while typing in a regular input (so
+   * Cmd+C/Cmd+V/Cmd+Z keep working in fields); `global` ones (default) work everywhere.
    */
-  scope?: "global" | "terminal";
+  scope?: "global" | "terminal" | "canvas";
   run: () => unknown;
 }
 

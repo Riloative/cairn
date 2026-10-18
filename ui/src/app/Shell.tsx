@@ -1,9 +1,8 @@
-import { Map as MapIcon } from "lucide-react";
 import { useEffect } from "react";
 import { AuditView } from "@/views/AuditView";
 import { SessionsView } from "@/views/SessionsView";
 import { SettingsView } from "@/views/settings/SettingsView";
-import { UpcomingView } from "@/views/UpcomingView";
+import { MapView } from "@/views/map/MapView";
 import { useNotifications } from "@/stores/notifications";
 import { useSettings } from "@/stores/settings";
 import { useUi, type View } from "@/stores/ui";
@@ -32,13 +31,7 @@ function ActiveView({ view }: { view: View }) {
     case "inventory":
       return <InventoryView />;
     case "map":
-      return (
-        <UpcomingView
-          icon={<MapIcon size={20} />}
-          title="Network map"
-          description="Campus, building, floor and rack views arrive in milestone 5."
-        />
-      );
+      return <MapView />;
     case "audit":
       return <AuditView />;
     case "settings":

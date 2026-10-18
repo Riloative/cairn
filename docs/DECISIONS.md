@@ -217,3 +217,75 @@ connect", `core::login::LoginAutomator` watches the first 64 kB of output and an
 `Username:` / `Password:` / `>`-then-enable prompts. Each secret is typed at most once
 and it stops on a failure message or a repeated prompt, so a wrong stored password can
 never cause repeated attempts and lockouts.
+
+## D-028 · Map layout is stored per view, separate from the inventory (M5)
+
+The map adds four tables: `links` (one interface at each end, each interface in at most
+one link, never two ends on one device), `map_positions` keyed by view (`campus:N`,
+`building:N`, `floor:N`) and node (`d:N` device, `b:N` building), `map_zones` per view,
+and `floor_plans` (image bytes as a BLOB inside the encrypted database, max 25 MB, MIME
+sniffed from the content). A device therefore has independent positions on the campus,
+building and floor views, and deleting a device or building forgets its positions.
+Links are inventory data (audited like other inventory changes); positions and zones
+are layout, saved without audit entries. Global map preferences (label toggles, color
+by, grid, mini-map) are a settings document. Views and edges are derived on the client
+from the inventory and map snapshots: campus edges aggregate every cable between two
+buildings into one edge with a count; building and floor views draw each link and show
+linked devices outside the view as dimmed peers. Undo/redo covers layout only
+(positions, zones); link and inventory edits go through the audit log instead.
+
+## D-029 · Diagram export builds its own SVG; Rust renders PNG and PDF (M5)
+
+The exporter does not serialize the React Flow DOM (HTML nodes, CSS variables, no
+fonts inline). `map/exportSvg.ts` draws a standalone SVG from the same model and routes the
+canvas uses (`map/routing.ts`, D-033), with colors resolved from the current or
+a forced light theme and floor plans embedded as `data:` URLs. SVG is written as is;
+PNG (1×/2×/4×, capped at 16384 px per side) and PDF are rendered in
+`cairn-export` with resvg and svg2pdf from that SVG, so all three formats match.
+Text uses system fonts (Inter where installed, then common sans fonts): bundling
+font files into the renderer would add megabytes for a small gain. Only `data:` image
+hrefs are resolved, so an export can never read local files or the network. Exports
+are audited as `data_exported` with the format and path.
+
+## D-030 · Floor plan PDFs become PNG on import (M5)
+
+A PDF floor plan is rendered once in the webview with pdf.js (page chosen by the user,
+about 2400 px wide) and stored as a PNG. The canvas and exporter then only deal with
+raster or SVG images, and the Rust side never parses PDFs. pdf.js 5+ never evaluates
+document code; its WASM decoders stay off because they would be fetched at runtime.
+Plan bytes travel as raw IPC bodies both ways; because `connect-src` only allows IPC,
+the exporter re-reads the bytes over IPC and converts them with `FileReader` rather
+than fetching the `blob:` URL the canvas displays.
+
+## D-031 · Rack drag and the map canvas use pointer events, not HTML5 drag and drop (M5)
+
+HTML5 drag and drop is unreliable in the Linux WebKitGTK webview when Tauri's file
+drop handling is active, and gives no control over the drag image. The rack elevation
+uses pointer capture with a live drop preview (green fits, red collides) and arrow keys
+move a racked device by 1U; collisions are checked in the UI and again in Rust. The
+map canvas is React Flow 12 (pointer based) with ELK's layered algorithm for
+auto-layout: ranks come from device role (firewall → router → core → distribution →
+access → servers → endpoints, from type and `core`/`distribution`/`access` tags), or
+from the floor in a building view.
+
+## D-032 · The map is static; live status comes later (M5)
+
+Nodes show inventory data only. Reachability or interface status would need polling
+(ICMP/SNMP) that the spec does not require and that conflicts with "no network calls
+except user-initiated connections". The node model has room for a status field if a
+user-triggered check is added later.
+
+## D-033 · Link routing is computed for the whole view at once (M5)
+
+`map/routing.ts` routes every link of a view in one pass, shared by the canvas and the
+exporter, so exports match the screen. Each link is an orthogonal route between its
+two boxes. Sideways exits use a device's icon tile, vertical exits the whole node so
+lines never cross the hostname. Between rows a link leaves from the top or bottom
+unless the gap is clearly wider than tall. When the straight route crosses another
+node, the bend moves, the route switches axis, or it detours below or above the row,
+whichever crosses the fewest nodes. Parallel links of one pair are offset 12 px and
+nest. Links to different peers on the same side of a node get separate attachment
+slots, ordered by where they go, and their port labels fan out. This is a heuristic,
+not a full obstacle-avoiding router: ELK's own edge routes would be better but go
+stale as soon as a node is dragged, and dragging must stay at 60 fps with a few
+hundred links.

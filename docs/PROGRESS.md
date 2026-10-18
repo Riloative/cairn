@@ -125,3 +125,40 @@ terminal server; on macOS, that only `/dev/cu.*` ports are listed.
 auto-enable, and Telnet/console-server login); copy a password and check that the
 clipboard clears after 30 s and that clipboard managers (GNOME/KDE, macOS) don't keep
 it; an inventory of a few hundred devices for table speed.
+
+### M5 (session 3, continued)
+
+- M4 closed: CI run 18 green on both platforms.
+- Schema v4 and `core::map` (D-028): interface-to-interface links (media, speed,
+  VLANs, LAG, description, per-link label overrides; audited), per-view node
+  positions and zones, floor plans stored in the encrypted database, map preferences.
+- `cairn-export` renders map SVG to PNG (1×/2×/4×, resvg) and vector PDF (svg2pdf)
+  with system fonts; `map_export` writes the file and audits it (D-029).
+- Map view: campus (buildings, cables aggregated), building (floor bands, outside
+  peers dimmed) and floor views with breadcrumbs, floor chips and search across
+  views; original icons with vendor badges; links colored by media, speed or VLAN with
+  a legend; port/speed/VLAN labels (global and per link); orthogonal routing that
+  avoids nodes, nests parallel links, marks LAG bundles and spreads links sharing a
+  side (D-033); snap to grid, alignment guides, multi-select, zones that carry their
+  devices, per-node and global lock, undo/redo; ELK auto-layout by role or floor
+  (D-031); context menus (connect, ping, traceroute, copy IP, edit), hover cards,
+  double-click to connect or open, mini-map. Draw a link by dragging from a device
+  onto another; the dialog creates missing interfaces.
+- Floor plans: PNG/JPEG/SVG or a PDF page (rendered with pdf.js, D-030), auto-fitted
+  behind the floor's devices, with scale/opacity/offset. Rack elevations with
+  pointer drag (fit preview, collision-free) and 1U keyboard moves.
+- Export dialog: PNG/SVG/PDF, title, legend, date, current or light theme, selection
+  only.
+- `seed_demo` example fills a vault with a demo campus for trying the map.
+- Verified in the release build under Xvfb: first-open auto-layout and fit on campus,
+  building and floor views; drawing a link with new interfaces; rack drag between
+  racks; PNG and PDF export (fonts embedded, matches the canvas); PDF floor plan
+  upload, fit and reload after restart.
+
+**Next:** M6 (power tools) once M5 CI is green.
+
+**Test manually:** the map with a real inventory of a few hundred devices (drag
+performance, auto-layout time, readability of routes); PDF export opened in a PDF
+viewer and printed; a multi-page PDF floor plan (page choice); trackpad pinch/zoom
+and Cmd-click multi-select on macOS; the map in each theme, including "light theme"
+exports from a dark theme.

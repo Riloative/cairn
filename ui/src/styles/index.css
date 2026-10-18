@@ -124,3 +124,62 @@
     cursor: auto;
   }
 }
+
+/* Network map: React Flow chrome drawn with design tokens (base.css has no colors). */
+.cairn-map {
+  --xy-background-color: var(--bg);
+  --xy-connectionline-stroke: var(--accent);
+  --xy-connectionline-stroke-width: 2;
+  --xy-handle-background-color: var(--accent);
+  --xy-resize-background-color: var(--accent);
+  --xy-selection-background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+  --xy-selection-border: 1px dashed var(--accent);
+  --xy-minimap-background-color: var(--surface-raised);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--bg) 70%, transparent);
+  --xy-minimap-mask-stroke-color: var(--border-strong);
+  --xy-minimap-node-background-color: var(--fg-subtle);
+}
+
+.cairn-map .react-flow__controls {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+}
+
+.cairn-map .react-flow__controls-button {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.cairn-map .react-flow__controls-button + .react-flow__controls-button {
+  border-top: 1px solid var(--border);
+}
+
+.cairn-map .react-flow__controls-button:hover {
+  background: var(--surface);
+  color: var(--fg);
+}
+
+.cairn-map .react-flow__controls-button svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+.cairn-map .react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}

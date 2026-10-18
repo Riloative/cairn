@@ -13,6 +13,7 @@ import type {
 } from "@/lib/ipc";
 import { DEFAULT_TERMINAL_PREFS } from "@/stores/terminalPrefs";
 import { FakeInventory } from "./fakeInventory";
+import { FakeMap } from "./fakeMap";
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
@@ -47,7 +48,12 @@ export class FakeBackend {
     (kind, payload) => this.log(kind, payload),
     (payload) => this.fail(payload),
   );
-  /** What the native open dialog returns. */
+  map = new FakeMap(
+    this.inventory,
+    (kind, payload) => this.log(kind, payload),
+    (payload) => this.fail(payload),
+  );
+  /** What the native open/save dialog returns. */
   dialogResult: string | string[] | null = null;
 
   constructor(status: VaultStatus) {
@@ -111,6 +117,11 @@ export class FakeBackend {
     ) {
       this.requireUnlocked();
       const r = this.inventory.handle(cmd, args);
+      if (r.handled) return r.result;
+    }
+    if (/^(map|link|zone|floor_plan)_/.test(cmd)) {
+      this.requireUnlocked();
+      const r = this.map.handle(cmd, args);
       if (r.handled) return r.result;
     }
     switch (cmd) {
@@ -196,6 +207,7 @@ export class FakeBackend {
         return [`${String(args.dir)}/fw.bin`];
       }
       case "plugin:dialog|open":
+      case "plugin:dialog|save":
         return this.dialogResult;
       case "audit_recent":
         this.requireUnlocked();

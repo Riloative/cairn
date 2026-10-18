@@ -32,6 +32,19 @@
   --proto-rdp: #38bdf8;
   --proto-local: #94a3b8;
 
+  /* Map link colors (mid-tone, readable on dark and light canvases). */
+  --link-copper: #7c8597;
+  --link-sm-fiber: #d99a2b;
+  --link-mm-fiber: #2aa89d;
+  --link-dac: #8b7cf6;
+  --link-wireless: #3b9ad9;
+  --link-speed-100m: #7c8597;
+  --link-speed-1g: #3b9ad9;
+  --link-speed-10g: #2aa89d;
+  --link-speed-25g: #8b7cf6;
+  --link-speed-40g: #c26fc0;
+  --link-speed-100g: #d99a2b;
+
   /* Terminal header tints: translucent so they work on every theme. */
   --tint-remote: rgb(139 124 246 / 0.16);
   --tint-serial: rgb(245 158 11 / 0.18);
