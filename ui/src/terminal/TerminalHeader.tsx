@@ -2,6 +2,7 @@ import { cn } from "@/lib/cn";
 import type { SessionTab } from "@/stores/sessions";
 import { headerTint, type HeaderTint } from "./tint";
 import { PROTOCOL_LABEL, STATE_LABEL } from "@/app/protocol";
+import { SessionControls } from "./SessionControls";
 
 const TINT_CLASS: Record<HeaderTint, string> = {
   local: "bg-surface",
@@ -31,6 +32,7 @@ export function TerminalHeader({ tab, privileged }: { tab: SessionTab; privilege
         </span>
       )}
       <span className="flex-1" />
+      <SessionControls tab={tab} />
       <span className="text-xs text-fg-subtle">{STATE_LABEL[tab.state]}</span>
     </div>
   );

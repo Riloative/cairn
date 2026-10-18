@@ -25,6 +25,7 @@ pub fn run() {
             let dir = app.path().app_data_dir()?;
             app.manage(state::AppState::new(Vault::new(dir)));
             app.manage(sessions::SessionManager::new());
+            app.manage(commands::serial::PortWatcher::default());
             autolock::spawn(app.handle().clone());
             Ok(())
         })
@@ -48,6 +49,16 @@ pub fn run() {
             commands::session::local_containers,
             commands::session::local_default_shell,
             commands::session::session_prompt_reply,
+            commands::session::session_break,
+            commands::serial::serial_ports,
+            commands::serial::serial_ports_watch,
+            commands::serial::serial_ports_unwatch,
+            commands::serial::serial_open,
+            commands::serial::serial_set_lines,
+            commands::serial::serial_send_files,
+            commands::serial::serial_receive_files,
+            commands::serial::serial_transfer_cancel,
+            commands::telnet::telnet_open,
             commands::ssh::ssh_open,
             commands::ssh::ssh_reconnect,
             commands::ssh::ssh_forget,

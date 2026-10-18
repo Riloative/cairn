@@ -16,7 +16,7 @@ function useCountdown(at: number | null): number | null {
   return at === null ? null : Math.max(0, Math.ceil((at - now) / 1000));
 }
 
-/** Shown over a dropped SSH session: reason, auto-reconnect countdown, actions. */
+/** Shown over a dropped SSH, Telnet or serial session: reason, auto-reconnect countdown, actions. */
 export function ReconnectOverlay({ tab }: { tab: SessionTab }) {
   const state = useReconnect((s) => s.byTab[tab.id]);
   const seconds = useCountdown(state?.nextAt ?? null);

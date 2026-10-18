@@ -1,6 +1,16 @@
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { emit } from "@tauri-apps/api/event";
-import type { AuditEntry, ErrorPayload, Settings, TerminalPrefs, VaultStatus } from "@/lib/ipc";
+import type { Channel } from "@tauri-apps/api/core";
+import type {
+  AuditEntry,
+  ErrorPayload,
+  PortInfo,
+  PortsChanged,
+  Settings,
+  TerminalPrefs,
+  TransferStatus,
+  VaultStatus,
+} from "@/lib/ipc";
 import { DEFAULT_TERMINAL_PREFS } from "@/stores/terminalPrefs";
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -29,6 +39,11 @@ export class FakeBackend {
   terminalPrefs: TerminalPrefs = structuredClone(DEFAULT_TERMINAL_PREFS);
   audit: AuditEntry[] = [];
   calls: { cmd: string; args: Record<string, unknown> }[] = [];
+  ports: PortInfo[] = [];
+  /** Hotplug channel registered by `serial_ports_watch`. */
+  portWatch: Channel<PortsChanged> | null = null;
+  /** What the native open dialog returns. */
+  dialogResult: string | string[] | null = null;
 
   constructor(status: VaultStatus) {
     this.status = status;
@@ -45,6 +60,17 @@ export class FakeBackend {
   async autoLock(reason: "idle" | "system_sleep") {
     this.status = "locked";
     await emit("vault://locked", reason);
+  }
+
+  /** Simulate plugging in (or removing) serial adapters. */
+  hotplug(ports: PortInfo[]) {
+    const before = this.ports;
+    this.ports = ports;
+    this.portWatch?.onmessage({
+      ports,
+      added: ports.filter((p) => !before.some((b) => b.path === p.path)),
+      removed: before.filter((b) => !ports.some((p) => p.path === b.path)),
+    });
   }
 
   private info() {
@@ -132,6 +158,32 @@ export class FakeBackend {
       case "local_containers":
       case "known_hosts_list":
         return [];
+      case "serial_ports":
+        return this.ports;
+      case "serial_ports_watch":
+        this.portWatch = args.onChange as Channel<PortsChanged>;
+        return this.ports;
+      case "serial_ports_unwatch":
+        this.portWatch = null;
+        return null;
+      case "serial_set_lines":
+      case "session_break":
+      case "serial_transfer_cancel":
+        return null;
+      case "serial_send_files": {
+        const progress = args.onProgress as Channel<TransferStatus>;
+        const files = (args.paths as string[]).map((p) => p.split("/").pop() ?? p);
+        progress.onmessage({ phase: "running", bytes: 512, total: 1024 });
+        this.log("file_transferred", { direction: "upload", file: files.join(", ") });
+        return { phase: "done", files, bytes: 1024 };
+      }
+      case "serial_receive_files": {
+        const progress = args.onProgress as Channel<TransferStatus>;
+        progress.onmessage({ phase: "running", bytes: 2048, total: null });
+        return [`${String(args.dir)}/fw.bin`];
+      }
+      case "plugin:dialog|open":
+        return this.dialogResult;
       case "audit_recent":
         this.requireUnlocked();
         return this.audit.slice(0, Number(args.limit));

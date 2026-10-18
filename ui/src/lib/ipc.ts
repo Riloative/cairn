@@ -167,6 +167,7 @@ export type ConnectProgress =
 
 export type SessionMessage =
   | { type: "closed"; reason: CloseReason }
+  | { type: "connected" }
   | { type: "progress"; progress: ConnectProgress }
   | {
       type: "host_key";
@@ -310,6 +311,120 @@ export interface KnownHost extends HostKeyInfo {
 export const knownHostsList = () => call<KnownHost[]>("known_hosts_list");
 export const knownHostsRemove = (host: string, port: number, keyType: string) =>
   call<null>("known_hosts_remove", { host, port, keyType });
+
+/** Send BREAK on a serial or Telnet session. */
+export const sessionBreak = (id: string) => call<null>("session_break", { id });
+
+// ── Serial ─────────────────────────────────────────────────────────────────────────
+
+/** Mirrors `cairn_proto_serial::PortInfo`. */
+export interface PortInfo {
+  path: string;
+  label: string;
+  chip: string | null;
+  vid: number | null;
+  pid: number | null;
+  serialNumber: string | null;
+  usb: boolean;
+}
+
+export interface PortsChanged {
+  ports: PortInfo[];
+  added: PortInfo[];
+  removed: PortInfo[];
+}
+
+export type DataBits = "five" | "six" | "seven" | "eight";
+export type Parity = "none" | "odd" | "even";
+export type StopBits = "one" | "two";
+export type FlowControl = "none" | "rts-cts" | "xon-xoff";
+export type Newline = "cr" | "lf" | "crlf";
+
+export interface LineSettings {
+  baud: number;
+  dataBits: DataBits;
+  parity: Parity;
+  stopBits: StopBits;
+  flowControl: FlowControl;
+}
+
+/** Mirrors `cairn_proto_serial::SerialOptions`. */
+export interface SerialOptions {
+  path: string;
+  settings: LineSettings;
+  newline: { transmit: Newline; receive: Newline };
+  localEcho: boolean;
+}
+
+export type TransferVariant = "xmodem" | "xmodem1k" | "ymodem";
+
+export type TransferStatus =
+  | { phase: "running"; bytes: number; total: number | null }
+  | { phase: "done"; files: string[]; bytes: number };
+
+export const serialPorts = () => call<PortInfo[]>("serial_ports");
+
+/** Current ports; `onChange` fires on hotplug until `serialPortsUnwatch`. */
+export const serialPortsWatch = (onChange: (c: PortsChanged) => void) =>
+  call<PortInfo[]>("serial_ports_watch", { onChange: new Channel<PortsChanged>(onChange) });
+
+export const serialPortsUnwatch = () => call<null>("serial_ports_unwatch");
+
+export const serialOpen = (options: SerialOptions, cb: SessionCallbacks) =>
+  call<string>("serial_open", { options, ...channels(cb) });
+
+export const serialSetLines = (id: string, lines: { dtr?: boolean; rts?: boolean }) =>
+  call<null>("serial_set_lines", { id, dtr: lines.dtr ?? null, rts: lines.rts ?? null });
+
+export const serialSendFiles = (
+  id: string,
+  variant: TransferVariant,
+  paths: string[],
+  onProgress: (s: TransferStatus) => void,
+) =>
+  call<TransferStatus>("serial_send_files", {
+    id,
+    variant,
+    paths,
+    onProgress: new Channel<TransferStatus>(onProgress),
+  });
+
+/** Receive into `dir`; resolves with the saved file paths. */
+export const serialReceiveFiles = (
+  id: string,
+  variant: TransferVariant,
+  dir: string,
+  onProgress: (s: TransferStatus) => void,
+) =>
+  call<string[]>("serial_receive_files", {
+    id,
+    variant,
+    dir,
+    onProgress: new Channel<TransferStatus>(onProgress),
+  });
+
+export const serialTransferCancel = (id: string) => call<null>("serial_transfer_cancel", { id });
+
+// ── Telnet ─────────────────────────────────────────────────────────────────────────
+
+export type ConsoleServerKind =
+  "opengear" | "cisco-line" | "avocent" | "lantronix" | "digi" | "custom";
+
+/** Mirrors `TelnetRequest` in src-tauri commands/telnet.rs. */
+export interface TelnetRequest {
+  host: string;
+  port: number;
+  raw: boolean;
+  console: { kind: ConsoleServerKind; port: number } | null;
+  connectTimeoutSecs: number;
+}
+
+export const telnetOpen = (
+  request: TelnetRequest,
+  cols: number,
+  rows: number,
+  cb: SessionCallbacks,
+) => call<string>("telnet_open", { request, cols, rows, ...channels(cb) });
 
 export const sessionResize = (id: string, cols: number, rows: number) =>
   call<null>("session_resize", { id, cols, rows });

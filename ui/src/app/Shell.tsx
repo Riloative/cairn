@@ -16,6 +16,7 @@ import { useCoreActions } from "./useCoreActions";
 import { useGlobalShortcuts } from "./useGlobalShortcuts";
 import { useTerminalSetup } from "@/terminal/useTerminalSetup";
 import { QuickConnectDialog } from "@/ssh/QuickConnectDialog";
+import { TransferDialog } from "@/terminal/TransferDialog";
 import { SessionPrompts } from "@/ssh/SessionPrompts";
 import { PasteConfirmDialog } from "@/terminal/PasteConfirmDialog";
 import { TabOverview } from "@/terminal/TabOverview";
@@ -80,6 +81,7 @@ export function Shell() {
       <SessionPrompts />
       <PasteConfirmDialog />
       <TabOverview />
+      <TransferDialog />
     </div>
   );
 }

@@ -43,9 +43,44 @@ pub enum SessionMessage {
         prompt_id: u64,
         prompt: Prompt,
     },
+    /// The transport is up (Telnet; SSH uses `Progress`).
+    Connected,
     Closed {
         reason: CloseReason,
     },
+}
+
+/// State of a serial file transfer, sent on the transfer's own channel. Failures are
+/// returned as the command's error.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "phase", rename_all = "snake_case")]
+pub enum TransferStatus {
+    #[serde(rename_all = "camelCase")]
+    Running { bytes: u64, total: Option<u64> },
+    #[serde(rename_all = "camelCase")]
+    Done { files: Vec<String>, bytes: u64 },
+}
+
+/// Protocol-specific controls attached to a session (serial lines, Telnet BREAK).
+#[derive(Clone)]
+pub enum Extra {
+    Serial(Arc<SerialControl>),
+    Telnet(Arc<cairn_proto_telnet::TelnetSession>),
+}
+
+/// A serial session plus the cancel flag of its running transfer.
+pub struct SerialControl {
+    pub session: Arc<cairn_proto_serial::SerialSession>,
+    pub cancel: std::sync::atomic::AtomicBool,
+}
+
+impl std::fmt::Debug for Extra {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Extra::Serial(_) => "Extra::Serial",
+            Extra::Telnet(_) => "Extra::Telnet",
+        })
+    }
 }
 
 /// Where a session's output goes. Implemented by Tauri channels in production and by
@@ -58,6 +93,7 @@ pub trait SessionOutput: Send + Sync + 'static {
 #[derive(Default)]
 pub struct SessionManager {
     sessions: Mutex<HashMap<SessionId, Arc<dyn TerminalSession>>>,
+    extras: Mutex<HashMap<SessionId, Extra>>,
     next_id: AtomicU64,
 }
 
@@ -105,6 +141,7 @@ impl SessionManager {
             TermEvent::Closed(reason) => {
                 if let Some(mgr) = weak.upgrade() {
                     mgr.sessions.lock().remove(&sink_id);
+                    mgr.extras.lock().remove(&sink_id);
                 }
                 output.message(SessionMessage::Closed { reason });
             }
@@ -116,6 +153,17 @@ impl SessionManager {
         let session = start(sink)?;
         sessions.insert(id.clone(), session);
         Ok(id)
+    }
+
+    /// Attach protocol-specific controls to an open session.
+    pub fn set_extra(&self, id: &str, extra: Extra) {
+        if self.sessions.lock().contains_key(id) {
+            self.extras.lock().insert(id.to_owned(), extra);
+        }
+    }
+
+    pub fn extra(&self, id: &str) -> Option<Extra> {
+        self.extras.lock().get(id).cloned()
     }
 
     pub fn get(&self, id: &str) -> Option<Arc<dyn TerminalSession>> {

@@ -12,6 +12,8 @@ import { useTerminalUi } from "@/stores/terminalUi";
 import { copySelection, pasteFromClipboard } from "@/terminal/clipboard";
 import { closeTab, openLocalShell, profileIdOf, setTabVendor } from "@/terminal/controller";
 import { VENDORS } from "@/terminal/highlight/rulesets";
+import { sendBreak, supportsBreak } from "@/terminal/serialControls";
+import { useSerial } from "@/stores/serial";
 import { useTerminalPrefs } from "@/stores/terminalPrefs";
 import { NAV_ITEMS } from "./nav";
 
@@ -26,6 +28,11 @@ export function coreActions(): Action[] {
     const id = sessions().activeId;
     const tab = sessions().tabs.find((t) => t.id === id);
     return ui().view === "sessions" && !!tab && tab.protocol !== "rdp";
+  };
+  const activeTab = () => sessions().tabs.find((t) => t.id === sessions().activeId);
+  const connectedProtocol = (p: (proto: string) => boolean) => () => {
+    const tab = activeTab();
+    return ui().view === "sessions" && !!tab && tab.state === "connected" && p(tab.protocol);
   };
   const mac = isMac();
 
@@ -128,11 +135,59 @@ export function coreActions(): Action[] {
     },
     {
       id: "ssh.quickConnect",
-      title: "New SSH connection…",
+      title: "New connection…",
       group: "Sessions",
-      keywords: ["ssh", "connect", "host", "device", "jump", "proxy"],
+      keywords: ["ssh", "telnet", "serial", "connect", "host", "device", "jump", "proxy"],
       shortcut: "Mod+N",
+      // Opens on the protocol used last.
       run: () => ui().setQuickConnectOpen(true),
+    },
+    {
+      id: "telnet.connect",
+      title: "New Telnet connection…",
+      group: "Sessions",
+      keywords: ["telnet", "raw", "tcp", "console server", "opengear", "avocent", "reverse"],
+      run: () => ui().openConnect("telnet"),
+    },
+    {
+      id: "serial.connect",
+      title: "New serial connection…",
+      group: "Sessions",
+      keywords: ["serial", "console", "usb", "com", "tty", "baud"],
+      run: () => ui().openConnect("serial"),
+    },
+    {
+      id: "session.break",
+      title: "Send BREAK",
+      group: "Terminal",
+      keywords: ["break", "rommon", "password recovery", "serial", "telnet"],
+      enabled: connectedProtocol(supportsBreak),
+      run: () => {
+        const id = sessions().activeId;
+        if (id) void sendBreak(id);
+      },
+    },
+    {
+      id: "serial.send",
+      title: "Send file (Xmodem / Ymodem)…",
+      group: "Terminal",
+      keywords: ["upload", "xmodem", "ymodem", "transfer", "ios", "rommon"],
+      enabled: connectedProtocol((p) => p === "serial"),
+      run: () => {
+        const id = sessions().activeId;
+        if (id) useSerial.getState().openDialog(id, "send");
+      },
+    },
+    {
+      id: "serial.receive",
+      title: "Receive file (Xmodem / Ymodem)…",
+      group: "Terminal",
+      keywords: ["download", "xmodem", "ymodem", "transfer"],
+      enabled: connectedProtocol((p) => p === "serial"),
+      run: () => {
+        const id = sessions().activeId;
+        if (id) useSerial.getState().openDialog(id, "receive");
+      },
     },
     {
       id: "tabs.overview",

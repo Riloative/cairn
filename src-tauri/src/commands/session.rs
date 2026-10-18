@@ -4,7 +4,7 @@ use crate::error::{CommandError, CommandResult};
 use crate::prompts::PromptAnswer;
 use crate::sessions::log::{log_path, LoggingOutput};
 use crate::sessions::output::{AuditedOutput, ChannelOutput};
-use crate::sessions::{SessionId, SessionManager, SessionMessage, SessionOutput};
+use crate::sessions::{Extra, SessionId, SessionManager, SessionMessage, SessionOutput};
 use crate::state::AppState;
 use cairn_core::audit::AuditEvent;
 use cairn_core::terminal::TerminalSession;
@@ -144,6 +144,30 @@ pub fn session_resize(
     rows: u16,
 ) -> CommandResult<()> {
     Ok(session(&sessions, &id)?.resize(cols, rows)?)
+}
+
+/// Send BREAK on a serial or Telnet session.
+#[tauri::command]
+pub async fn session_break(
+    sessions: State<'_, Arc<SessionManager>>,
+    id: SessionId,
+) -> CommandResult<()> {
+    match sessions.extra(&id) {
+        // Holds the line for `BREAK_DURATION`; keep it off the async runtime.
+        Some(Extra::Serial(c)) => {
+            tauri::async_runtime::spawn_blocking(move || c.session.send_break())
+                .await
+                .map_err(|e| CommandError::internal(format!("break failed: {e}")))??
+        }
+        Some(Extra::Telnet(t)) => t.send_break()?,
+        None => {
+            return Err(cairn_core::CoreError::Validation(
+                "This session does not support BREAK.".into(),
+            )
+            .into())
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]

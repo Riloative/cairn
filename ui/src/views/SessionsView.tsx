@@ -19,7 +19,7 @@ export function SessionsView() {
       <EmptyState
         icon={<TerminalSquare size={20} />}
         title="No open sessions"
-        description="Start a local shell, or connect to a device with SSH (Ctrl/⌘ N)."
+        description="Start a local shell, or connect to a device over SSH, Telnet or a serial cable (Ctrl/⌘ N)."
         action={{
           label: "New local shell",
           onClick: () => void openLocalShell(),
@@ -38,7 +38,7 @@ export function SessionsView() {
           .map((t) => (
             <TerminalPane key={t.id} tabId={t.id} active={t.id === activeId} />
           ))}
-        {active.protocol === "ssh" && <ReconnectOverlay tab={active} />}
+        <ReconnectOverlay tab={active} />
         <SearchBar key={active.id} tabId={active.id} />
       </div>
     </div>

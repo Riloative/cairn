@@ -4,14 +4,17 @@ import type {
   CloseReason,
   ConnectOptions,
   ConnectProgress,
+  SerialOptions,
   SessionMessage,
   ShellSpec,
+  TelnetRequest,
   TerminalProfile,
 } from "@/lib/ipc";
 import { THEMES } from "@/lib/theme";
 import { useNotifications } from "@/stores/notifications";
 import { usePrompts } from "@/stores/prompts";
 import { backoffDelay, useReconnect } from "@/stores/reconnect";
+import { useSerial } from "@/stores/serial";
 import { useSessions, type SessionProtocol } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
@@ -46,6 +49,9 @@ const profiles = new Map<string, string>();
 const untrack = new Map<string, () => void>();
 /** SSH connection handles (options and credentials stay in Rust). */
 const connections = new Map<string, string>();
+type Starter = (cols: number, rows: number, cb: ipc.SessionCallbacks) => Promise<string>;
+/** How to start a dropped tab's session again (SSH, Telnet, serial). */
+const reopeners = new Map<string, Starter>();
 const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const highlighters = new Map<string, Highlighter>();
 /** Compiled rules per vendor, invalidated when prefs change. */
@@ -148,7 +154,7 @@ function onClosed(tabId: string, reason: CloseReason) {
   if (useSettings.getState().settings?.notifyOnDisconnect !== false && inactive) {
     void desktopNotify(`${tab.title} disconnected`, message);
   }
-  if (connections.has(tabId)) scheduleReconnect(tabId, message);
+  if (reopeners.has(tabId)) scheduleReconnect(tabId, message);
 }
 
 function onMessage(tabId: string, msg: SessionMessage) {
@@ -165,6 +171,10 @@ function onMessage(tabId: string, msg: SessionMessage) {
         status: msg.status,
         openssh: msg.openssh,
       });
+      break;
+    case "connected":
+      useReconnect.getState().clear(tabId);
+      useSessions.getState().setState(tabId, "connected");
       break;
     case "prompt":
       usePrompts.getState().push({ id: msg.promptId, tabId, type: "prompt", prompt: msg.prompt });
@@ -219,8 +229,8 @@ function wireInput(tabId: string, handle: TerminalHandle) {
     });
   };
   handle.term.onData((d) => {
-    // Enter on a dropped SSH session reconnects immediately.
-    if (!backendIds.has(tabId) && connections.has(tabId) && d === "\r") {
+    // Enter on a dropped session reconnects immediately.
+    if (!backendIds.has(tabId) && reopeners.has(tabId) && d === "\r") {
       void reconnectTab(tabId);
       return;
     }
@@ -332,7 +342,51 @@ export function openSsh(
     start: async (tabId, cols, rows, cb) => {
       const opened = await ipc.sshOpen(options, cols, rows, cb);
       connections.set(tabId, opened.connectionId);
+      reopeners.set(tabId, (c, r, callbacks) =>
+        ipc.sshReconnect(opened.connectionId, c, r, callbacks),
+      );
       return opened.sessionId;
+    },
+  });
+}
+
+/** Open a Telnet or raw TCP session (optionally to a console-server port). */
+export function openTelnet(
+  request: TelnetRequest,
+  title: string,
+  extra: { profileId?: string | null; vendor?: string } = {},
+) {
+  const start: Starter = (cols, rows, cb) => ipc.telnetOpen(request, cols, rows, cb);
+  return openTerminalTab({
+    title,
+    protocol: "telnet",
+    profileId: extra.profileId,
+    vendor: extra.vendor,
+    readyOnStart: false,
+    start: (tabId, cols, rows, cb) => {
+      reopeners.set(tabId, start);
+      return start(cols, rows, cb);
+    },
+  });
+}
+
+/** Open a serial console. A dropped port (unplugged) is retried with backoff. */
+export function openSerial(
+  options: SerialOptions,
+  title: string,
+  extra: { profileId?: string | null; vendor?: string } = {},
+) {
+  const start: Starter = (_cols, _rows, cb) => ipc.serialOpen(options, cb);
+  return openTerminalTab({
+    title,
+    protocol: "serial",
+    profileId: extra.profileId,
+    vendor: extra.vendor,
+    readyOnStart: true,
+    start: (tabId, cols, rows, cb) => {
+      reopeners.set(tabId, start);
+      useSerial.getState().resetLines(tabId);
+      return start(cols, rows, cb);
     },
   });
 }
@@ -361,11 +415,11 @@ export function cancelAutoReconnect(tabId: string) {
   if (s) useReconnect.getState().set(tabId, { ...s, nextAt: null });
 }
 
-/** Reconnect a dropped SSH tab, reusing its terminal. */
+/** Reconnect a dropped tab, reusing its terminal. */
 export async function reconnectTab(tabId: string, opts: { automatic?: boolean } = {}) {
-  const connectionId = connections.get(tabId);
+  const reopen = reopeners.get(tabId);
   const handle = getTerminal(tabId);
-  if (!connectionId || !handle || backendIds.has(tabId)) return;
+  if (!reopen || !handle || backendIds.has(tabId)) return;
   clearTimeout(reconnectTimers.get(tabId));
   const prev = useReconnect.getState().byTab[tabId];
   const attempt = opts.automatic ? (prev?.attempt ?? 0) + 1 : 0;
@@ -373,17 +427,18 @@ export async function reconnectTab(tabId: string, opts: { automatic?: boolean } 
   useSessions.getState().setState(tabId, "connecting", "Reconnecting");
   statusLine(handle, "Reconnecting…");
   try {
-    const id = await ipc.sshReconnect(
-      connectionId,
-      handle.term.cols,
-      handle.term.rows,
-      callbacks(tabId),
-    );
+    const id = await reopen(handle.term.cols, handle.term.rows, callbacks(tabId));
     if (!tabOf(tabId)) {
       void ipc.sessionClose(id).catch(() => {});
       return;
     }
     backendIds.set(tabId, id);
+    if (tabOf(tabId)?.protocol === "serial") {
+      // Serial has no handshake: open means usable.
+      useReconnect.getState().clear(tabId);
+      useSerial.getState().resetLines(tabId);
+      useSessions.getState().setState(tabId, "connected");
+    }
   } catch (e) {
     const err = ipc.CommandError.from(e);
     useSessions.getState().setState(tabId, "error", err.message);
@@ -405,8 +460,14 @@ export function closeTab(tabId: string) {
   usePrompts.getState().dropTab(tabId);
   const connectionId = connections.get(tabId);
   connections.delete(tabId);
+  reopeners.delete(tabId);
+  useSerial.getState().dropTab(tabId);
   if (connectionId) ipc.sshForget(connectionId).catch(() => {});
-  if (id) ipc.sessionClose(id).catch(() => {});
+  if (id) {
+    // A running transfer would otherwise hold the port until it times out.
+    if (tabOf(tabId)?.protocol === "serial") ipc.serialTransferCancel(id).catch(() => {});
+    ipc.sessionClose(id).catch(() => {});
+  }
   disposeTerminal(tabId);
   useSessions.getState().close(tabId);
 }
@@ -429,7 +490,7 @@ export function backendSessionId(tabId: string): string | undefined {
 }
 
 export function canReconnect(tabId: string): boolean {
-  return connections.has(tabId) && !backendIds.has(tabId);
+  return reopeners.has(tabId) && !backendIds.has(tabId);
 }
 
 /** Re-apply profiles, palettes and highlighting to every open terminal. */

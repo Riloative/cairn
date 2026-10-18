@@ -72,6 +72,17 @@ pub enum AuditEvent {
         device: Option<String>,
         host_key_fingerprint: Option<String>,
     },
+    /// File sent or received over a session (Xmodem/Ymodem now; SFTP/SCP/TFTP later).
+    #[serde(rename_all = "camelCase")]
+    FileTransferred {
+        session_id: String,
+        protocol: String,
+        direction: String,
+        file: String,
+        bytes: u64,
+        ok: bool,
+        error: Option<String>,
+    },
     #[serde(rename_all = "camelCase")]
     SessionEnded {
         session_id: String,
@@ -97,6 +108,7 @@ impl AuditEvent {
             AuditEvent::HostKeyRejected { .. } => "host_key_rejected",
             AuditEvent::SessionStarted { .. } => "session_started",
             AuditEvent::SessionEnded { .. } => "session_ended",
+            AuditEvent::FileTransferred { .. } => "file_transferred",
         }
     }
 }
@@ -426,6 +438,15 @@ mod tests {
                 username: Some("admin".into()),
                 device: None,
                 host_key_fingerprint: None,
+            },
+            AuditEvent::FileTransferred {
+                session_id: "s1".into(),
+                protocol: "ymodem".into(),
+                direction: "send".into(),
+                file: "ios.bin".into(),
+                bytes: 10,
+                ok: true,
+                error: None,
             },
             AuditEvent::SessionEnded {
                 session_id: "s1".into(),

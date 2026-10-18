@@ -149,3 +149,28 @@ recommended in the UI.
 `rust-toolchain.toml` pins the compiler (currently 1.99.1) so local builds and CI run the
 same clippy lints; a newer stable in CI introduced a lint the local toolchain did not
 know. Bump deliberately.
+
+## D-021 · Serial hotplug by polling, only while someone is looking (M3)
+
+Port hotplug is detected by re-listing ports once a second (`serialport` enumeration via
+udev on Linux, IOKit on macOS) and diffing, rather than subscribing to udev/IOKit
+notifications. One portable code path, no extra native dependencies, and a 1 s delay is
+not noticeable when plugging a cable. The poll runs only while the connect dialog's
+Serial tab is open (`serial_ports_watch` / `serial_ports_unwatch`), so an idle Cairn does
+no background scanning.
+
+## D-022 · Dropped serial and Telnet sessions reconnect like SSH (M3)
+
+Every remote tab keeps a "reopen" closure in the frontend (SSH: the Rust-side connection
+handle; Telnet: host/port; serial: port and line settings; no secrets). An unexpected
+close uses the same overlay and backoff as SSH. For serial this means an unplugged USB
+adapter is retried until it comes back, so re-plugging the cable resumes the console
+without any clicks.
+
+## D-023 · X/Ymodem files go through native dialogs and never overwrite (M3)
+
+Files to send and the folder to receive into are chosen with the native dialog; the
+frontend passes the paths to Rust, which reads/writes them (64 MiB send limit, regular
+files only). Names announced by a Ymodem sender are reduced to a bare file name, and a
+received file never replaces an existing one (`name (2).ext`, opened with `create_new`).
+Every transfer, successful or not, is audited as `file_transferred`.
