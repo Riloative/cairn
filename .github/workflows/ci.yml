@@ -1,13 +1,15 @@
 name: CI
 
 on:
+  # Every branch push runs CI (a PR from this repo shows these checks too).
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
