@@ -68,3 +68,31 @@ with reverse Telnet to console servers).
 algorithms; check Cmd/Ctrl+Shift+C/V, the changed-host-key warning (edit the key in
 Settings → Security → Known hosts by forgetting it and re-keying a lab device), desktop
 notifications (permission prompt on first disconnect), and WebGL rendering on your GPU.
+
+### M3 (session 3)
+
+- `proto-serial`: port discovery with USB VID/PID chip names (`/dev/cu.*` only on macOS),
+  full line settings, DTR/RTS, BREAK (500 ms), local echo, newline mapping, permission
+  errors with the per-OS fix, and Xmodem / Xmodem-1K / Ymodem send and receive,
+  integration-tested over socat PTY pairs against lrzsz (`sx`, `rb`, `sb`).
+- `proto-telnet`: loop-safe IAC/option negotiation, NAWS, terminal type, BREAK, raw TCP
+  mode, console-server port mapping (Opengear, Cisco lines, Avocent, Lantronix, Digi);
+  tested against a real inetutils telnetd and scripted servers.
+- App: `serial_*` and `telnet_open` commands, a generic `session_break`, hotplug
+  watching while the Serial tab is open (D-021), and transfers in a blocking thread
+  with throttled progress, cancellation and `file_transferred` audit entries (D-023).
+- UI: the connect dialog (`Mod+N`) has SSH / Telnet / Serial tabs; serial header
+  controls (DTR/RTS toggles, Break, Transfer menu); a transfer dialog with progress
+  that can be hidden and reopened; palette actions for BREAK and transfers. Serial and
+  Telnet tabs reconnect with backoff like SSH (D-022). Audit view labels sessions and
+  transfers.
+- Verified in the real release build under Xvfb: serial console over a socat null
+  modem, a 70 kB Ymodem upload to `rb` (byte-identical), unplug → "Was the cable
+  unplugged?" → automatic resume on replug, and Telnet to telnetd with NAWS and BREAK.
+
+**Next:** confirm CI green for M3, then M4 (inventory).
+
+**Test manually:** real USB-serial adapters (FTDI, Prolific, CP210x, CH340) on both OSes,
+including hotplug and the Linux `dialout` hint; BREAK into ROMMON on a Cisco device;
+an Xmodem image upload in ROMMON; reverse Telnet through an Opengear/Avocent/Cisco
+terminal server; on macOS, that only `/dev/cu.*` ports are listed.

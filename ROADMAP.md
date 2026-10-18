@@ -71,14 +71,16 @@ both platforms, and there are no stubs/TODOs left inside it.
 ## M3 – Serial and Telnet
 
 - [x] Serial port discovery + USB VID/PID friendly names; prefer `/dev/cu.*` on macOS (crate)
-- [ ] Hotplug events to the UI
+- [x] Hotplug events to the UI (live port list in the connect dialog)
 - [x] Full line settings, live DTR/RTS, BREAK, local echo, newline mapping (crate)
 - [x] Xmodem / Xmodem-1K / Ymodem send & receive with progress (crate; tested against lrzsz)
 - [x] Permission problem detection with per-OS fixes
-- [ ] Serial UI: connect dialog, header controls (DTR/RTS/BREAK), transfer dialog with progress
+- [x] Serial UI: connect dialog, header controls (DTR/RTS/BREAK), transfer dialog with progress
 - [x] Telnet: IAC/option negotiation (loop-safe), NAWS, terminal type, BREAK, raw TCP mode (crate)
 - [x] Reverse Telnet port mapping for console servers (Opengear, Cisco lines, Avocent, Lantronix, Digi)
-- [ ] Telnet / console-server UI in the connect dialog
+- [x] Telnet / console-server UI in the connect dialog
+- [x] Unplug/replug and dropped Telnet sessions reconnect with backoff (D-022)
+- [ ] CI green on both platforms for M3
 - [x] Integration tests: socat PTY pairs (incl. Xmodem/Ymodem vs lrzsz), real telnetd + scripted server
 
 ## M4 – Inventory
