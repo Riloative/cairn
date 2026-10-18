@@ -1,0 +1,48 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/core",
+  "crates/proto-ssh",
+  "crates/proto-serial",
+  "crates/proto-telnet",
+  "crates/proto-rdp",
+  "crates/tftp",
+  "crates/export",
+  "src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/riloative/cairn"
+authors = ["Cairn contributors"]
+
+[workspace.dependencies]
+cairn-core = { path = "crates/core" }
+cairn-proto-ssh = { path = "crates/proto-ssh" }
+cairn-proto-serial = { path = "crates/proto-serial" }
+cairn-proto-telnet = { path = "crates/proto-telnet" }
+cairn-proto-rdp = { path = "crates/proto-rdp" }
+cairn-tftp = { path = "crates/tftp" }
+cairn-export = { path = "crates/export" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

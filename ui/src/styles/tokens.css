@@ -1,0 +1,57 @@
+/*
+ * Design tokens. Components never use raw colors; they use Tailwind utilities that map to
+ * these variables (see `@theme inline` in index.css). Spacing follows an 8 px grid
+ * (Tailwind's 4 px base step, used in even multiples). Themes override the color and
+ * shadow tokens via [data-theme] on <html>.
+ */
+:root {
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+
+  --duration-fast: 120ms;
+  --duration-base: 160ms;
+  --duration-slow: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --font-ui: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  /* Protocol accents (used for tab dots and terminal header tint). */
+  --proto-ssh: #8b7cf6;
+  --proto-telnet: #a78bfa;
+  --proto-serial: #f59e0b;
+  --proto-rdp: #38bdf8;
+  --proto-local: #94a3b8;
+}
+
+/* Midnight — the default dark theme. Remaining themes land in M1. */
+:root,
+[data-theme="midnight"] {
+  color-scheme: dark;
+  --bg: #0d0e12;
+  --bg-subtle: #121318;
+  --surface: #16171d;
+  --surface-raised: #1c1d24;
+  --border: #25262e;
+  --border-strong: #33343d;
+  --fg: #e6e7eb;
+  --fg-muted: #9a9ca7;
+  --fg-subtle: #6b6d78;
+  --accent: #7c6cf2;
+  --accent-fg: #ffffff;
+  --accent-subtle: #7c6cf21f;
+  --success: #3fb97f;
+  --warning: #e5a33a;
+  --danger: #e5534b;
+  --focus-ring: #8b7cf6;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 16px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 12px 40px rgb(0 0 0 / 0.45);
+}

@@ -1,0 +1,100 @@
+# CLAUDE.md — Cairn
+
+**Before starting work, read CLAUDE.md, ROADMAP.md and docs/SPEC.md; work on the first unchecked milestone; update ROADMAP.md checkboxes and add a short entry to docs/PROGRESS.md at the end of every session.**
+
+Record every non-obvious technical decision in `docs/DECISIONS.md`.
+
+## What Cairn is
+
+A local-only desktop SSH / Serial / Telnet / RDP client with a network infrastructure
+inventory and map, for a single network engineer. Targets: macOS (Apple Silicon only)
+and Ubuntu 24.04+. Full spec: `docs/SPEC.md`.
+
+## Architecture
+
+- **Tauri 2** shell. Rust backend, React + TypeScript + Vite frontend.
+- All domain logic lives in UI-free Rust crates under `crates/`. `src-tauri` is a thin
+  layer: it validates IPC input, calls into the crates, and maps errors to
+  user-friendly messages.
+- Terminal and RDP data flow over **Tauri v2 Channels with binary payloads**
+  (`tauri::ipc::Response` / `InvokeResponseBody::Raw`), never JSON byte arrays.
+- Persistent data: SQLite + SQLCipher (`rusqlite`), key derived with Argon2id from the
+  master password. Secrets never leave Rust.
+
+## Layout
+
+```
+crates/
+  core/          models, database, vault, audit, settings (no UI deps)
+  proto-ssh/     SSH (russh, russh-sftp), host keys, algorithms
+  proto-serial/  serial ports, line settings, X/Ymodem
+  proto-telnet/  telnet IAC/option negotiation, NAWS
+  proto-rdp/     IronRDP session wrapper
+  tftp/          TFTP server
+  export/        SVG→PDF, CSV/JSON export, backups
+src-tauri/       Tauri app: commands, events, capabilities, bundling config
+ui/              React frontend (Vite root)
+  src/app/       app shell, routing between views
+  src/components/ui/  design-system primitives (Radix-based)
+  src/styles/    tokens.css (design tokens), themes, fonts
+  src/lib/       IPC wrappers (typed), utilities
+  public/fonts/  bundled Inter + JetBrains Mono (OFL licenses alongside)
+docs/            SPEC.md, DECISIONS.md, PROGRESS.md
+.github/workflows/  ci.yml, release.yml
+```
+
+## Commands
+
+Run from the repo root.
+
+| Task | Command |
+|---|---|
+| Install JS deps | `npm ci` |
+| Dev app | `npm run tauri dev` |
+| Frontend only | `npm run dev` |
+| Build bundles | `npm run tauri build` (Linux: `-- --bundles deb`; macOS: `-- --target aarch64-apple-darwin --bundles dmg`) |
+| Rust format | `cargo fmt --all` (check: `cargo fmt --all -- --check`) |
+| Rust lint | `cargo clippy --workspace --all-targets -- -D warnings` |
+| Rust tests | `cargo test --workspace` |
+| Supply chain | `cargo deny check`, `cargo audit`, `npm audit --audit-level=high` |
+| Frontend lint | `npm run lint` |
+| Frontend format | `npm run format` (check: `npm run format:check`) |
+| Typecheck | `npm run typecheck` |
+| Frontend tests | `npm test` |
+
+Linux build deps: `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libudev-dev libssl-dev pkg-config build-essential patchelf`.
+
+## Coding conventions
+
+- Read existing code before changing it. Small functions, focused modules.
+- Rust: edition 2021, `thiserror` for typed errors in every crate; every error maps to a
+  human-readable, actionable message (`UserMessage` trait / `to_user_message`). No
+  `unwrap()`/`expect()` outside tests except on proven invariants (comment why).
+- Clippy must be clean with `-D warnings`. rustfmt default style.
+- Public crate APIs are unit-tested. Integration tests against real local servers go in
+  `crates/*/tests/`.
+- TypeScript: `strict`, no `any`. IPC calls go only through typed wrappers in
+  `ui/src/lib/ipc.ts`. State in Zustand stores (`ui/src/stores`).
+- Styling only via design tokens (CSS variables in `ui/src/styles/tokens.css`) exposed
+  through Tailwind theme names. No raw hex colors in components. 8 px spacing grid.
+- Transitions 120–200 ms; skeletons instead of spinners; empty states with one CTA.
+- Do not leave stubs/TODOs in a milestone marked complete.
+- Do not put model identifiers in commits, PRs or code.
+
+## Security rules (non-negotiable, from SPEC §9)
+
+- **Master password** required on first launch and to unlock. Argon2id (~0.5–1 s) derives
+  the SQLCipher key. Auto-lock after idle (default 15 min) and on system sleep. Strength
+  indicator on setup; warn that a lost master password means lost data; offer an
+  encrypted backup right after setup.
+- **Secrets stay in Rust:** credentials, keys and passphrases live only in the encrypted
+  vault and in Rust memory wrapped in `zeroize` types. They never reach the frontend.
+  The frontend references credentials by ID and shows masked values; explicit reveal is
+  audited. Clipboard copies of passwords are cleared after 30 s.
+- **Tauri hardening:** strict CSP, no remote content, minimal capabilities per window.
+  All IPC commands are typed and validated. Nothing from the network is rendered as
+  HTML; terminal web links open only on explicit click.
+- **Logs never contain secrets.** Input typed after a detected password prompt is
+  redacted in audit/transcripts; raw output is kept.
+- **Supply chain:** `cargo audit`, `cargo deny`, `npm audit` run in CI.
+- **Fully local:** no telemetry, no network calls except user-initiated connections.

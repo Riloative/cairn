@@ -1,0 +1,132 @@
+# Cairn Roadmap
+
+Source of truth: [docs/SPEC.md](docs/SPEC.md). Work on the first unchecked milestone.
+A milestone is checked only when every task is done, all tests pass, CI is green on
+both platforms, and there are no stubs/TODOs left inside it.
+
+## M0 – Scaffolding
+
+- [x] `docs/SPEC.md`, `ROADMAP.md`, `CLAUDE.md`, `docs/DECISIONS.md`, `docs/PROGRESS.md`
+- [x] Cargo workspace with `crates/{core,proto-ssh,proto-serial,proto-telnet,proto-rdp,tftp,export}` and `src-tauri`
+- [x] Each crate compiles with a minimal, tested public surface (no UI deps)
+- [x] Tauri 2 app (`src-tauri`) with strict CSP, minimal capabilities, typed `app_info` command
+- [x] Frontend: React + TypeScript + Vite + Tailwind + Radix in `ui/`
+- [x] Bundled Inter + JetBrains Mono with OFL licenses
+- [x] Design-token CSS variables (base theme) and a minimal app shell placeholder
+- [x] Lint/format: rustfmt, clippy (`-D warnings`), eslint, prettier, `tsc --noEmit`
+- [x] Vitest + React Testing Library set up with a first test
+- [x] `deny.toml` for `cargo deny`; `cargo audit` and `npm audit` in CI
+- [x] CI workflow: lint + test on ubuntu-24.04 and macos-14
+- [x] CI builds unsigned `.deb` (ubuntu-24.04) and `.dmg` (macos-14, `aarch64-apple-darwin`) as artifacts
+- [x] Release workflow on `v*` tags attaching the bundles to a GitHub Release
+- [ ] CI verified green on both platforms (needs a push + PR run)
+
+## M1 – Core and shell
+
+- [ ] `core::vault`: Argon2id KDF (calibrated ~0.5–1 s), salt + params file, verifier, `zeroize` secrets
+- [ ] SQLCipher database (`rusqlite` + `bundled-sqlcipher`), migrations framework with versioned SQL
+- [ ] Master password setup / unlock / lock / change; failed-attempt audit; idle auto-lock (default 15 min) and lock on system sleep
+- [ ] Password strength meter on setup + lost-password warning + offer encrypted backup after setup
+- [ ] Audit core: append-only table, SHA-256 hash chain, `verify_integrity`, typed event enum
+- [ ] Settings store (typed, versioned, audited changes)
+- [ ] Typed error type → user-friendly messages across IPC
+- [ ] Design system: tokens (color, radius, spacing 8px grid, shadow), 3 dark + 3 light themes + follow system
+- [ ] Primitives: Button, Input, Dialog, Sheet, Tooltip, DropdownMenu, ContextMenu, Tabs, Toast, Skeleton, EmptyState, Kbd
+- [ ] App shell: collapsible sidebar (Sessions, Inventory, Map, Audit, Settings + open sessions), top session tabs with protocol dot + state
+- [ ] Command palette (Cmd/Ctrl+K) with action registry
+- [ ] Toasts + notification center
+- [ ] Shortcut registry listed in Settings
+- [ ] Tests: vault, db migrations, audit chain tamper detection, settings, stores, components
+
+## M2 – Terminal and SSH
+
+- [ ] xterm.js (WebGL, fit, search, unicode11, web-links, serialize, image) over binary Tauri Channels
+- [ ] Session manager in Rust (session IDs, lifecycle events, backpressure)
+- [ ] Local shell tabs (`portable-pty`), profiles; Linux Podman/Toolbox/Distrobox quick-launch
+- [ ] Terminal profiles (font, size, line height, cursor, scrollback 10k, palette, opacity, bell, copy-on-select)
+- [ ] ≥15 bundled palettes with attribution; import iTerm2/Ghostty/Windows Terminal/Alacritty with live preview
+- [ ] SSH: password, pubkey (ed25519/ECDSA/RSA, encrypted), keyboard-interactive, agent; agent forwarding toggle
+- [ ] Host keys: own known-hosts store, TOFU with fingerprint, changed-key full-screen warning ("accept"), optional `~/.ssh/known_hosts`
+- [ ] Legacy algorithms per device (dh-group1/14-sha1, ssh-rsa, aes-cbc) + warning badge
+- [ ] Jump host chains, SOCKS5/HTTP proxy
+- [ ] Keepalive, auto-reconnect with backoff, reconnect overlay
+- [ ] Session logging with timestamps
+- [ ] Keyword highlighting overlay engine + vendor rule sets (IOS/IOS-XE/NX-OS, Junos, FortiOS, AOS-CX, ProCurve, Comware, UniFi/EdgeOS), editable
+- [ ] Scrollback search (regex/case/whole word)
+- [ ] Paste safety dialog + per-line delay
+- [ ] Tab overview grid with live thumbnails
+- [ ] Context-colored header bar + privilege prompt regexes
+- [ ] Disconnect notifications; OSC 133 long-command notifications
+- [ ] Integration tests against local openssh-server (modern + legacy config)
+
+## M3 – Serial and Telnet
+
+- [ ] Serial port discovery + hotplug + USB VID/PID friendly names; prefer `/dev/cu.*` on macOS
+- [ ] Full line settings, live DTR/RTS, BREAK, local echo, newline mapping
+- [ ] Xmodem / Xmodem-1K / Ymodem send & receive with progress
+- [ ] Permission problem detection with per-OS fixes
+- [ ] Telnet: IAC/option negotiation, NAWS, terminal type
+- [ ] Reverse Telnet via console server (server X, port Y)
+- [ ] Integration tests: socat PTY pairs (incl. Xmodem), local telnet server
+
+## M4 – Inventory
+
+- [ ] Location hierarchy: Site → Building → Floor → Room → Rack (U height)
+- [ ] Devices with all fields, IP validation + duplicate warnings, connection methods
+- [ ] Interfaces + bulk create from patterns (`Gi1/0/1-48`)
+- [ ] VLAN registry with colors
+- [ ] Credential profiles (secrets in vault only, reveal/copy audited, clipboard clear 30 s)
+- [ ] Custom fields (text, number, select, multi-select, date, URL, IP, boolean)
+- [ ] Inventory table: filter, group, sort, column chooser, saved views, full-text search
+- [ ] Side-sheet detail view, minimal forms with validation + keyboard nav
+- [ ] Duplicate device with interfaces
+- [ ] Field-level diff audit for inventory CRUD
+
+## M5 – Map
+
+- [ ] Campus / Building / Floor / Rack views with breadcrumbs
+- [ ] Original SVG icon set for all device types, vendor badge
+- [ ] Interface-to-interface links (media, speed, VLANs, LAG, description)
+- [ ] Link labels toggles (per link + global), color by media/speed/VLAN
+- [ ] Orthogonal routing + parallel link bundling
+- [ ] Snap-to-grid, alignment guides, multi-select, zones, lock, undo/redo
+- [ ] ELK auto-layout (whole/selection)
+- [ ] Context menu, hover card, double-click connect, search/focus, mini-map
+- [ ] Floor plan backgrounds (PNG/JPG/SVG/PDF page) with scale/opacity
+- [ ] Rack elevation with collision-free drag
+- [ ] Export PNG (1x/2x/4x), SVG, PDF (Rust `svg2pdf`) with title/legend/date, theme or forced light
+
+## M6 – Power tools
+
+- [ ] SFTP side panel (tree, DnD, rename/delete/mkdir/chmod, transfer queue) + SCP
+- [ ] Port forwarding manager (local/remote/dynamic, presets, live status)
+- [ ] TFTP server (root, bind, rw perms, transfer log, custom port + setcap/authbind docs)
+- [ ] Snippets library with variables, palette + snippet bar
+- [ ] Broadcast from tabs and map with banner
+- [ ] Grab config (vendor commands, paging) + snapshots + side-by-side diff + export
+- [ ] Audit integration for all of the above
+
+## M7 – RDP
+
+- [ ] IronRDP session, dirty-rect frames over binary channel to canvas
+- [ ] Keyboard/mouse input incl. macOS key mapping
+- [ ] NLA/CredSSP, TLS cert trust prompt
+- [ ] Dynamic resize, fit/scaled, fullscreen, Ctrl+Alt+Del, text clipboard sync
+- [ ] RDP profiles (resolution, color depth, gateway if feasible, SSH tunnel)
+- [ ] External client fallback (FreeRDP on Linux, `.rdp` on macOS)
+- [ ] xrdp integration test if feasible
+
+## M8 – Audit and data
+
+- [ ] Audit view: filters (time, device, event, protocol), verify integrity, CSV/JSON export, retention
+- [ ] asciicast v2 recording (per device / global), replay player (seek, speed), transcript export
+- [ ] Encrypted `.cairn-backup` full backup + restore
+- [ ] JSON/CSV readable export (credentials opt-in with warning)
+
+## M9 – Polish
+
+- [ ] Performance: 300 devices, 30 sessions, 500-link map; cold start < 1.5 s
+- [ ] Accessibility: focus rings, contrast checks in all themes
+- [ ] Empty states, onboarding, keyboard shortcuts sheet
+- [ ] tauri-driver e2e smoke tests under xvfb + screenshot artifacts
+- [ ] README with install notes (macOS quarantine, Ubuntu dialout)
