@@ -116,6 +116,14 @@ export function coreActions(): Action[] {
       },
     },
     {
+      id: "ssh.quickConnect",
+      title: "New SSH connection…",
+      group: "Sessions",
+      keywords: ["ssh", "connect", "host", "device", "jump", "proxy"],
+      shortcut: "Mod+N",
+      run: () => ui().setQuickConnectOpen(true),
+    },
+    {
       id: "tabs.next",
       title: "Next tab",
       group: "Sessions",

@@ -8,7 +8,10 @@ use zeroize::Zeroizing;
 
 /// Ordered schema migrations. The index + 1 is the schema version stored in
 /// `PRAGMA user_version`. Never edit a released migration; append a new one.
-const MIGRATIONS: &[&str] = &[include_str!("migrations/0001_init.sql")];
+const MIGRATIONS: &[&str] = &[
+    include_str!("migrations/0001_init.sql"),
+    include_str!("migrations/0002_known_hosts.sql"),
+];
 
 /// Latest schema version this build knows.
 pub const SCHEMA_VERSION: i64 = MIGRATIONS.len() as i64;

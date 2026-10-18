@@ -1,6 +1,7 @@
 //! Host key identity and lookup in OpenSSH `known_hosts` files.
 
-use russh::keys::{HashAlg, PublicKey};
+use russh::keys::HashAlg;
+pub use russh::keys::PublicKey;
 use serde::Serialize;
 use std::path::Path;
 

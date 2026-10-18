@@ -15,6 +15,8 @@ import { useActivityPing } from "./useActivityPing";
 import { useCoreActions } from "./useCoreActions";
 import { useGlobalShortcuts } from "./useGlobalShortcuts";
 import { useTerminalSetup } from "@/terminal/useTerminalSetup";
+import { QuickConnectDialog } from "@/ssh/QuickConnectDialog";
+import { SessionPrompts } from "@/ssh/SessionPrompts";
 
 function ActiveView({ view }: { view: View }) {
   switch (view) {
@@ -72,6 +74,8 @@ export function Shell() {
       </div>
       <CommandPalette />
       <NotificationCenter />
+      <QuickConnectDialog />
+      <SessionPrompts />
     </div>
   );
 }

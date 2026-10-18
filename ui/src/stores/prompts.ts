@@ -1,0 +1,34 @@
+import { create } from "zustand";
+import * as ipc from "@/lib/ipc";
+import type { HostKeyInfo, HostKeyStatus, PromptAnswer, SshPrompt } from "@/lib/ipc";
+
+export type PendingPrompt =
+  | {
+      id: number;
+      tabId: string;
+      type: "host_key";
+      info: HostKeyInfo;
+      status: HostKeyStatus;
+      openssh: "match" | "mismatch" | "unknown";
+    }
+  | { id: number; tabId: string; type: "prompt"; prompt: SshPrompt };
+
+interface PromptsState {
+  /** Oldest first; the UI shows the first one. */
+  queue: PendingPrompt[];
+  push: (p: PendingPrompt) => void;
+  /** Send the answer to the backend and remove the prompt. */
+  answer: (id: number, answer: PromptAnswer) => Promise<void>;
+  /** Forget prompts of a closed tab (the backend already dropped them). */
+  dropTab: (tabId: string) => void;
+}
+
+export const usePrompts = create<PromptsState>((set, get) => ({
+  queue: [],
+  push: (p) => set({ queue: [...get().queue, p] }),
+  answer: async (id, answer) => {
+    set({ queue: get().queue.filter((p) => p.id !== id) });
+    await ipc.sessionPromptReply(id, answer);
+  },
+  dropTab: (tabId) => set({ queue: get().queue.filter((p) => p.tabId !== tabId) }),
+}));

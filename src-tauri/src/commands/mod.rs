@@ -5,5 +5,6 @@ pub mod app;
 pub mod audit;
 pub mod session;
 pub mod settings;
+pub mod ssh;
 pub mod terminal;
 pub mod vault;

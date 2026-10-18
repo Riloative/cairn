@@ -45,6 +45,41 @@ pub enum AuditEvent {
         ok: bool,
         entries: u64,
     },
+    #[serde(rename_all = "camelCase")]
+    HostKeyTrusted {
+        host: String,
+        port: u16,
+        key_type: String,
+        fingerprint: String,
+        /// Set when this replaced a different (changed) key.
+        replaced_fingerprint: Option<String>,
+    },
+    /// The user refused a host key (unknown or changed).
+    #[serde(rename_all = "camelCase")]
+    HostKeyRejected {
+        host: String,
+        port: u16,
+        fingerprint: String,
+        changed: bool,
+    },
+    #[serde(rename_all = "camelCase")]
+    SessionStarted {
+        session_id: String,
+        protocol: String,
+        target: String,
+        username: Option<String>,
+        /// Device id once inventory exists (M4); free-form label until then.
+        device: Option<String>,
+        host_key_fingerprint: Option<String>,
+    },
+    #[serde(rename_all = "camelCase")]
+    SessionEnded {
+        session_id: String,
+        protocol: String,
+        target: String,
+        duration_secs: u64,
+        reason: String,
+    },
 }
 
 impl AuditEvent {
@@ -58,6 +93,10 @@ impl AuditEvent {
             AuditEvent::MasterPasswordChanged => "master_password_changed",
             AuditEvent::SettingsChanged { .. } => "settings_changed",
             AuditEvent::IntegrityVerified { .. } => "integrity_verified",
+            AuditEvent::HostKeyTrusted { .. } => "host_key_trusted",
+            AuditEvent::HostKeyRejected { .. } => "host_key_rejected",
+            AuditEvent::SessionStarted { .. } => "session_started",
+            AuditEvent::SessionEnded { .. } => "session_ended",
         }
     }
 }
@@ -366,6 +405,34 @@ mod tests {
             AuditEvent::IntegrityVerified {
                 ok: true,
                 entries: 1,
+            },
+            AuditEvent::HostKeyTrusted {
+                host: "h".into(),
+                port: 22,
+                key_type: "ssh-ed25519".into(),
+                fingerprint: "f".into(),
+                replaced_fingerprint: None,
+            },
+            AuditEvent::HostKeyRejected {
+                host: "h".into(),
+                port: 22,
+                fingerprint: "f".into(),
+                changed: true,
+            },
+            AuditEvent::SessionStarted {
+                session_id: "s1".into(),
+                protocol: "ssh".into(),
+                target: "h:22".into(),
+                username: Some("admin".into()),
+                device: None,
+                host_key_fingerprint: None,
+            },
+            AuditEvent::SessionEnded {
+                session_id: "s1".into(),
+                protocol: "ssh".into(),
+                target: "h:22".into(),
+                duration_secs: 5,
+                reason: "exited".into(),
             },
         ];
         for e in events {

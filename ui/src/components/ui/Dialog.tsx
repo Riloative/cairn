@@ -1,6 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, ReactNode, RefObject } from "react";
 import { cn } from "@/lib/cn";
 
 export const Dialog = DialogPrimitive.Root;
@@ -27,6 +27,10 @@ interface DialogContentProps extends Omit<ComponentProps<typeof DialogPrimitive.
   description?: ReactNode;
   /** Hide the close button (e.g. for a blocking confirmation). */
   hideClose?: boolean;
+  /** Element to focus when the dialog opens (default: first focusable). */
+  initialFocus?: RefObject<HTMLElement | null>;
+  /** Called instead of restoring focus to the trigger when the dialog closes. */
+  onClosed?: () => void;
 }
 
 export function DialogContent({
@@ -34,6 +38,8 @@ export function DialogContent({
   title,
   description,
   hideClose,
+  initialFocus,
+  onClosed,
   children,
   ...props
 }: DialogContentProps) {
@@ -46,6 +52,18 @@ export function DialogContent({
           "rounded-xl border border-border bg-surface p-6 shadow-lg animate-pop-in focus:outline-none",
           className,
         )}
+        onOpenAutoFocus={(e) => {
+          if (initialFocus?.current) {
+            e.preventDefault();
+            initialFocus.current.focus();
+          }
+        }}
+        onCloseAutoFocus={(e) => {
+          if (onClosed) {
+            e.preventDefault();
+            onClosed();
+          }
+        }}
         {...props}
       >
         <DialogPrimitive.Title className="text-[15px] font-semibold tracking-tight">

@@ -34,6 +34,10 @@ pub struct Settings {
     pub lock_on_sleep: bool,
     pub sidebar_collapsed: bool,
     pub reduce_motion: bool,
+    /// Also trust keys found in `~/.ssh/known_hosts` (read-only).
+    pub read_openssh_known_hosts: bool,
+    /// Desktop notification when a session drops unexpectedly.
+    pub notify_on_disconnect: bool,
 }
 
 impl Default for Settings {
@@ -46,6 +50,8 @@ impl Default for Settings {
             lock_on_sleep: true,
             sidebar_collapsed: false,
             reduce_motion: false,
+            read_openssh_known_hosts: true,
+            notify_on_disconnect: true,
         }
     }
 }

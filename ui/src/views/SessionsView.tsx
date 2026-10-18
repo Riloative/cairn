@@ -5,6 +5,7 @@ import { openLocalShell } from "@/terminal/controller";
 import { TerminalHeader } from "@/terminal/TerminalHeader";
 import { TerminalPane } from "@/terminal/TerminalPane";
 import { usePrivileged } from "@/terminal/privilege";
+import { ReconnectOverlay } from "@/terminal/ReconnectOverlay";
 
 export function SessionsView() {
   const tabs = useSessions((s) => s.tabs);
@@ -17,7 +18,7 @@ export function SessionsView() {
       <EmptyState
         icon={<TerminalSquare size={20} />}
         title="No open sessions"
-        description="Start a local shell, or open the command palette to connect to a device."
+        description="Start a local shell, or connect to a device with SSH (Ctrl/⌘ N)."
         action={{
           label: "New local shell",
           onClick: () => void openLocalShell(),
@@ -36,6 +37,7 @@ export function SessionsView() {
           .map((t) => (
             <TerminalPane key={t.id} tabId={t.id} active={t.id === activeId} />
           ))}
+        {active.protocol === "ssh" && <ReconnectOverlay tab={active} />}
       </div>
     </div>
   );

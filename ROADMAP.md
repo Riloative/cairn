@@ -48,11 +48,12 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [ ] Profile behaviors: bell (visual/sound), copy-on-select
 - [x] ≥15 bundled palettes with attribution (20, MIT; `ui/public/licenses/terminal-palettes.txt`)
 - [ ] Palette import: iTerm2/Ghostty/Windows Terminal/Alacritty with live preview
-- [ ] SSH: password, pubkey (ed25519/ECDSA/RSA, encrypted), keyboard-interactive, agent; agent forwarding toggle
-- [ ] Host keys: own known-hosts store, TOFU with fingerprint, changed-key full-screen warning ("accept"), optional `~/.ssh/known_hosts`
-- [ ] Legacy algorithms per device (dh-group1/14-sha1, ssh-rsa, aes-cbc) + warning badge
-- [ ] Jump host chains, SOCKS5/HTTP proxy
-- [ ] Keepalive, auto-reconnect with backoff, reconnect overlay
+- [x] SSH: password, pubkey (ed25519/ECDSA/RSA, encrypted), keyboard-interactive, agent; agent forwarding toggle
+- [x] Host keys: own known-hosts store, TOFU with fingerprint, changed-key full-screen warning ("accept"), optional `~/.ssh/known_hosts`
+- [x] Legacy algorithms per connection (dh-group1/14/gex-sha1, ssh-rsa, aes-cbc, 3des-cbc, hmac-sha1) + warning badge in the connect dialog (per-device badge lands with inventory in M4)
+- [x] Jump host chains, SOCKS5/HTTP proxy
+- [x] Keepalive, auto-reconnect with backoff, reconnect overlay
+- [x] Quick-connect dialog (`Mod+N`), host-key and credential prompts, known-hosts manager in Settings
 - [ ] Session logging with timestamps
 - [ ] Keyword highlighting overlay engine + vendor rule sets (IOS/IOS-XE/NX-OS, Junos, FortiOS, AOS-CX, ProCurve, Comware, UniFi/EdgeOS), editable
 - [ ] Scrollback search (regex/case/whole word)
@@ -60,8 +61,9 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [ ] Tab overview grid with live thumbnails
 - [x] Context-colored header bar + privilege prompt regexes (defaults for Cisco/Aruba/HP `#`, Junos, Linux root, Comware)
 - [ ] Settings UI for terminal profiles, palettes and prompt patterns
-- [ ] Disconnect notifications; OSC 133 long-command notifications
-- [ ] Integration tests against local openssh-server (modern + legacy config)
+- [x] Disconnect notifications (desktop, when the tab is in the background)
+- [ ] OSC 133 long-command notifications
+- [x] Integration tests against local openssh-server (modern + legacy config) — 16 tests in CI
 
 ## M3 – Serial and Telnet
 

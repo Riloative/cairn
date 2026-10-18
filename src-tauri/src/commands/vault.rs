@@ -58,6 +58,8 @@ pub async fn vault_unlock(
     let vault = state.vault.clone();
     blocking(move || Ok(vault.lock().unlock(&password)?)).await?;
     state.touch();
+    // Write audit events raised while locked (e.g. sessions that ended during auto-lock).
+    state.audit.flush(&state.vault.lock());
     info(&state)
 }
 

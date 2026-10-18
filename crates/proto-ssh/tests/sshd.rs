@@ -36,6 +36,8 @@ fn port(k: &str) -> u16 {
 #[derive(Default)]
 struct TestInteract {
     reject_host_keys: bool,
+    /// Simulates a user taking their time on the host key dialog.
+    host_key_delay: Duration,
     answers: Mutex<VecDeque<Vec<String>>>,
     prompts: Mutex<Vec<Prompt>>,
     host_keys: Mutex<Vec<HostKeyInfo>>,
@@ -64,7 +66,11 @@ impl Interact for TestInteract {
         } else {
             HostKeyVerdict::Accept
         };
-        Box::pin(async move { v })
+        let delay = self.host_key_delay;
+        Box::pin(async move {
+            tokio::time::sleep(delay).await;
+            v
+        })
     }
     fn prompt(&self, prompt: Prompt) -> BoxFuture<'static, Option<Vec<SecretString>>> {
         self.prompts.lock().expect("lock").push(prompt);
@@ -314,6 +320,18 @@ async fn cancelled_prompt_cancels_auth() {
     .await
     .expect_err("cancelled");
     assert!(matches!(err, SshError::AuthCancelled));
+}
+
+#[tokio::test]
+async fn slow_user_decisions_do_not_trip_the_connect_timeout() {
+    require_sshd!();
+    let i = Arc::new(TestInteract {
+        host_key_delay: Duration::from_millis(2500),
+        ..Default::default()
+    });
+    let mut o = opts(vec![hop("CAIRN_SSH_PORT", vec![password()], false)]);
+    o.connect_timeout_secs = 1;
+    connect(&o, i).await.expect("prompt time must not count");
 }
 
 #[tokio::test]

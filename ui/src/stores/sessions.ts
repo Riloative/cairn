@@ -8,6 +8,8 @@ export interface SessionTab {
   title: string;
   protocol: SessionProtocol;
   state: SessionState;
+  /** Short progress or error text (e.g. "Authenticating as admin"). */
+  detail?: string;
 }
 
 interface SessionsStore {
@@ -17,7 +19,7 @@ interface SessionsStore {
   close: (id: string) => void;
   activate: (id: string) => void;
   activateRelative: (offset: number) => void;
-  setState: (id: string, state: SessionState) => void;
+  setState: (id: string, state: SessionState, detail?: string) => void;
 }
 
 export const useSessions = create<SessionsStore>((set, get) => ({
@@ -45,6 +47,6 @@ export const useSessions = create<SessionsStore>((set, get) => ({
     const next = tabs[(idx + offset + tabs.length) % tabs.length];
     if (next) set({ activeId: next.id });
   },
-  setState: (id, state) =>
-    set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, state } : t)) }),
+  setState: (id, state, detail) =>
+    set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, state, detail } : t)) }),
 }));

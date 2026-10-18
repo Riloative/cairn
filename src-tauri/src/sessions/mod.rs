@@ -4,7 +4,12 @@
 //! (`InvokeResponseBody::Raw`), never JSON arrays. Lifecycle messages (closed, …) use a
 //! second, JSON channel. Input arrives as a raw request body (see `commands::session`).
 
+pub mod output;
+pub mod ssh;
+
+use cairn_core::known_hosts::HostKeyStatus;
 use cairn_core::terminal::{CloseReason, EventSink, TermEvent, TerminalSession};
+use cairn_proto_ssh::{HostKeyInfo, Progress, Prompt};
 use parking_lot::Mutex;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -18,7 +23,28 @@ pub type SessionId = String;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum SessionMessage {
-    Closed { reason: CloseReason },
+    /// Connection progress (SSH): connecting / authenticating / connected.
+    Progress {
+        progress: Progress,
+    },
+    /// A host key needs the user's decision; answer with `session_prompt_reply`.
+    #[serde(rename_all = "camelCase")]
+    HostKey {
+        prompt_id: u64,
+        info: HostKeyInfo,
+        status: HostKeyStatus,
+        /// `match` / `mismatch` / `unknown` in the user's OpenSSH known_hosts.
+        openssh: &'static str,
+    },
+    /// Credentials or answers needed; answer with `session_prompt_reply`.
+    #[serde(rename_all = "camelCase")]
+    Prompt {
+        prompt_id: u64,
+        prompt: Prompt,
+    },
+    Closed {
+        reason: CloseReason,
+    },
 }
 
 /// Where a session's output goes. Implemented by Tauri channels in production and by
@@ -47,14 +73,30 @@ impl SessionManager {
         Arc::new(Self::default())
     }
 
-    /// Start a session. `start` receives the event sink and returns the backend; events
-    /// are forwarded to `output`, and the session is forgotten once it closes.
+    /// Reserve a fresh session id (so outputs can know it before the session starts).
+    pub fn allocate_id(&self) -> SessionId {
+        format!("s{}", self.next_id.fetch_add(1, Ordering::Relaxed) + 1)
+    }
+
+    /// Start a session with a fresh id. See [`SessionManager::open_with_id`].
+    #[cfg(test)]
     pub fn open<E>(
         self: &Arc<Self>,
         output: Arc<dyn SessionOutput>,
         start: impl FnOnce(EventSink) -> Result<Arc<dyn TerminalSession>, E>,
     ) -> Result<SessionId, E> {
-        let id = format!("s{}", self.next_id.fetch_add(1, Ordering::Relaxed) + 1);
+        let id = self.allocate_id();
+        self.open_with_id(id, output, start)
+    }
+
+    /// Start a session. `start` receives the event sink and returns the backend; events
+    /// are forwarded to `output`, and the session is forgotten once it closes.
+    pub fn open_with_id<E>(
+        self: &Arc<Self>,
+        id: SessionId,
+        output: Arc<dyn SessionOutput>,
+        start: impl FnOnce(EventSink) -> Result<Arc<dyn TerminalSession>, E>,
+    ) -> Result<SessionId, E> {
         let weak = Arc::downgrade(self);
         let sink_id = id.clone();
         let sink: EventSink = Arc::new(move |event| match event {

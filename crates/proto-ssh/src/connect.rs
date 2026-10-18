@@ -2,6 +2,7 @@
 //! of jump hosts (ProxyJump).
 
 use crate::algorithms::{AlgorithmPolicy, LegacyAlgorithm};
+use crate::clock::PromptClock;
 use crate::error::{connect_error, SshError};
 use crate::hostkey::HostKeyInfo;
 use crate::interact::{HostKeyVerdict, Interact, Progress, Prompt};
@@ -118,6 +119,7 @@ pub struct ClientHandler {
     interact: Arc<dyn Interact>,
     agent_forwarding: bool,
     host_key: Arc<Mutex<Option<HostKeyInfo>>>,
+    clock: Arc<PromptClock>,
 }
 
 impl std::fmt::Debug for ClientHandler {
@@ -145,7 +147,10 @@ impl client::Handler for ClientHandler {
             }
         };
         let info = HostKeyInfo::from_key(&self.host, self.port, &key);
-        let verdict = self.interact.host_key(info.clone()).await;
+        let verdict = self
+            .clock
+            .pause_during(self.interact.host_key(info.clone()))
+            .await;
         if verdict == HostKeyVerdict::Accept {
             *self.host_key.lock().await = Some(info);
             Ok(true)
@@ -227,6 +232,7 @@ pub async fn connect(
         .checked_sub(1)
         .ok_or_else(|| SshError::Protocol("no destination given".into()))?;
     let timeout = Duration::from_secs(u64::from(opts.connect_timeout_secs.max(1)));
+    let clock = Arc::new(PromptClock::default());
     let mut jumps: Vec<Handle<ClientHandler>> = Vec::new();
     let mut host_key = None;
 
@@ -243,6 +249,7 @@ pub async fn connect(
             interact: interact.clone(),
             agent_forwarding: opts.agent_forwarding && index == last,
             host_key: slot.clone(),
+            clock: clock.clone(),
         };
         let cfg = config(opts, &hop.algorithms);
 
@@ -278,18 +285,27 @@ pub async fn connect(
                 }
             }
         };
-        let mut handle = tokio::time::timeout(timeout, handshake)
+        let timed_out = || SshError::Timeout {
+            target: target.clone(),
+        };
+        let mut handle = clock
+            .timeout(timeout, handshake)
             .await
-            .map_err(|_| SshError::Timeout {
-                target: target.clone(),
-            })??;
+            .map_err(|()| timed_out())??;
 
         interact.progress(Progress::Authenticating {
             index,
             user: hop.username.clone(),
             target: target.clone(),
         });
-        authenticate(&mut handle, hop, interact.as_ref()).await?;
+        let prompts = PausingInteract {
+            inner: interact.as_ref(),
+            clock: &clock,
+        };
+        clock
+            .timeout(timeout, authenticate(&mut handle, hop, &prompts))
+            .await
+            .map_err(|()| timed_out())??;
         host_key = slot.lock().await.clone();
         jumps.push(handle);
     }
@@ -303,6 +319,18 @@ pub async fn connect(
         host_key,
         target: opts.hops[last].target(),
     })
+}
+
+/// Forwards prompts to the user with the connect timeout paused.
+struct PausingInteract<'a> {
+    inner: &'a dyn Interact,
+    clock: &'a PromptClock,
+}
+
+impl PausingInteract<'_> {
+    async fn prompt(&self, p: Prompt) -> Option<Vec<SecretString>> {
+        self.clock.pause_during(self.inner.prompt(p)).await
+    }
 }
 
 fn resolve_or_connect_error(e: std::io::Error, host: &str, target: &str) -> SshError {
@@ -330,7 +358,7 @@ fn remaining(methods: &russh::MethodSet) -> Vec<String> {
 async fn authenticate(
     handle: &mut Handle<ClientHandler>,
     hop: &Hop,
-    interact: &dyn Interact,
+    interact: &PausingInteract<'_>,
 ) -> Result<(), SshError> {
     let target = hop.target();
     let mut left: Vec<String> = Vec::new();
@@ -416,7 +444,7 @@ async fn auth_key(
     label: &str,
     data: &str,
     passphrase: Option<&SecretString>,
-    interact: &dyn Interact,
+    interact: &PausingInteract<'_>,
 ) -> Result<AuthResult, SshError> {
     let key_err = |e: russh::keys::Error| SshError::Key {
         path: label.to_owned(),
@@ -501,7 +529,7 @@ async fn auth_agent(_: &mut Handle<ClientHandler>, _: &Hop) -> Result<AuthResult
 async fn auth_kbd(
     handle: &mut Handle<ClientHandler>,
     hop: &Hop,
-    interact: &dyn Interact,
+    interact: &PausingInteract<'_>,
 ) -> Result<AuthResult, SshError> {
     let target = hop.target();
     let map = |e| SshError::from_russh(e, &target);

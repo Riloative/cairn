@@ -6,6 +6,7 @@
 //! - [`interact`]: how the engine asks the UI for host-key decisions and secrets.
 
 pub mod algorithms;
+pub mod clock;
 pub mod connect;
 pub mod error;
 pub mod hostkey;

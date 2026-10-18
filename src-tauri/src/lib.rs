@@ -3,9 +3,11 @@
 //! This crate is intentionally thin: commands validate input, call into the `cairn-*`
 //! crates and map their errors to user-facing payloads.
 
+mod audit_queue;
 mod autolock;
 mod commands;
 mod error;
+mod prompts;
 mod sessions;
 mod state;
 
@@ -16,6 +18,8 @@ use tauri::Manager;
 pub fn run() {
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             app.manage(state::AppState::new(Vault::new(dir)));
@@ -42,6 +46,12 @@ pub fn run() {
             commands::session::session_close,
             commands::session::local_containers,
             commands::session::local_default_shell,
+            commands::session::session_prompt_reply,
+            commands::ssh::ssh_open,
+            commands::ssh::ssh_reconnect,
+            commands::ssh::ssh_forget,
+            commands::ssh::known_hosts_list,
+            commands::ssh::known_hosts_remove,
             commands::terminal::terminal_prefs_get,
             commands::terminal::terminal_prefs_update,
         ])

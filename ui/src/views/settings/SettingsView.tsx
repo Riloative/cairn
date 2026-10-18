@@ -18,6 +18,7 @@ import {
 import { useNotifications } from "@/stores/notifications";
 import { useSettings } from "@/stores/settings";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
+import { KnownHosts } from "./KnownHosts";
 
 const AUTO_LOCK_OPTIONS = [
   { value: 1, label: "1 minute" },
@@ -197,6 +198,33 @@ function Security({ s, update }: { s: Settings; update: (p: Partial<Settings>) =
       >
         <Button onClick={() => setChanging(true)}>Change…</Button>
       </Row>
+      <Row
+        title="Use ~/.ssh/known_hosts"
+        description="Trust host keys you already accepted in OpenSSH (read-only)."
+      >
+        <Switch
+          aria-label="Use ~/.ssh/known_hosts"
+          checked={s.readOpensshKnownHosts}
+          onCheckedChange={(v) => update({ readOpensshKnownHosts: v })}
+        />
+      </Row>
+      <Row
+        title="Notify on disconnect"
+        description="Desktop notification when a session in the background drops."
+      >
+        <Switch
+          aria-label="Notify on disconnect"
+          checked={s.notifyOnDisconnect}
+          onCheckedChange={(v) => update({ notifyOnDisconnect: v })}
+        />
+      </Row>
+      <div className="py-4">
+        <p className="font-medium">Known hosts</p>
+        <p className="mb-2 text-xs text-fg-muted">
+          SSH host keys you trusted in Cairn. Forgetting one makes the next connection ask again.
+        </p>
+        <KnownHosts />
+      </div>
       <ChangePasswordDialog open={changing} onOpenChange={setChanging} />
     </section>
   );

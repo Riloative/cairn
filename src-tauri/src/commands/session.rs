@@ -1,34 +1,46 @@
 //! Terminal session commands.
 
 use crate::error::{CommandError, CommandResult};
+use crate::prompts::PromptAnswer;
+use crate::sessions::output::{AuditedOutput, ChannelOutput};
 use crate::sessions::{SessionId, SessionManager, SessionMessage, SessionOutput};
 use crate::state::AppState;
+use cairn_core::audit::AuditEvent;
 use cairn_core::terminal::TerminalSession;
 use cairn_core::VaultStatus;
 use cairn_pty::{Container, LocalPty, ShellSpec};
 use std::sync::Arc;
+use std::time::Instant;
 use tauri::ipc::{Channel, InvokeBody, InvokeResponseBody, Request};
 use tauri::State;
 
 /// Header carrying the session id on raw-body `session_write` calls.
 pub const SESSION_HEADER: &str = "x-cairn-session";
 
-struct ChannelOutput {
-    data: Channel<InvokeResponseBody>,
-    events: Channel<SessionMessage>,
+/// Channel output wrapped with session-end auditing.
+pub(crate) fn audited_output(
+    state: &AppState,
+    session_id: &str,
+    protocol: &'static str,
+    target: &str,
+    on_data: Channel<InvokeResponseBody>,
+    on_event: Channel<SessionMessage>,
+) -> Arc<dyn SessionOutput> {
+    Arc::new(AuditedOutput {
+        inner: Arc::new(ChannelOutput {
+            data: on_data,
+            events: on_event,
+        }),
+        vault: state.vault.clone(),
+        audit: state.audit.clone(),
+        session_id: session_id.to_owned(),
+        protocol,
+        target: target.to_owned(),
+        started: Instant::now(),
+    })
 }
 
-impl SessionOutput for ChannelOutput {
-    fn data(&self, bytes: Vec<u8>) {
-        // The webview may already be gone (window closing); output is then irrelevant.
-        let _ = self.data.send(InvokeResponseBody::Raw(bytes));
-    }
-    fn message(&self, msg: SessionMessage) {
-        let _ = self.events.send(msg);
-    }
-}
-
-fn require_unlocked(state: &AppState) -> CommandResult<()> {
+pub(crate) fn require_unlocked(state: &AppState) -> CommandResult<()> {
     if state.vault.lock().status() == VaultStatus::Unlocked {
         Ok(())
     } else {
@@ -54,15 +66,36 @@ pub fn session_open_local(
 ) -> CommandResult<SessionId> {
     require_unlocked(&state)?;
     let spec = spec.unwrap_or_default();
-    let output = Arc::new(ChannelOutput {
-        data: on_data,
-        events: on_event,
-    });
-    sessions.open(output, |sink| {
+    let program = spec
+        .program
+        .clone()
+        .unwrap_or_else(cairn_pty::default_shell);
+    let id = sessions.allocate_id();
+    let output = audited_output(&state, &id, "local", &program, on_data, on_event);
+    let id = sessions.open_with_id(id, output, |sink| {
         LocalPty::spawn(&spec, cols, rows, sink)
             .map(|p| Arc::new(p) as Arc<dyn TerminalSession>)
             .map_err(CommandError::from)
-    })
+    })?;
+    state.audit.record(
+        &state.vault,
+        AuditEvent::SessionStarted {
+            session_id: id.clone(),
+            protocol: "local".into(),
+            target: program,
+            username: None,
+            device: None,
+            host_key_fingerprint: None,
+        },
+    );
+    Ok(id)
+}
+
+/// Answer a host-key or credential prompt raised by a connecting session.
+#[tauri::command]
+pub fn session_prompt_reply(state: State<'_, AppState>, prompt_id: u64, answer: PromptAnswer) {
+    // An unknown id means the session already went away; nothing to do.
+    state.prompts.answer(prompt_id, answer);
 }
 
 /// Send input. The body is the raw bytes; the session id is in [`SESSION_HEADER`].

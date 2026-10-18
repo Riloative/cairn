@@ -8,6 +8,7 @@ pub mod db;
 pub mod diff;
 pub mod error;
 pub mod kdf;
+pub mod known_hosts;
 pub mod protocol;
 pub mod secret;
 pub mod settings;

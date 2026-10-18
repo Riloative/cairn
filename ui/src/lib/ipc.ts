@@ -99,6 +99,8 @@ export interface Settings {
   lockOnSleep: boolean;
   sidebarCollapsed: boolean;
   reduceMotion: boolean;
+  readOpensshKnownHosts: boolean;
+  notifyOnDisconnect: boolean;
 }
 
 export const settingsGet = () => call<Settings>("settings_get");
@@ -130,7 +132,47 @@ export const auditVerify = () => call<IntegrityReport>("audit_verify");
 export type CloseReason =
   { kind: "exited"; code: number | null } | { kind: "closed" } | { kind: "error"; message: string };
 
-export type SessionMessage = { type: "closed"; reason: CloseReason };
+export interface HostKeyInfo {
+  host: string;
+  port: number;
+  keyType: string;
+  fingerprint: string;
+  publicKey: string;
+}
+
+export type HostKeyStatus =
+  | { status: "trusted" }
+  | { status: "unknown" }
+  | { status: "changed"; previousFingerprint: string };
+
+export type SshPrompt =
+  | { kind: "password"; user: string; target: string }
+  | { kind: "passphrase"; key: string }
+  | {
+      kind: "keyboard_interactive";
+      user: string;
+      target: string;
+      name: string;
+      instructions: string;
+      prompts: { text: string; echo: boolean }[];
+    };
+
+export type ConnectProgress =
+  | { phase: "connecting"; index: number; target: string }
+  | { phase: "authenticating"; index: number; user: string; target: string }
+  | { phase: "connected"; host_key: HostKeyInfo | null };
+
+export type SessionMessage =
+  | { type: "closed"; reason: CloseReason }
+  | { type: "progress"; progress: ConnectProgress }
+  | {
+      type: "host_key";
+      promptId: number;
+      info: HostKeyInfo;
+      status: HostKeyStatus;
+      openssh: "match" | "mismatch" | "unknown";
+    }
+  | { type: "prompt"; promptId: number; prompt: SshPrompt };
 
 /** Mirrors `cairn_pty::ShellSpec`. */
 export interface ShellSpec {
@@ -186,6 +228,85 @@ export async function sessionWrite(id: string, data: Uint8Array): Promise<void> 
     throw CommandError.from(e);
   }
 }
+
+// ── SSH ────────────────────────────────────────────────────────────────────────────
+
+export type LegacyAlgorithm =
+  | "dh-group1-sha1"
+  | "dh-group14-sha1"
+  | "dh-gex-sha1"
+  | "ssh-rsa-sha1"
+  | "aes-cbc"
+  | "triple-des-cbc"
+  | "hmac-sha1";
+
+export type AuthMethod =
+  | { kind: "agent" }
+  | { kind: "keyFile"; path: string; passphrase: string | null }
+  | { kind: "keyboardInteractive" }
+  | { kind: "password"; password: string | null };
+
+export interface Hop {
+  host: string;
+  port: number;
+  username: string;
+  auth: AuthMethod[];
+  algorithms: { legacy: LegacyAlgorithm[] };
+}
+
+export interface ProxyConfig {
+  kind: "socks5" | "http";
+  host: string;
+  port: number;
+  username: string | null;
+  password: string | null;
+}
+
+/** Mirrors `cairn_proto_ssh::ConnectOptions`. */
+export interface ConnectOptions {
+  hops: Hop[];
+  proxy: ProxyConfig | null;
+  keepaliveSecs: number;
+  keepaliveMax: number;
+  connectTimeoutSecs: number;
+  agentForwarding: boolean;
+}
+
+export interface SshOpened {
+  sessionId: string;
+  connectionId: string;
+}
+
+export const sshOpen = (
+  options: ConnectOptions,
+  cols: number,
+  rows: number,
+  cb: SessionCallbacks,
+) => call<SshOpened>("ssh_open", { options, cols, rows, ...channels(cb) });
+
+export const sshReconnect = (
+  connectionId: string,
+  cols: number,
+  rows: number,
+  cb: SessionCallbacks,
+) => call<string>("ssh_reconnect", { connectionId, cols, rows, ...channels(cb) });
+
+export const sshForget = (connectionId: string) => call<null>("ssh_forget", { connectionId });
+
+export type PromptAnswer =
+  { kind: "hostKey"; accept: boolean } | { kind: "secrets"; values: string[] } | { kind: "cancel" };
+
+export const sessionPromptReply = (promptId: number, answer: PromptAnswer) =>
+  call<null>("session_prompt_reply", { promptId, answer });
+
+export interface KnownHost extends HostKeyInfo {
+  firstSeen: string;
+  lastSeen: string;
+}
+
+export const knownHostsList = () => call<KnownHost[]>("known_hosts_list");
+export const knownHostsRemove = (host: string, port: number, keyType: string) =>
+  call<null>("known_hosts_remove", { host, port, keyType });
 
 export const sessionResize = (id: string, cols: number, rows: number) =>
   call<null>("session_resize", { id, cols, rows });

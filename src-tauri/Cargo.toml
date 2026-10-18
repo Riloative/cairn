@@ -19,11 +19,15 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 cairn-core.workspace = true
+cairn-proto-ssh.workspace = true
 cairn-pty.workspace = true
+futures.workspace = true
 parking_lot.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
 tauri-plugin-opener = "2"
 tokio.workspace = true
 

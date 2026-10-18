@@ -10,6 +10,8 @@ export const DEFAULT_SETTINGS: Settings = {
   lockOnSleep: true,
   sidebarCollapsed: false,
   reduceMotion: false,
+  readOpensshKnownHosts: true,
+  notifyOnDisconnect: true,
 };
 
 /**
