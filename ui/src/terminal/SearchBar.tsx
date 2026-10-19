@@ -119,7 +119,7 @@ export function SearchBar({ tabId }: { tabId: string }) {
           if (e.key === "Escape") close();
         }}
         className={cn(
-          "h-6 w-48 rounded bg-surface px-2 font-mono text-xs outline-none",
+          "h-6 w-48 rounded bg-surface px-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring",
           invalid && "text-danger",
         )}
       />

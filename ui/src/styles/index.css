@@ -16,9 +16,11 @@
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
   --color-accent-subtle: var(--accent-subtle);
+  --color-accent-text: var(--accent-text);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-danger-solid: var(--danger-solid);
   --color-ring: var(--focus-ring);
   --color-proto-ssh: var(--proto-ssh);
   --color-proto-telnet: var(--proto-telnet);

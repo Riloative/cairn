@@ -14,7 +14,7 @@ const ICON: Record<NotificationVariant, typeof Info> = {
   error: XCircle,
 };
 const TONE: Record<NotificationVariant, string> = {
-  info: "text-accent",
+  info: "text-accent-text",
   success: "text-success",
   warning: "text-warning",
   error: "text-danger",

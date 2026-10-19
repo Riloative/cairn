@@ -97,7 +97,7 @@ function InterfacePicker({
           <button
             type="button"
             onClick={() => onCreate(filter.trim())}
-            className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[13px] text-accent hover:bg-surface-raised"
+            className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[13px] text-accent-text hover:bg-surface-raised"
           >
             <Plus size={12} /> Create {filter.trim()}
           </button>

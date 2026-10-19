@@ -6,7 +6,7 @@ const TOKEN =
 
 function classOf(token: string): string {
   if (/^(no|shutdown)$/i.test(token)) return "text-danger";
-  if (/^[\d.]+(\/\d+)?$/.test(token) || token.includes(":")) return "text-accent";
+  if (/^[\d.]+(\/\d+)?$/.test(token) || token.includes(":")) return "text-accent-text";
   return "text-warning";
 }
 

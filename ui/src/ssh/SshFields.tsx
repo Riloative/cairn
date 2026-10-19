@@ -145,7 +145,7 @@ export function SshFields({ form, set, errors, autoFocus }: SshFieldsProps) {
               <span className="flex-1" />
               <button
                 type="button"
-                className="text-accent hover:underline"
+                className="text-accent-text hover:underline"
                 onClick={() =>
                   set("legacy", form.legacy.length === ALL_LEGACY.length ? [] : ALL_LEGACY)
                 }

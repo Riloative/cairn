@@ -66,7 +66,7 @@ export function CertificatePrompt({
         description="This is the first RDP connection to this server. Compare the fingerprint with the server's certificate before trusting it; no credentials are sent until you do."
       >
         <div className="flex gap-3 rounded-lg bg-surface-raised p-3">
-          <ShieldQuestion size={18} className="mt-0.5 shrink-0 text-accent" />
+          <ShieldQuestion size={18} className="mt-0.5 shrink-0 text-accent-text" />
           <div className="flex min-w-0 flex-col gap-2">
             <Row label="Fingerprint (SHA-256)" value={cert.fingerprint} mono />
             <Row label="Subject" value={cert.subject || "—"} />

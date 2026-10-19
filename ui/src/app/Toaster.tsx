@@ -11,7 +11,7 @@ const ICONS: Record<NotificationVariant, typeof Info> = {
 };
 
 const TONE: Record<NotificationVariant, string> = {
-  info: "text-accent",
+  info: "text-accent-text",
   success: "text-success",
   warning: "text-warning",
   error: "text-danger",
@@ -61,7 +61,7 @@ export function Toaster() {
                 <ToastPrimitive.Action
                   altText={t.action.label}
                   onClick={t.action.onClick}
-                  className="mt-1.5 text-xs font-medium text-accent hover:underline"
+                  className="mt-1.5 text-xs font-medium text-accent-text hover:underline"
                 >
                   {t.action.label}
                 </ToastPrimitive.Action>

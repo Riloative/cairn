@@ -40,7 +40,7 @@ function UnknownHostKey({
         description="This is the first connection to this host. Compare the fingerprint with the device (e.g. `show crypto key mypubkey rsa`, `ssh-keygen -lf`) before trusting it."
       >
         <div className="flex gap-3 rounded-lg bg-surface-raised p-3">
-          <ShieldQuestion size={18} className="mt-0.5 shrink-0 text-accent" />
+          <ShieldQuestion size={18} className="mt-0.5 shrink-0 text-accent-text" />
           <div className="flex flex-col gap-2">
             <Fingerprint label={p.info.keyType} value={p.info.fingerprint} />
             {p.openssh === "mismatch" && (

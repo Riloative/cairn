@@ -38,7 +38,7 @@ export function TerminalHeader({ tab, privileged }: { tab: SessionTab; privilege
         </span>
       )}
       {privileged && (
-        <span className="rounded-sm bg-danger px-1.5 py-px text-[11px] font-medium text-white">
+        <span className="rounded-sm bg-danger-solid px-1.5 py-px text-[11px] font-medium text-white">
           privileged
         </span>
       )}

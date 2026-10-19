@@ -113,7 +113,7 @@ export function SetupScreen() {
         Moving from another computer?{" "}
         <button
           type="button"
-          className="text-accent hover:underline"
+          className="text-accent-text hover:underline"
           onClick={() => setRestoring(true)}
           disabled={busy}
         >

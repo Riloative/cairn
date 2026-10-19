@@ -43,9 +43,11 @@ const REQUIRED = [
   "accent",
   "accent-fg",
   "accent-subtle",
+  "accent-text",
   "success",
   "warning",
   "danger",
+  "danger-solid",
   "focus-ring",
   "shadow-sm",
   "shadow-md",
@@ -74,18 +76,27 @@ describe.each(THEMES.map((t) => [t.id, t] as const))("theme %s", (id, theme) => 
     },
   );
 
-  it("subtle text and focus ring meet the 3:1 non-text minimum", () => {
-    expect(contrast(v["fg-subtle"]!, v.bg!)).toBeGreaterThanOrEqual(3);
-    expect(contrast(v["focus-ring"]!, v.bg!)).toBeGreaterThanOrEqual(3);
-  });
+  const SURFACES = ["bg", "bg-subtle", "surface", "surface-raised"];
 
-  it("accent buttons are readable", () => {
-    expect(contrast(v["accent-fg"]!, v.accent!)).toBeGreaterThanOrEqual(4.5);
-  });
+  // Subtle text, accent links and status messages are all small text in the UI
+  // (headers, counts, errors), so they need the full 4.5:1 on every surface.
+  it.each(["fg-subtle", "accent-text", "success", "warning", "danger"])(
+    "%s text meets WCAG AA (4.5:1) on every surface",
+    (key) => {
+      for (const surface of SURFACES) {
+        expect(contrast(v[key]!, v[surface]!), surface).toBeGreaterThanOrEqual(4.5);
+      }
+    },
+  );
 
-  it("status colors are visible on the background", () => {
-    for (const key of ["success", "warning", "danger"]) {
-      expect(contrast(v[key]!, v.bg!), key).toBeGreaterThanOrEqual(3);
+  it("the focus ring is visible (3:1) on every surface", () => {
+    for (const surface of SURFACES) {
+      expect(contrast(v["focus-ring"]!, v[surface]!), surface).toBeGreaterThanOrEqual(3);
     }
+  });
+
+  it("accent and danger buttons are readable", () => {
+    expect(contrast(v["accent-fg"]!, v.accent!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast("#ffffff", v["danger-solid"]!)).toBeGreaterThanOrEqual(4.5);
   });
 });

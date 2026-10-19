@@ -17,7 +17,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 
 export function CairnMark({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden className="text-accent">
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden className="text-accent-text">
       <ellipse cx="12" cy="19" rx="8" ry="3" fill="currentColor" />
       <ellipse cx="12" cy="13.5" rx="6" ry="2.6" fill="currentColor" opacity="0.85" />
       <ellipse cx="12" cy="8.8" rx="4" ry="2.1" fill="currentColor" opacity="0.7" />

@@ -404,7 +404,7 @@ export function InterfacesPanel({ device }: { device: Device }) {
                 <td className="py-1">
                   <button
                     type="button"
-                    className="font-mono text-xs hover:text-accent"
+                    className="font-mono text-xs hover:text-accent-text"
                     onClick={() => setEditing(i)}
                   >
                     {i.name}

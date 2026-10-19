@@ -62,13 +62,17 @@
   --border-strong: #353641;
   --fg: #e7e8ec;
   --fg-muted: #a3a5b0;
-  --fg-subtle: #7a7c88;
+  --fg-subtle: #848691;
   --accent: #6a5ae0;
   --accent-fg: #ffffff;
   --accent-subtle: rgb(106 90 224 / 0.18);
+  /* Accent as text (links, icons): readable on every surface. */
+  --accent-text: #8578e6;
   --success: #45c286;
   --warning: #e5a33a;
   --danger: #ef6b63;
+  /* Filled danger buttons and badges: white text stays readable. */
+  --danger-solid: #bf564f;
   --focus-ring: #9d90f8;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md: 0 4px 16px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.4);
@@ -85,13 +89,17 @@
   --border-strong: #414146;
   --fg: #ececee;
   --fg-muted: #a9a9b0;
-  --fg-subtle: #808087;
+  --fg-subtle: #939399;
   --accent: #3b6fd4;
   --accent-fg: #ffffff;
   --accent-subtle: rgb(59 111 212 / 0.2);
+  /* Accent as text (links, icons): readable on every surface. */
+  --accent-text: #6b92df;
   --success: #4cc38a;
   --warning: #e8a840;
   --danger: #f0716a;
+  /* Filled danger buttons and badges: white text stays readable. */
+  --danger-solid: #b95752;
   --focus-ring: #7aa5f5;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
   --shadow-md: 0 4px 16px rgb(0 0 0 / 0.3), 0 1px 2px rgb(0 0 0 / 0.35);
@@ -108,13 +116,17 @@
   --border-strong: #2c2c33;
   --fg: #f2f2f4;
   --fg-muted: #a6a6b0;
-  --fg-subtle: #7c7c87;
+  --fg-subtle: #7f7f89;
   --accent: #2fb5a5;
   --accent-fg: #04110f;
   --accent-subtle: rgb(47 181 165 / 0.16);
+  /* Accent as text (links, icons): readable on every surface. */
+  --accent-text: #2fb5a5;
   --success: #43c47f;
   --warning: #e7a53c;
   --danger: #f06a62;
+  /* Filled danger buttons and badges: white text stays readable. */
+  --danger-solid: #c0554e;
   --focus-ring: #4fd0c0;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.6);
   --shadow-md: 0 4px 16px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.6);
@@ -131,13 +143,17 @@
   --border-strong: #d4d4da;
   --fg: #1b1b1f;
   --fg-muted: #5e5f69;
-  --fg-subtle: #7a7b85;
+  --fg-subtle: #6c6d76;
   --accent: #6253e1;
   --accent-fg: #ffffff;
   --accent-subtle: rgb(98 83 225 / 0.1);
-  --success: #1f8a57;
-  --warning: #a8640a;
-  --danger: #cc3a32;
+  /* Accent as text (links, icons): readable on every surface. */
+  --accent-text: #6253e1;
+  --success: #1c7d4f;
+  --warning: #9e5e09;
+  --danger: #c83931;
+  /* Filled danger buttons and badges: white text stays readable. */
+  --danger-solid: #c83931;
   --focus-ring: #6253e1;
   --shadow-sm: 0 1px 2px rgb(16 18 30 / 0.06);
   --shadow-md: 0 4px 16px rgb(16 18 30 / 0.08), 0 1px 2px rgb(16 18 30 / 0.06);
@@ -154,13 +170,17 @@
   --border-strong: #c9d0db;
   --fg: #18202c;
   --fg-muted: #535d6c;
-  --fg-subtle: #6b7584;
+  --fg-subtle: #616a77;
   --accent: #2d6fd6;
   --accent-fg: #ffffff;
   --accent-subtle: rgb(45 111 214 / 0.1);
-  --success: #1b8452;
-  --warning: #9f6008;
-  --danger: #c4362f;
+  /* Accent as text (links, icons): readable on every surface. */
+  --accent-text: #2a66c5;
+  --success: #18774a;
+  --warning: #995c08;
+  --danger: #c0352e;
+  /* Filled danger buttons and badges: white text stays readable. */
+  --danger-solid: #c0352e;
   --focus-ring: #2d6fd6;
   --shadow-sm: 0 1px 2px rgb(20 30 50 / 0.06);
   --shadow-md: 0 4px 16px rgb(20 30 50 / 0.08), 0 1px 2px rgb(20 30 50 / 0.06);
@@ -177,13 +197,17 @@
   --border-strong: #cfc2ad;
   --fg: #2a241c;
   --fg-muted: #5f5546;
-  --fg-subtle: #776c5c;
+  --fg-subtle: #6e6455;
   --accent: #b4532a;
   --accent-fg: #ffffff;
   --accent-subtle: rgb(180 83 42 / 0.12);
-  --success: #2f7d4b;
-  --warning: #95600b;
+  /* Accent as text (links, icons): readable on every surface. */
+  --accent-text: #a34b26;
+  --success: #2b7345;
+  --warning: #8c5a0a;
   --danger: #b8372d;
+  /* Filled danger buttons and badges: white text stays readable. */
+  --danger-solid: #b8372d;
   --focus-ring: #b4532a;
   --shadow-sm: 0 1px 2px rgb(60 40 20 / 0.07);
   --shadow-md: 0 4px 16px rgb(60 40 20 / 0.09), 0 1px 2px rgb(60 40 20 / 0.07);

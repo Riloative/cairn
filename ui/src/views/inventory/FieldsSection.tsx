@@ -72,7 +72,7 @@ function FieldDialog({ initial, onClose }: { initial: CustomField; onClose: () =
             <Field label="Options" description="One per line." error={optionsError}>
               <textarea
                 rows={4}
-                className="rounded-md border border-border bg-surface p-2.5 text-[13px] focus-visible:border-ring focus-visible:outline-none"
+                className="rounded-md border border-border bg-surface p-2.5 text-[13px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
                 value={options}
                 onChange={(e) => setOptions(e.target.value)}
               />
@@ -132,7 +132,7 @@ export function FieldsSection({ snapshot }: { snapshot: InventorySnapshot }) {
               >
                 <button
                   type="button"
-                  className="font-medium hover:text-accent"
+                  className="font-medium hover:text-accent-text"
                   onClick={() => setEditing(f)}
                 >
                   {f.label}

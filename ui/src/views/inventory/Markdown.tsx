@@ -105,7 +105,7 @@ function inline(text: string): ReactNode[] {
           key={i}
           type="button"
           title={url}
-          className="text-accent underline-offset-2 hover:underline"
+          className="text-accent-text underline-offset-2 hover:underline"
           onClick={() => openLink(url)}
         >
           {link[1]}

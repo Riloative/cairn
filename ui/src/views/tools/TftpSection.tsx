@@ -14,7 +14,7 @@ import { formatBytes } from "@/lib/format";
 import { useTftp, watchTftp } from "@/stores/tftp";
 
 const STATE_CLASS: Record<TftpLogEntry["state"], string> = {
-  running: "text-accent",
+  running: "text-accent-text",
   done: "text-success",
   failed: "text-danger",
   refused: "text-warning",

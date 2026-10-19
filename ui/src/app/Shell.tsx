@@ -1,9 +1,6 @@
-import { useEffect } from "react";
-import { AuditView } from "@/views/AuditView";
+import { lazy, Suspense, useEffect } from "react";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { SessionsView } from "@/views/SessionsView";
-import { SettingsView } from "@/views/settings/SettingsView";
-import { MapView } from "@/views/map/MapView";
-import { ToolsView } from "@/views/tools/ToolsView";
 import { useNotifications } from "@/stores/notifications";
 import { useSettings } from "@/stores/settings";
 import { useUi, type View } from "@/stores/ui";
@@ -26,10 +23,41 @@ import { TransferDialog } from "@/terminal/TransferDialog";
 import { SessionPrompts } from "@/ssh/SessionPrompts";
 import { PasteConfirmDialog } from "@/terminal/PasteConfirmDialog";
 import { TabOverview } from "@/terminal/TabOverview";
-import { InventoryView } from "@/views/inventory/InventoryView";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
+// Views other than Sessions load on first use, so startup only parses what the first
+// screen needs (the map alone brings React Flow and ELK).
+const InventoryView = lazy(() =>
+  import("@/views/inventory/InventoryView").then((m) => ({ default: m.InventoryView })),
+);
+const MapView = lazy(() => import("@/views/map/MapView").then((m) => ({ default: m.MapView })));
+const AuditView = lazy(() => import("@/views/AuditView").then((m) => ({ default: m.AuditView })));
+const ToolsView = lazy(() =>
+  import("@/views/tools/ToolsView").then((m) => ({ default: m.ToolsView })),
+);
+const SettingsView = lazy(() =>
+  import("@/views/settings/SettingsView").then((m) => ({ default: m.SettingsView })),
+);
+
+function ViewSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 p-6" aria-busy="true">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-10" />
+      <Skeleton className="h-64" />
+    </div>
+  );
+}
+
 function ActiveView({ view }: { view: View }) {
+  return (
+    <Suspense fallback={<ViewSkeleton />}>
+      <ViewFor view={view} />
+    </Suspense>
+  );
+}
+
+function ViewFor({ view }: { view: View }) {
   switch (view) {
     case "sessions":
       return <SessionsView />;

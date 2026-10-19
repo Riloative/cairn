@@ -168,7 +168,7 @@ export function VlansSection({ snapshot }: { snapshot: InventorySnapshot }) {
                   <td className="py-1.5">
                     <button
                       type="button"
-                      className="flex items-center gap-2 font-medium hover:text-accent"
+                      className="flex items-center gap-2 font-medium hover:text-accent-text"
                       onClick={() => setEditing(v)}
                     >
                       <span

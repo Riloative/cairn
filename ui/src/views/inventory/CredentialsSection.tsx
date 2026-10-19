@@ -176,7 +176,7 @@ function SecretInput({
           spellCheck={false}
           autoComplete="off"
           aria-label={label}
-          className="rounded-md border border-border bg-surface p-2.5 font-mono text-xs focus-visible:border-ring focus-visible:outline-none"
+          className="rounded-md border border-border bg-surface p-2.5 font-mono text-xs focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
           value={value}
           onChange={(e) => set(e.target.value)}
         />
@@ -395,7 +395,7 @@ export function CredentialsSection({ snapshot }: { snapshot: InventorySnapshot }
                   <KeyRound size={14} className="text-fg-muted" />
                   <button
                     type="button"
-                    className="font-medium hover:text-accent"
+                    className="font-medium hover:text-accent-text"
                     onClick={() => setEditing({ profile: p })}
                   >
                     {p.name}

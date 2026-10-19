@@ -528,7 +528,7 @@ export function FilePanel({ tab, sessionId }: { tab: SessionTab; sessionId: stri
                           size={13}
                           className={cn(
                             "shrink-0",
-                            e.kind === "dir" ? "text-accent" : "text-fg-subtle",
+                            e.kind === "dir" ? "text-accent-text" : "text-fg-subtle",
                           )}
                         />
                         <span className="min-w-0 flex-1 truncate">{e.name}</span>
