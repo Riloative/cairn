@@ -146,8 +146,9 @@ both platforms, and there are no stubs/TODOs left inside it.
 
 ## M9 – Polish
 
-- [ ] Performance: 300 devices, 30 sessions, 500-link map; cold start < 1.5 s
-- [ ] Accessibility: focus rings, contrast checks in all themes
-- [ ] Empty states, onboarding, keyboard shortcuts sheet
-- [ ] tauri-driver e2e smoke tests under xvfb + screenshot artifacts
-- [ ] README with install notes (macOS quarantine, Ubuntu dialout)
+- [x] Performance: 300 devices, 30 sessions, 500-link map; cold start < 1.5 s
+- [x] Accessibility: focus rings, contrast checks in all themes
+- [x] Empty states, onboarding, keyboard shortcuts sheet
+- [x] tauri-driver e2e smoke tests under xvfb + screenshot artifacts
+- [x] README with install notes (macOS quarantine, Ubuntu dialout)
+- [ ] CI green on both platforms for M9

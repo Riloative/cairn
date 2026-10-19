@@ -496,3 +496,41 @@ is 1.99).
 - **Post-setup offer** (D-012): after creating the vault, Cairn offers a backup once,
   explaining that a lost master password cannot be recovered but a backup can be
   restored. Settings → Backup offers backup and restore any time.
+
+## D-045 · Polish at scale: lazy views, a WebGL pool, indexed audit filters, worker layout (M9)
+
+- **Scale fixture.** `crates/core/examples/seed_scale.rs` builds the SPEC's target
+  inventory (300 devices in 5 buildings, ~7,000 interfaces, 500 links) and times the
+  reads the UI makes, so regressions show up as numbers rather than impressions.
+- **Cold start.** Inventory, Map, Audit, Tools and Settings are `React.lazy` chunks
+  behind a skeleton; the first paint loads only the shell, the lock screen and the
+  Sessions view. Measured under Xvfb: ~1.25 s to an interactive lock screen warm,
+  ~1.7 s with cold disk caches.
+- **Many terminals.** WebKit allows ~16 WebGL contexts per page and drops the oldest
+  beyond that, so each terminal gets WebGL only while it is among the 8 most recently
+  shown (`terminal/gpuPool.ts`, LRU); the rest fall back to xterm's DOM renderer and
+  are promoted again when shown. 30 local shells stay responsive; a switch costs
+  ~0.1 s under software GL.
+- **Audit filters at scale.** Migration 0008 adds expression indexes for the session
+  id inside `details`, device, protocol and inventory entity names, each with the same
+  `COLLATE NOCASE` the queries use. The device and protocol filters are a `UNION` of
+  indexed lookups instead of an `OR` across columns, which SQLite would answer with a
+  full scan; a test asserts the query plan has no `SCAN audit_log`.
+- **Map layout off the main thread.** ELK runs in a worker (`elk-api` +
+  `elk-worker.min.js?url`; CSP needs nothing new since workers fall back to
+  `script-src 'self'`). Views with more than 80 nodes use Brandes–Köpf node placement
+  instead of network simplex (300 nodes: 4.8 s → 1.4 s), and layers wider than 12
+  nodes wrap into rows so a floor of 60 access switches stays readable. A status pill
+  says "Arranging N devices…" while the first layout of a view runs; saved positions
+  skip layout entirely.
+- **Contrast as a test.** Each theme gains `--accent-text` (accent usable as text) and
+  `--danger-solid` (a fill that white text reads on); `tokens.test.ts` checks WCAG AA
+  for every text token on every background it sits on (4.5:1), the focus ring (3:1)
+  and the text on accent/danger fills, in all six themes. Several light-theme colors
+  were darkened to pass.
+- **E2E via tauri-driver with a dependency-free client.** `e2e/webdriver.mjs` speaks
+  W3C WebDriver with `fetch` (~120 lines) instead of pulling WebdriverIO's large
+  dependency tree into the supply-chain audit. WebKitWebDriver reports empty text for
+  some nested elements, so text lookups read `textContent` in the page. CI runs the
+  smoke scenario against the release binary under `xvfb-run` (Linux only: there is no
+  WKWebView WebDriver for Tauri on macOS) and uploads a screenshot per step.

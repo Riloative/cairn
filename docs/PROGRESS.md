@@ -306,3 +306,34 @@ session with full-screen apps (vim, top) and replaying it with seeking, a 50+ MB
 recording, backup and restore of a vault with real inventory and floor plans across
 Ubuntu ↔ macOS, a backup made by this version restored by the next one, and the CSV
 export opened in LibreOffice/Excel/Numbers (formulas shown as text).
+
+### M9 (session 3, continued)
+
+- **Performance** (D-045): `seed_scale` example (300 devices, ~7k interfaces, 500
+  links) with timings: inventory snapshot 1.4 ms, links 0.6 ms, audit device filter
+  0.2 ms after migration 0008's indexes and `UNION` filters. Views are lazy chunks;
+  cold start ~1.25 s warm / ~1.7 s cold under Xvfb. Inventory of 300 devices renders in
+  ~0.2 s, the campus map in ~0.2 s, a saved building view in ~1 s. ELK runs in a worker
+  with Brandes–Köpf placement for big views and wrapped rows; a building's first layout
+  (61 devices, never opened) takes ~3 s with an "Arranging…" pill. 30 local shells:
+  WebGL kept for the 8 most recent terminals, typing stays live, tab switch ~0.1 s.
+- **Accessibility:** `--accent-text` and `--danger-solid` tokens; WCAG AA contrast
+  for text, focus rings and filled buttons tested in all six themes (light themes
+  darkened where they failed); visible focus rings on inputs, textareas and search.
+- **Onboarding and shortcuts:** "Get started" card on the empty Sessions view (connect,
+  build inventory, back up, learn shortcuts; dismissal stored in settings);
+  `Mod+/` opens a keyboard shortcuts sheet generated from the action registry plus
+  context keys (RDP F11, recordings Space, list navigation).
+- **E2E:** `e2e/smoke.mjs` drives the release binary through tauri-driver: setup,
+  backup offer, adding a device, audit with integrity check, shortcuts sheet, lock and
+  unlock, with a screenshot per step. Runs in CI's Linux bundle job under Xvfb.
+- **README:** features, install notes (macOS quarantine, Ubuntu `dialout`, FreeRDP),
+  first run without recovery, data locations, security summary, troubleshooting.
+
+**Next:** all milestones done once M9 CI is green on both platforms.
+
+**Test manually:** cold start on an Apple Silicon Mac and a real Ubuntu desktop
+(hardware GL), 30+ SSH sessions to real devices with output streaming in several at
+once, the map of a real 300-device network (first layout time, panning), keyboard-only
+use of every view with a screen reader (VoiceOver, Orca), and the macOS `.dmg` install
+path from the README on a machine that has never run Cairn.
