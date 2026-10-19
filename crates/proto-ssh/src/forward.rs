@@ -8,9 +8,11 @@ use russh::client::Msg;
 use russh::Channel;
 use serde::Serialize;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::pin::Pin;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use std::task::{Context, Poll};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::watch;
 
@@ -207,20 +209,64 @@ async fn accept_loop(
     }
 }
 
-/// Copy both ways between a local socket and an SSH channel, counting bytes.
-async fn pipe<S>(mut stream: S, channel: Channel<Msg>, stats: &ForwardStats)
+/// Copy both ways between a local socket and an SSH channel, counting bytes as they
+/// pass so long-lived connections show live traffic.
+async fn pipe<S>(stream: S, channel: Channel<Msg>, stats: &ForwardStats)
 where
     S: AsyncRead + AsyncWrite + Unpin,
 {
     stats.active.fetch_add(1, Ordering::Relaxed);
     stats.total.fetch_add(1, Ordering::Relaxed);
     stats.set_error(None);
-    let mut remote = channel.into_stream();
-    if let Ok((out, inn)) = tokio::io::copy_bidirectional(&mut stream, &mut remote).await {
-        stats.bytes_out.fetch_add(out, Ordering::Relaxed);
-        stats.bytes_in.fetch_add(inn, Ordering::Relaxed);
-    }
+    let mut local = Counted::new(stream, &stats.bytes_out);
+    let mut remote = Counted::new(channel.into_stream(), &stats.bytes_in);
+    // A reset is a normal way for a forwarded connection to end; the bytes are counted.
+    let _ = tokio::io::copy_bidirectional(&mut local, &mut remote).await;
     stats.active.fetch_sub(1, Ordering::Relaxed);
+}
+
+/// A stream that adds every byte read from it to a counter.
+struct Counted<'a, S> {
+    inner: S,
+    read: &'a AtomicU64,
+}
+
+impl<'a, S> Counted<'a, S> {
+    fn new(inner: S, read: &'a AtomicU64) -> Self {
+        Self { inner, read }
+    }
+}
+
+impl<S: AsyncRead + Unpin> AsyncRead for Counted<'_, S> {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        let before = buf.filled().len();
+        let res = Pin::new(&mut self.inner).poll_read(cx, buf);
+        let n = buf.filled().len() - before;
+        self.read.fetch_add(n as u64, Ordering::Relaxed);
+        res
+    }
+}
+
+impl<S: AsyncWrite + Unpin> AsyncWrite for Counted<'_, S> {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        data: &[u8],
+    ) -> Poll<std::io::Result<usize>> {
+        Pin::new(&mut self.inner).poll_write(cx, data)
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.inner).poll_flush(cx)
+    }
+
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.inner).poll_shutdown(cx)
+    }
 }
 
 /// A connection the server forwarded to us (remote forward): connect to the route.

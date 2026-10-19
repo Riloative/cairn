@@ -153,6 +153,19 @@ fn apply<R: Runtime>(
             direction,
             reason,
         } => {
+            // Refusals are audited too: they include path escapes and overwrite attempts.
+            audit.record(
+                vault,
+                AuditEvent::FileTransferred {
+                    session_id: format!("tftp {peer}"),
+                    protocol: "tftp".into(),
+                    direction: audit_direction(direction).into(),
+                    file: file.clone(),
+                    bytes: 0,
+                    ok: false,
+                    error: Some(reason.clone()),
+                },
+            );
             log.push_front(LogEntry {
                 id: 0,
                 at: cairn_core::audit::now(),

@@ -196,3 +196,27 @@ exports from a dark theme.
 - Tests: core (snippets, forwards, snapshots, grab per vendor, diff), the TFTP server
   over UDP, proto-ssh tool tests against a real sshd (forwards, SFTP, SCP, grab), and
   UI tests for each new panel.
+- Verified in the release build under Xvfb against the local test sshd: TFTP get and
+  put with curl, plus refused requests (missing file, overwrite off) in the live log
+  and the audit; the SFTP panel on the shared connection (list, refresh, rename);
+  a local forward carrying traffic; broadcast across two SSH tabs (both shells ran
+  the command) and a snippet with a variable typed into both; audit summaries for
+  each event. That pass found and fixed: forward traffic counters were only added
+  when a connection closed cleanly (now counted live), refused TFTP requests were
+  not audited, and cramped columns in the forwards and TFTP tables.
+- Grab config and the diff viewer were not run against a real network device here
+  (the test server is a Linux shell). Grab is covered by the per-vendor state-machine
+  tests and an integration test on a real SSH channel, and the viewer by UI tests.
+- CI: the Linux Rust job ran out of disk once the M6 crates were added. Dev profile
+  debug info is now off in CI, and unused preinstalled SDKs are removed.
+
+**Next:** M7 (RDP).
+
+**Test manually:** Grab config on real Cisco IOS/NX-OS, Junos, FortiOS, ArubaOS-CX,
+MikroTik and EdgeOS devices (enable secret, paging, long configs), then compare two
+snapshots and export the diff; `copy tftp:` of a large IOS image to a switch (block
+rollover past 32 MB with 512-byte blocks); TFTP on port 69 after `setcap`; SCP to
+an IOS device's `flash:` when SFTP is off; dragging files from the desktop onto the
+file panel on macOS and GNOME; a SOCKS forward used by a browser; remote forwards
+on a server that only allows `GatewayPorts no`; broadcast from a map selection
+with a mix of SSH and serial devices.

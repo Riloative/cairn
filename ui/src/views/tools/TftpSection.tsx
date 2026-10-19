@@ -75,10 +75,10 @@ function Log({ entries }: { entries: TftpLogEntry[] }) {
           const pct = e.size ? Math.min(100, Math.round((e.bytes / e.size) * 100)) : null;
           return (
             <tr key={`${e.id}-${i}`} className="border-t border-border">
-              <td className="py-1.5 font-mono text-xs text-fg-muted">
+              <td className="py-1.5 pr-2 font-mono text-xs whitespace-nowrap text-fg-muted">
                 {new Date(e.at).toLocaleTimeString()}
               </td>
-              <td className="py-1.5 font-mono text-xs">{e.peer}</td>
+              <td className="py-1.5 pr-2 font-mono text-xs whitespace-nowrap">{e.peer}</td>
               <td className="max-w-64 truncate py-1.5">
                 {e.direction === "read" ? (
                   <ArrowUpFromLine
@@ -95,7 +95,7 @@ function Log({ entries }: { entries: TftpLogEntry[] }) {
                 )}
                 {e.file}
               </td>
-              <td className="py-1.5 text-right font-mono text-xs">
+              <td className="py-1.5 text-right font-mono text-xs whitespace-nowrap">
                 {formatBytes(e.bytes)}
                 {e.size !== null && e.state === "running" && ` / ${formatBytes(e.size)}`}
               </td>

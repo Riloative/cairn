@@ -593,7 +593,7 @@ mod tools {
         port
     }
 
-    async fn roundtrip(mut s: TcpStream) {
+    async fn roundtrip(s: &mut TcpStream) {
         s.write_all(b"ping").await.expect("write");
         let mut buf = [0u8; 4];
         tokio::time::timeout(Duration::from_secs(5), s.read_exact(&mut buf))
@@ -622,17 +622,15 @@ mod tools {
         let local = forward::start(c.clone(), spec(ForwardKind::Local, target))
             .await
             .expect("local");
-        roundtrip(
-            TcpStream::connect(("127.0.0.1", local.bound_port))
-                .await
-                .expect("connect"),
-        )
-        .await;
-        // Counters are updated when a connection ends.
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        let mut s = TcpStream::connect(("127.0.0.1", local.bound_port))
+            .await
+            .expect("connect");
+        roundtrip(&mut s).await;
+        // Counters are live while the connection is still open.
         let stats = local.stats.snapshot();
-        assert_eq!(stats.total, 1);
-        assert_eq!(stats.bytes_out, 4);
+        assert_eq!((stats.active, stats.total), (1, 1));
+        assert_eq!((stats.bytes_out, stats.bytes_in), (4, 4));
+        drop(s);
         local.stop().await;
 
         let remote = forward::start(c.clone(), spec(ForwardKind::Remote, target))
@@ -640,7 +638,7 @@ mod tools {
             .expect("remote");
         assert_ne!(remote.bound_port, 0, "server allocated a port");
         roundtrip(
-            TcpStream::connect(("127.0.0.1", remote.bound_port))
+            &mut TcpStream::connect(("127.0.0.1", remote.bound_port))
                 .await
                 .expect("connect"),
         )
@@ -662,7 +660,7 @@ mod tools {
         let mut reply = [0u8; 10];
         s.read_exact(&mut reply).await.expect("reply");
         assert_eq!(reply[1], 0, "SOCKS success");
-        roundtrip(s).await;
+        roundtrip(&mut s).await;
         socks.stop().await;
     }
 

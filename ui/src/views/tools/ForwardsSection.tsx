@@ -202,8 +202,8 @@ function ActiveForwards() {
       <thead className="text-left text-xs text-fg-muted">
         <tr>
           <th className="py-1 font-medium">Forward</th>
-          <th className="py-1 font-medium">Session</th>
-          <th className="py-1 text-right font-medium">Connections</th>
+          <th className="px-3 py-1 font-medium">Session</th>
+          <th className="px-3 py-1 text-right font-medium">Connections</th>
           <th className="py-1 text-right font-medium">Traffic</th>
           <th className="w-10" />
         </tr>
@@ -211,17 +211,17 @@ function ActiveForwards() {
       <tbody>
         {active.map((f) => (
           <tr key={f.id} className="border-t border-border align-top">
-            <td className="py-2 font-mono text-xs">
+            <td className="py-2 font-mono text-xs break-all">
               {f.summary}
               {f.counters.lastError && (
                 <span className="mt-0.5 block font-sans text-danger">{f.counters.lastError}</span>
               )}
             </td>
-            <td className="py-2">{tabTitle(f.sessionId) ?? f.target}</td>
-            <td className="py-2 text-right font-mono text-xs">
+            <td className="px-3 py-2 whitespace-nowrap">{tabTitle(f.sessionId) ?? f.target}</td>
+            <td className="px-3 py-2 text-right font-mono text-xs whitespace-nowrap">
               {f.counters.active} open · {f.counters.total} total
             </td>
-            <td className="py-2 text-right font-mono text-xs">
+            <td className="py-2 text-right font-mono text-xs whitespace-nowrap">
               ↑ {formatBytes(f.counters.bytesOut)} ↓ {formatBytes(f.counters.bytesIn)}
             </td>
             <td className="py-1.5 text-right">
