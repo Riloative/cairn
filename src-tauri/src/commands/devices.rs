@@ -43,7 +43,7 @@ fn invalid(msg: impl Into<String>) -> CommandError {
 }
 
 /// `user@host:port`, `host`, `[v6::addr]:port`.
-fn parse_target(s: &str) -> Option<(Option<String>, String, Option<u16>)> {
+pub(crate) fn parse_target(s: &str) -> Option<(Option<String>, String, Option<u16>)> {
     let s = s.trim();
     if s.is_empty() || s.contains(char::is_whitespace) {
         return None;
@@ -63,7 +63,7 @@ fn parse_target(s: &str) -> Option<(Option<String>, String, Option<u16>)> {
         return Some((user, host.to_owned(), port));
     }
     match rest.matches(':').count() {
-        0 => Some((user, rest.to_owned(), None)),
+        0 => (!rest.is_empty()).then(|| (user, rest.to_owned(), None)),
         1 => {
             let (h, p) = rest.split_once(':')?;
             let port = p.parse().ok().filter(|p| *p > 0)?;
@@ -259,7 +259,7 @@ pub(crate) fn plan(
             ))
         }
         ConnectionMethod::Rdp { .. } => Err(invalid(
-            "RDP sessions are not available in this version of Cairn yet.",
+            "RDP connections open in an RDP tab (device_rdp_open), not a terminal.",
         )),
         ConnectionMethod::Web { .. } => Err(invalid(
             "Web UIs open in your browser; use Open web UI instead.",
@@ -491,6 +491,7 @@ mod tests {
         );
         assert_eq!(parse_target("h:0"), None);
         assert_eq!(parse_target("@h"), None);
+        assert_eq!(parse_target("ops@"), None);
         assert_eq!(parse_target("a b"), None);
     }
 }

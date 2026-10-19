@@ -20,6 +20,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 cairn-core.workspace = true
 cairn-export.workspace = true
+cairn-proto-rdp.workspace = true
 cairn-proto-serial.workspace = true
 cairn-proto-ssh.workspace = true
 cairn-proto-telnet.workspace = true

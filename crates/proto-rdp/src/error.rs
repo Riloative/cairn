@@ -12,6 +12,8 @@ pub enum RdpError {
         #[source]
         source: std::io::Error,
     },
+    #[error("Could not open the SSH tunnel: {0}")]
+    Tunnel(String),
     #[error("Timed out connecting to {0}. The host may be down or RDP blocked by a firewall.")]
     Timeout(String),
     #[error("The TLS handshake with the server failed: {0}")]

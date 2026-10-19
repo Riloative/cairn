@@ -9,6 +9,7 @@ pub mod files;
 pub mod forwards;
 pub mod inventory;
 pub mod map;
+pub mod rdp;
 pub mod serial;
 pub mod session;
 pub mod settings;

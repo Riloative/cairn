@@ -636,6 +636,7 @@ version = "0.1.0"
 dependencies = [
  "cairn-core",
  "cairn-export",
+ "cairn-proto-rdp",
  "cairn-proto-serial",
  "cairn-proto-ssh",
  "cairn-proto-telnet",

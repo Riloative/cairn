@@ -82,6 +82,27 @@ pub enum ConnectionMethod {
         port: u16,
         #[serde(default)]
         username: String,
+        #[serde(default)]
+        domain: String,
+        /// `nla` (CredSSP, falling back to TLS when the server lacks it) or `tls`.
+        #[serde(default = "rdp_nla")]
+        security: String,
+        /// Fixed desktop size; 0×0 follows the window.
+        #[serde(default)]
+        width: u16,
+        #[serde(default)]
+        height: u16,
+        /// 16 or 32 bits per pixel.
+        #[serde(default = "depth_32")]
+        color_depth: u8,
+        #[serde(default = "yes")]
+        clipboard: bool,
+        /// SSH jump host (`user@host:port`) to tunnel through; empty connects directly.
+        #[serde(default)]
+        tunnel: String,
+        /// Open in FreeRDP (Linux) or the system RDP app (macOS) instead of a tab.
+        #[serde(default)]
+        external: bool,
     },
     #[serde(rename_all = "camelCase")]
     Web { url: String },
@@ -95,6 +116,15 @@ fn port_23() -> u16 {
 }
 fn port_3389() -> u16 {
     3389
+}
+fn rdp_nla() -> String {
+    "nla".into()
+}
+fn depth_32() -> u8 {
+    32
+}
+fn yes() -> bool {
+    true
 }
 
 const CONSOLE_SERVERS: &[&str] = &[
@@ -176,10 +206,48 @@ impl ConnectionMethod {
                     raw: *raw,
                 }
             }
-            ConnectionMethod::Rdp { port, username } => ConnectionMethod::Rdp {
-                port: validate::port(*port, "RDP")?,
-                username: validate::text(username, "username", 255)?,
-            },
+            ConnectionMethod::Rdp {
+                port,
+                username,
+                domain,
+                security,
+                width,
+                height,
+                color_depth,
+                clipboard,
+                tunnel,
+                external,
+            } => {
+                if !matches!(security.as_str(), "nla" | "tls") {
+                    return Err(CoreError::Validation(
+                        "RDP security must be NLA or TLS.".into(),
+                    ));
+                }
+                let side = |v: u16| (200..=8192).contains(&v);
+                if !((*width == 0 && *height == 0) || (side(*width) && side(*height))) {
+                    return Err(CoreError::Validation(
+                        "RDP resolution must be 200–8192 pixels per side, or fit the window."
+                            .into(),
+                    ));
+                }
+                if !matches!(color_depth, 16 | 32) {
+                    return Err(CoreError::Validation(
+                        "RDP color depth must be 16 or 32 bits.".into(),
+                    ));
+                }
+                ConnectionMethod::Rdp {
+                    port: validate::port(*port, "RDP")?,
+                    username: validate::text(username, "username", 255)?,
+                    domain: validate::text(domain, "domain", 255)?,
+                    security: security.clone(),
+                    width: *width,
+                    height: *height,
+                    color_depth: *color_depth,
+                    clipboard: *clipboard,
+                    tunnel: validate::text(tunnel, "SSH tunnel", 255)?,
+                    external: *external,
+                }
+            }
             ConnectionMethod::Web { url } => ConnectionMethod::Web {
                 url: validate::web_url(url)?,
             },
@@ -832,5 +900,41 @@ mod tests {
         assert_eq!(copy2.hostname, "sw1-copy2");
         delete(&c, d.id).expect("delete");
         assert_eq!(list(&c).expect("list").len(), 2);
+    }
+
+    #[test]
+    fn rdp_methods_load_with_defaults_and_validate() {
+        let old: ConnectionMethod =
+            serde_json::from_value(json!({"kind": "rdp", "port": 3389, "username": "admin"}))
+                .expect("old shape");
+        let ConnectionMethod::Rdp {
+            security,
+            width,
+            color_depth,
+            clipboard,
+            external,
+            ..
+        } = &old
+        else {
+            panic!("rdp");
+        };
+        assert_eq!((security.as_str(), *width, *color_depth), ("nla", 0, 32));
+        assert!(*clipboard && !*external);
+        assert!(old.clean().is_ok());
+
+        let with = |patch: serde_json::Value| {
+            let mut v = json!({"kind": "rdp"});
+            if let (Some(o), Some(p)) = (v.as_object_mut(), patch.as_object()) {
+                o.extend(p.clone());
+            }
+            serde_json::from_value::<ConnectionMethod>(v)
+                .expect("shape")
+                .clean()
+        };
+        assert!(with(json!({"security": "tls", "width": 1920, "height": 1080})).is_ok());
+        assert!(with(json!({"security": "rdp"})).is_err());
+        assert!(with(json!({"width": 1920, "height": 0})).is_err());
+        assert!(with(json!({"width": 100, "height": 100})).is_err());
+        assert!(with(json!({"colorDepth": 24})).is_err());
     }
 }

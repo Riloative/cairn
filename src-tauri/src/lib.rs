@@ -27,6 +27,7 @@ pub fn run() {
             app.manage(sessions::SessionManager::new());
             app.manage(commands::serial::PortWatcher::default());
             app.manage(commands::tftp::TftpService::default());
+            app.manage(commands::rdp::RdpService::default());
             app.manage(commands::forwards::ForwardService::default());
             app.manage(commands::files::FileService::default());
             autolock::spawn(app.handle().clone());
@@ -134,6 +135,14 @@ pub fn run() {
             commands::configs::config_snapshot_delete,
             commands::configs::config_diff,
             commands::configs::config_export,
+            commands::rdp::rdp_open,
+            commands::rdp::device_rdp_open,
+            commands::rdp::rdp_input,
+            commands::rdp::rdp_resize,
+            commands::rdp::rdp_clipboard,
+            commands::rdp::rdp_ctrl_alt_del,
+            commands::rdp::rdp_close,
+            commands::rdp::rdp_external,
         ])
         .build(tauri::generate_context!())
         .map(|app| {
@@ -147,6 +156,7 @@ pub fn run() {
                     handle
                         .state::<commands::tftp::TftpService>()
                         .stop(&state.vault, &state.audit);
+                    handle.state::<commands::rdp::RdpService>().close_all();
                 }
             })
         });

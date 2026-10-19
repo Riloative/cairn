@@ -7,6 +7,7 @@
 pub mod autologin;
 pub mod log;
 pub mod output;
+pub mod rdp;
 pub mod ssh;
 
 use cairn_core::known_hosts::HostKeyStatus;
