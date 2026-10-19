@@ -8,6 +8,9 @@ import type {
   PortsChanged,
   Settings,
   TerminalPrefs,
+  ForwardInfo,
+  ForwardPreset,
+  ForwardSpec,
   Snippet,
   TftpPrefs,
   TftpStatus,
@@ -57,6 +60,8 @@ export class FakeBackend {
     (payload) => this.fail(payload),
   );
   snippets: Snippet[] = [];
+  forwards: ForwardInfo[] = [];
+  forwardPresets: ForwardPreset[] = [];
   tftp: TftpStatus = {
     running: false,
     address: null,
@@ -159,6 +164,53 @@ export class FakeBackend {
       }
       case "snippet_delete":
         this.snippets = this.snippets.filter((x) => x.id !== args.id);
+        return null;
+      case "forward_start": {
+        this.requireUnlocked();
+        const spec = args.spec as ForwardSpec;
+        if (spec.bindPort === 22)
+          this.fail({
+            code: "ssh.forward_bind",
+            message: "Could not listen on 127.0.0.1:22: address in use",
+            hint: null,
+          });
+        const bound = spec.bindPort || 40000 + this.forwards.length;
+        const summary =
+          spec.kind === "dynamic"
+            ? `D ${spec.bindHost}:${bound} (SOCKS5)`
+            : `${spec.kind === "local" ? "L" : "R"} ${spec.bindHost}:${bound} → ${spec.destHost}:${spec.destPort}`;
+        const info: ForwardInfo = {
+          id: this.forwards.length + 1,
+          sessionId: args.sessionId as string,
+          target: "10.0.0.2:22",
+          presetId: null,
+          spec: { ...spec, bindPort: bound },
+          summary,
+          boundPort: bound,
+          counters: { active: 0, total: 0, bytesOut: 0, bytesIn: 0, lastError: null },
+        };
+        this.forwards.push(info);
+        this.log("port_forward", { action: "started", forward: summary });
+        return info;
+      }
+      case "forward_stop":
+        this.forwards = this.forwards.filter((f) => f.id !== args.id);
+        this.log("port_forward", { action: "stopped" });
+        return null;
+      case "forwards_list":
+        return structuredClone(this.forwards);
+      case "forwards_autostart":
+        return [];
+      case "forward_presets_list":
+        return structuredClone(this.forwardPresets);
+      case "forward_preset_save": {
+        const p = args.preset as ForwardPreset;
+        const saved = { ...p, id: p.id || 700 + this.forwardPresets.length };
+        this.forwardPresets = [...this.forwardPresets.filter((x) => x.id !== saved.id), saved];
+        return saved;
+      }
+      case "forward_preset_delete":
+        this.forwardPresets = this.forwardPresets.filter((x) => x.id !== args.id);
         return null;
       case "tftp_status":
         return structuredClone(this.tftp);

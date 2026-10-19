@@ -4,7 +4,7 @@
 //! shell happen on a background task. Input typed meanwhile is queued and sent once the
 //! shell is open. The session reports the outcome through the event sink.
 
-use crate::connect::{connect, ConnectOptions};
+use crate::connect::{connect, ConnectOptions, Connection};
 use crate::error::SshError;
 use crate::interact::{Interact, Progress};
 use cairn_core::terminal::{
@@ -25,10 +25,14 @@ enum Cmd {
 /// Terminal type requested from the server.
 pub const TERM: &str = "xterm-256color";
 
+/// The live connection of a session, shared with SFTP, forwards and config grab.
+type Link = Arc<std::sync::Mutex<Option<Arc<Connection>>>>;
+
 pub struct SshSession {
     tx: mpsc::UnboundedSender<Cmd>,
     cancel: Arc<Notify>,
     closing: Arc<AtomicBool>,
+    link: Link,
 }
 
 impl std::fmt::Debug for SshSession {
@@ -50,12 +54,20 @@ impl SshSession {
         let (tx, rx) = mpsc::unbounded_channel();
         let cancel = Arc::new(Notify::new());
         let closing = Arc::new(AtomicBool::new(false));
-        let (c, cl) = (cancel.clone(), closing.clone());
+        let link = Link::default();
+        let (c, cl, l) = (cancel.clone(), closing.clone(), link.clone());
         runtime.spawn(async move {
             let reason = tokio::select! {
-                r = run(opts, clamp_size(cols, rows), interact, sink.clone(), rx) => r,
+                r = run(opts, clamp_size(cols, rows), interact, sink.clone(), rx, l.clone()) => r,
                 () = c.notified() => CloseReason::Closed,
             };
+            // Forwards and SFTP sessions see the connection go away with the shell.
+            if let Some(conn) = l.lock().ok().and_then(|mut g| g.take()) {
+                let _ = conn
+                    .handle
+                    .disconnect(russh::Disconnect::ByApplication, "", "en")
+                    .await;
+            }
             let reason = if cl.load(Ordering::SeqCst) {
                 CloseReason::Closed
             } else {
@@ -67,7 +79,13 @@ impl SshSession {
             tx,
             cancel,
             closing,
+            link,
         }
+    }
+
+    /// The authenticated connection once the shell is open (None before or after).
+    pub fn connection(&self) -> Option<Arc<Connection>> {
+        self.link.lock().ok().and_then(|g| g.clone())
     }
 }
 
@@ -106,9 +124,10 @@ async fn run(
     interact: Arc<dyn Interact>,
     sink: EventSink,
     mut rx: mpsc::UnboundedReceiver<Cmd>,
+    link: Link,
 ) -> CloseReason {
     let conn = match connect(&opts, interact.clone()).await {
-        Ok(c) => c,
+        Ok(c) => Arc::new(c),
         Err(e) => {
             return CloseReason::Error {
                 message: describe(&e),
@@ -149,6 +168,9 @@ async fn run(
     }
     if let Err(e) = channel.request_shell(false).await {
         return fail(e);
+    }
+    if let Ok(mut slot) = link.lock() {
+        *slot = Some(conn.clone());
     }
     interact.progress(Progress::Connected {
         host_key: conn.host_key.clone(),
@@ -196,6 +218,9 @@ async fn run(
         }
     }
 
+    if let Ok(mut slot) = link.lock() {
+        *slot = None;
+    }
     let _ = conn
         .handle
         .disconnect(russh::Disconnect::ByApplication, "", "en")

@@ -41,6 +41,7 @@ parking_lot = "0.12"
 portable-pty = "0.9"
 serialport = "4.10"
 russh = { version = "0.64", default-features = false, features = ["flate2", "ring", "rsa", "des"] }
+russh-sftp = "3.0.1"
 rusqlite = { version = "0.40", default-features = false, features = ["bundled-sqlcipher-vendored-openssl"] }
 resvg = { version = "0.45.1", default-features = false, features = ["text", "system-fonts", "raster-images"] }
 sha2 = "0.10"

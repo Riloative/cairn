@@ -36,6 +36,13 @@ const STATIC: Action[] = [
     run: () => useUi.getState().openTool("tftp"),
   },
   {
+    id: "tools.forwards",
+    title: "Port forwards…",
+    group: "Tools",
+    keywords: ["tunnel", "ssh -L", "socks", "proxy"],
+    run: () => useUi.getState().openTool("forwards"),
+  },
+  {
     id: "snippets.manage",
     title: "Snippets: Manage library…",
     group: "Snippets",

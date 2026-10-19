@@ -12,6 +12,7 @@ use russh::client::{self, AuthResult, Handle, KeyboardInteractiveAuthResponse};
 use russh::keys::{HashAlg, PrivateKeyWithHashAlg, PublicKey};
 use russh::{Channel, ChannelOpenFailure};
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -102,6 +103,33 @@ pub struct Connection {
     pub handle: Handle<ClientHandler>,
     pub host_key: Option<HostKeyInfo>,
     pub target: String,
+    /// Remote (ssh -R) forwards: where connections the server forwards to us go.
+    pub routes: RemoteRoutes,
+}
+
+/// Where the server's forwarded connections for one remote listener go.
+#[derive(Debug, Clone)]
+pub struct RemoteRoute {
+    pub dest_host: String,
+    pub dest_port: u16,
+    pub stats: Arc<crate::forward::ForwardStats>,
+}
+
+/// Remote listeners by (address, port) as requested from the server.
+pub type RemoteRoutes = Arc<std::sync::Mutex<HashMap<(String, u32), RemoteRoute>>>;
+
+/// The route for a forwarded connection. Servers may report the listen address
+/// differently than requested ("localhost" vs "127.0.0.1"), so a unique port matches too.
+fn find_route(routes: &RemoteRoutes, address: &str, port: u32) -> Option<RemoteRoute> {
+    let routes = routes.lock().ok()?;
+    if let Some(r) = routes.get(&(address.to_owned(), port)) {
+        return Some(r.clone());
+    }
+    let mut by_port = routes.iter().filter(|((_, p), _)| *p == port);
+    match (by_port.next(), by_port.next()) {
+        (Some((_, r)), None) => Some(r.clone()),
+        _ => None,
+    }
 }
 
 impl std::fmt::Debug for Connection {
@@ -120,6 +148,8 @@ pub struct ClientHandler {
     agent_forwarding: bool,
     host_key: Arc<Mutex<Option<HostKeyInfo>>>,
     clock: Arc<PromptClock>,
+    /// Remote-forward routes (destination hop only).
+    routes: Option<RemoteRoutes>,
 }
 
 impl std::fmt::Debug for ClientHandler {
@@ -184,6 +214,31 @@ impl client::Handler for ClientHandler {
         tokio::spawn(bridge_agent(channel));
         Ok(())
     }
+
+    async fn server_channel_open_forwarded_tcpip(
+        &mut self,
+        channel: Channel<client::Msg>,
+        connected_address: &str,
+        connected_port: u32,
+        _originator_address: &str,
+        _originator_port: u32,
+        reply: client::ChannelOpenHandle,
+        _session: &mut client::Session,
+    ) -> Result<(), Self::Error> {
+        let route = self
+            .routes
+            .as_ref()
+            .and_then(|r| find_route(r, connected_address, connected_port));
+        let Some(route) = route else {
+            reply
+                .reject(ChannelOpenFailure::AdministrativelyProhibited)
+                .await;
+            return Ok(());
+        };
+        reply.accept().await;
+        tokio::spawn(crate::forward::bridge_remote(channel, route));
+        Ok(())
+    }
 }
 
 /// Pipe a forwarded-agent channel to the local agent socket.
@@ -235,6 +290,7 @@ pub async fn connect(
     let clock = Arc::new(PromptClock::default());
     let mut jumps: Vec<Handle<ClientHandler>> = Vec::new();
     let mut host_key = None;
+    let routes = RemoteRoutes::default();
 
     for (index, hop) in opts.hops.iter().enumerate() {
         let target = hop.target();
@@ -250,6 +306,7 @@ pub async fn connect(
             agent_forwarding: opts.agent_forwarding && index == last,
             host_key: slot.clone(),
             clock: clock.clone(),
+            routes: (index == last).then(|| routes.clone()),
         };
         let cfg = config(opts, &hop.algorithms);
 
@@ -318,6 +375,7 @@ pub async fn connect(
         handle,
         host_key,
         target: opts.hops[last].target(),
+        routes,
     })
 }
 

@@ -130,9 +130,28 @@ function onProgress(tabId: string, p: ConnectProgress) {
   if (p.phase === "connected") {
     useReconnect.getState().clear(tabId);
     useSessions.getState().setState(tabId, "connected", describeProgress(p));
+    autostartForwards(tabId);
   } else {
     useSessions.getState().setState(tabId, "connecting", describeProgress(p));
   }
+}
+
+/** Start a device's auto-start port-forward presets once its SSH session is up. */
+function autostartForwards(tabId: string) {
+  const tab = tabOf(tabId);
+  const id = backendIds.get(tabId);
+  if (!tab?.device || tab.protocol !== "ssh" || !id) return;
+  ipc.forwardsAutostart(id, tab.device.id).then(
+    (started) => {
+      if (started.length)
+        useNotifications.getState().notify({
+          variant: "info",
+          title: `Started ${started.length} port forward${started.length === 1 ? "" : "s"} for ${tab.title}`,
+          description: started.map((f) => f.summary).join(", "),
+        });
+    },
+    (e: unknown) => useNotifications.getState().notifyError(e, "Could not start port forwards"),
+  );
 }
 
 function onClosed(tabId: string, reason: CloseReason) {

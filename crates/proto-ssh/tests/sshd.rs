@@ -552,3 +552,218 @@ async fn agent_auth_and_forwarding() {
 
     let _ = std::process::Command::new("kill").arg(pid).status();
 }
+
+// ---- Power tools over a session's connection (M6) ----
+
+mod tools {
+    use super::*;
+    use cairn_core::tools::grab::GrabPlan;
+    use cairn_core::tools::{ForwardKind, ForwardSpec};
+    use cairn_proto_ssh::connect::Connection;
+    use cairn_proto_ssh::sftp::{EntryKind, Sftp};
+    use cairn_proto_ssh::{forward, grab, scp};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::{TcpListener, TcpStream};
+    use tokio::sync::watch;
+
+    async fn conn() -> Arc<Connection> {
+        let i = TestInteract::with_answers(&[]);
+        Arc::new(
+            connect(
+                &opts(vec![hop("CAIRN_SSH_PORT", vec![password()], false)]),
+                i,
+            )
+            .await
+            .expect("connect"),
+        )
+    }
+
+    /// A TCP echo server; returns its port.
+    async fn echo() -> u16 {
+        let l = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let port = l.local_addr().expect("addr").port();
+        tokio::spawn(async move {
+            while let Ok((mut s, _)) = l.accept().await {
+                tokio::spawn(async move {
+                    let (mut r, mut w) = s.split();
+                    let _ = tokio::io::copy(&mut r, &mut w).await;
+                });
+            }
+        });
+        port
+    }
+
+    async fn roundtrip(mut s: TcpStream) {
+        s.write_all(b"ping").await.expect("write");
+        let mut buf = [0u8; 4];
+        tokio::time::timeout(Duration::from_secs(5), s.read_exact(&mut buf))
+            .await
+            .expect("timely")
+            .expect("read");
+        assert_eq!(&buf, b"ping");
+    }
+
+    fn spec(kind: ForwardKind, dest_port: u16) -> ForwardSpec {
+        ForwardSpec {
+            kind,
+            bind_host: "127.0.0.1".into(),
+            bind_port: 0,
+            dest_host: "127.0.0.1".into(),
+            dest_port,
+        }
+    }
+
+    #[tokio::test]
+    async fn local_remote_and_dynamic_forwards() {
+        require_sshd!();
+        let c = conn().await;
+        let target = echo().await;
+
+        let local = forward::start(c.clone(), spec(ForwardKind::Local, target))
+            .await
+            .expect("local");
+        roundtrip(
+            TcpStream::connect(("127.0.0.1", local.bound_port))
+                .await
+                .expect("connect"),
+        )
+        .await;
+        // Counters are updated when a connection ends.
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        let stats = local.stats.snapshot();
+        assert_eq!(stats.total, 1);
+        assert_eq!(stats.bytes_out, 4);
+        local.stop().await;
+
+        let remote = forward::start(c.clone(), spec(ForwardKind::Remote, target))
+            .await
+            .expect("remote");
+        assert_ne!(remote.bound_port, 0, "server allocated a port");
+        roundtrip(
+            TcpStream::connect(("127.0.0.1", remote.bound_port))
+                .await
+                .expect("connect"),
+        )
+        .await;
+        remote.stop().await;
+
+        let socks = forward::start(c.clone(), spec(ForwardKind::Dynamic, 0))
+            .await
+            .expect("dynamic");
+        let mut s = TcpStream::connect(("127.0.0.1", socks.bound_port))
+            .await
+            .expect("connect");
+        s.write_all(&[5, 1, 0]).await.expect("greet");
+        let mut r = [0u8; 2];
+        s.read_exact(&mut r).await.expect("method");
+        let mut req = vec![5, 1, 0, 1, 127, 0, 0, 1];
+        req.extend_from_slice(&target.to_be_bytes());
+        s.write_all(&req).await.expect("connect request");
+        let mut reply = [0u8; 10];
+        s.read_exact(&mut reply).await.expect("reply");
+        assert_eq!(reply[1], 0, "SOCKS success");
+        roundtrip(s).await;
+        socks.stop().await;
+    }
+
+    #[tokio::test]
+    async fn sftp_browse_transfer_and_manage() {
+        require_sshd!();
+        let c = conn().await;
+        let sftp = Sftp::open(&c).await.expect("sftp");
+        let home = sftp.home().await.expect("home");
+        let dir = cairn_proto_ssh::sftp::join(&home, &format!("cairn-sftp-{}", std::process::id()));
+        let _ = sftp.remove(&dir).await;
+        sftp.mkdir(&dir).await.expect("mkdir");
+
+        let tmp = tempfile::tempdir().expect("tmp");
+        let local = tmp.path().join("fw.bin");
+        let data: Vec<u8> = (0..300_000u32).map(|i| (i % 251) as u8).collect();
+        std::fs::write(&local, &data).expect("write");
+        let (_stop, cancel) = watch::channel(false);
+        let remote = cairn_proto_ssh::sftp::join(&dir, "fw.bin");
+        let progress = Arc::new(Mutex::new(0u64));
+        let p = progress.clone();
+        let n = sftp
+            .upload(
+                &local,
+                &remote,
+                move |b| *p.lock().expect("lock") = b,
+                cancel.clone(),
+            )
+            .await
+            .expect("upload");
+        assert_eq!(n, data.len() as u64);
+        assert_eq!(*progress.lock().expect("lock"), n);
+
+        sftp.mkdir(&cairn_proto_ssh::sftp::join(&dir, "sub"))
+            .await
+            .expect("sub");
+        let entries = sftp.list(&dir).await.expect("list");
+        assert_eq!(entries[0].name, "sub", "folders first");
+        assert_eq!(entries[0].kind, EntryKind::Dir);
+        assert_eq!(entries[1].size, data.len() as u64);
+
+        let renamed = cairn_proto_ssh::sftp::join(&dir, "fw2.bin");
+        sftp.rename(&remote, &renamed).await.expect("rename");
+        sftp.chmod(&renamed, 0o600).await.expect("chmod");
+        let e = sftp.list(&dir).await.expect("list");
+        let f = e.iter().find(|x| x.name == "fw2.bin").expect("renamed");
+        assert_eq!(f.mode, 0o600);
+
+        let back = tmp.path().join("back.bin");
+        sftp.download(&renamed, &back, |_| {}, cancel.clone())
+            .await
+            .expect("download");
+        assert_eq!(std::fs::read(&back).expect("read"), data);
+
+        let (stop, cancelled) = watch::channel(false);
+        stop.send(true).expect("cancel");
+        let r = sftp
+            .download(&renamed, &tmp.path().join("x"), |_| {}, cancelled)
+            .await;
+        assert!(matches!(r, Err(SshError::Cancelled)));
+        assert!(!tmp.path().join("x").exists());
+
+        sftp.remove(&dir).await.expect("recursive remove");
+        assert!(sftp.list(&dir).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn scp_upload_and_download() {
+        require_sshd!();
+        let c = conn().await;
+        let tmp = tempfile::tempdir().expect("tmp");
+        let local = tmp.path().join("cfg.txt");
+        std::fs::write(&local, b"hostname sw1\n").expect("write");
+        let remote = format!("/tmp/cairn-scp-{}.txt", std::process::id());
+        let (_stop, cancel) = watch::channel(false);
+        assert_eq!(
+            scp::upload(&c, &local, &remote, |_| {}, cancel.clone())
+                .await
+                .expect("up"),
+            13
+        );
+        let back = tmp.path().join("back.txt");
+        scp::download(&c, &remote, &back, |_| {}, cancel.clone())
+            .await
+            .expect("down");
+        assert_eq!(std::fs::read(&back).expect("read"), b"hostname sw1\n");
+        let missing =
+            scp::download(&c, "/nonexistent/x", &tmp.path().join("m"), |_| {}, cancel).await;
+        assert!(matches!(missing, Err(SshError::Scp(m)) if m.contains("No such file")));
+    }
+
+    #[tokio::test]
+    async fn grab_runs_on_its_own_channel() {
+        require_sshd!();
+        let c = conn().await;
+        let plan = GrabPlan {
+            setup: vec![],
+            command: "printf 'line one\\nline two\\n'".into(),
+            enable_mode: false,
+        };
+        let out = grab::grab(&c, plan, None).await.expect("grab");
+        assert_eq!(out, "line one\nline two\n");
+    }
+}

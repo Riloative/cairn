@@ -41,6 +41,22 @@ pub enum SshError {
     Disconnected(String),
     #[error("SSH protocol error: {0}")]
     Protocol(String),
+    #[error("The session is not connected.")]
+    NotConnected,
+    #[error("Could not listen on {addr}: {message}")]
+    ForwardBind { addr: String, message: String },
+    #[error("The server refused the port forward: {0}")]
+    ForwardRefused(String),
+    #[error("SFTP is not available on this device: {0}")]
+    SftpUnavailable(String),
+    #[error("{0}")]
+    Sftp(String),
+    #[error("SCP failed: {0}")]
+    Scp(String),
+    #[error("Could not grab the configuration: {0}")]
+    Grab(String),
+    #[error("The transfer was cancelled.")]
+    Cancelled,
 }
 
 impl SshError {
@@ -89,6 +105,14 @@ impl UserFacingError for SshError {
             SshError::Channel(_) => "ssh.channel",
             SshError::Disconnected(_) => "ssh.disconnected",
             SshError::Protocol(_) => "ssh.protocol",
+            SshError::NotConnected => "ssh.not_connected",
+            SshError::ForwardBind { .. } => "ssh.forward_bind",
+            SshError::ForwardRefused(_) => "ssh.forward_refused",
+            SshError::SftpUnavailable(_) => "ssh.sftp_unavailable",
+            SshError::Sftp(_) => "ssh.sftp",
+            SshError::Scp(_) => "ssh.scp",
+            SshError::Grab(_) => "ssh.grab",
+            SshError::Cancelled => "ssh.cancelled",
         }
     }
 
@@ -119,6 +143,19 @@ impl UserFacingError for SshError {
                 "Start an SSH agent and add your key (`ssh-add`), then make sure SSH_AUTH_SOCK is set for Cairn.".into()
             }
             SshError::Disconnected(_) => "Use Reconnect to open the session again.".into(),
+            SshError::NotConnected => "Wait until the session is connected, or reconnect it.".into(),
+            SshError::ForwardBind { .. } => {
+                "Choose another local port; ports below 1024 need administrator rights.".into()
+            }
+            SshError::ForwardRefused(_) => {
+                "The server may forbid forwarding (`AllowTcpForwarding`, `GatewayPorts` in sshd_config).".into()
+            }
+            SshError::SftpUnavailable(_) => {
+                "Many network devices have no SFTP server; use SCP instead (enable `ip scp server enable` on Cisco).".into()
+            }
+            SshError::Scp(_) => {
+                "Check the path and that SCP is enabled on the device (`ip scp server enable` on Cisco IOS).".into()
+            }
             _ => return None,
         })
     }

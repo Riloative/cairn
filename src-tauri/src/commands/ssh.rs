@@ -91,15 +91,19 @@ fn start(
         },
     });
     let runtime = tokio::runtime::Handle::current();
+    let registry = &state.ssh_sessions;
+    let key = id.clone();
     sessions.open_with_id::<CommandError>(id, output, move |sink| {
-        Ok(Arc::new(SshSession::start(
+        let session = Arc::new(SshSession::start(
             &runtime,
             target.opts.clone(),
             cols,
             rows,
             interact,
             sink,
-        )) as Arc<dyn TerminalSession>)
+        ));
+        registry.lock().insert(key, Arc::downgrade(&session));
+        Ok(session as Arc<dyn TerminalSession>)
     })
 }
 

@@ -951,3 +951,54 @@ export const tftpStart = (prefs: TftpPrefs) => call<TftpStatus>("tftp_start", { 
 export const tftpStop = () => call<TftpStatus>("tftp_stop");
 export const tftpClearLog = () => call<null>("tftp_clear_log");
 export const localAddresses = () => call<LocalAddress[]>("local_addresses");
+
+// ---- Port forwards (M6) ----
+
+export type ForwardKind = "local" | "remote" | "dynamic";
+
+export interface ForwardSpec {
+  kind: ForwardKind;
+  /** Local for local/dynamic, on the server for remote. */
+  bindHost: string;
+  /** 0 = pick a free port. */
+  bindPort: number;
+  destHost: string;
+  destPort: number;
+}
+
+export interface ForwardCounters {
+  active: number;
+  total: number;
+  bytesOut: number;
+  bytesIn: number;
+  lastError: string | null;
+}
+
+export interface ForwardInfo {
+  id: number;
+  sessionId: string;
+  target: string;
+  presetId: number | null;
+  spec: ForwardSpec;
+  summary: string;
+  boundPort: number;
+  counters: ForwardCounters;
+}
+
+export interface ForwardPreset extends ForwardSpec {
+  id: number;
+  deviceId: number;
+  autoStart: boolean;
+  description: string;
+}
+
+export const forwardStart = (sessionId: string, spec: ForwardSpec) =>
+  call<ForwardInfo>("forward_start", { sessionId, spec });
+export const forwardStop = (id: number) => call<null>("forward_stop", { id });
+export const forwardsList = () => call<ForwardInfo[]>("forwards_list");
+export const forwardsAutostart = (sessionId: string, deviceId: number) =>
+  call<ForwardInfo[]>("forwards_autostart", { sessionId, deviceId });
+export const forwardPresetsList = () => call<ForwardPreset[]>("forward_presets_list");
+export const forwardPresetSave = (preset: ForwardPreset) =>
+  call<ForwardPreset>("forward_preset_save", { preset });
+export const forwardPresetDelete = (id: number) => call<null>("forward_preset_delete", { id });
