@@ -127,6 +127,13 @@ pub fn run() {
             commands::files::sftp_op,
             commands::files::file_transfer,
             commands::files::file_transfer_cancel,
+            commands::configs::config_grab,
+            commands::configs::config_snapshots,
+            commands::configs::config_snapshot,
+            commands::configs::config_snapshot_note,
+            commands::configs::config_snapshot_delete,
+            commands::configs::config_diff,
+            commands::configs::config_export,
         ])
         .build(tauri::generate_context!())
         .map(|app| {

@@ -3,6 +3,7 @@
 
 pub mod app;
 pub mod audit;
+pub mod configs;
 pub mod devices;
 pub mod files;
 pub mod forwards;

@@ -2,11 +2,14 @@ import { create } from "zustand";
 import * as ipc from "@/lib/ipc";
 import type { InventorySnapshot } from "@/lib/ipc";
 
+/** Tabs of the device sheet. */
+export type DeviceTab = "overview" | "interfaces" | "configs";
+
 export type InventorySection = "devices" | "locations" | "vlans" | "credentials" | "fields";
 
 /** What the device side sheet shows. */
 export type DeviceSheet =
-  | { mode: "view"; deviceId: number; tab?: "overview" | "interfaces" }
+  | { mode: "view"; deviceId: number; tab?: DeviceTab }
   | { mode: "edit"; deviceId: number }
   | { mode: "new" }
   | null;

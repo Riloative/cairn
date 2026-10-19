@@ -1,5 +1,6 @@
 //! Power tools: snippets, port-forward presets, config grab and snapshots.
 
+pub mod configdiff;
 pub mod forwards;
 pub mod grab;
 pub mod snapshots;

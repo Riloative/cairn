@@ -14,10 +14,12 @@ export interface AppNotification {
   read: boolean;
   /** Whether it is currently shown as a toast. */
   toast: boolean;
+  /** One follow-up action offered on the toast (e.g. "Show history"). */
+  action?: { label: string; onClick: () => void };
 }
 
 export type NotifyInput = Pick<AppNotification, "title"> &
-  Partial<Pick<AppNotification, "description" | "hint" | "variant">>;
+  Partial<Pick<AppNotification, "description" | "hint" | "variant" | "action">>;
 
 interface NotificationState {
   items: AppNotification[];
@@ -43,6 +45,7 @@ export const useNotifications = create<NotificationState>((set, get) => ({
       title: n.title,
       description: n.description,
       hint: n.hint,
+      action: n.action,
       variant: n.variant ?? "info",
       createdAt: Date.now(),
       read: false,

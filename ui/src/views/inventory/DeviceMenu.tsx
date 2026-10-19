@@ -1,4 +1,4 @@
-import { Copy, CopyPlus, Globe, Pencil, PlugZap, Trash2 } from "lucide-react";
+import { Copy, CopyPlus, Globe, Pencil, PlugZap, ScrollText, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   ContextMenu,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/Menu";
 import type { Device } from "@/lib/ipc";
 import { useInventory } from "@/stores/inventory";
+import { grabConfig } from "@/views/configs/grab";
 import {
   canOpen,
   connect,
@@ -54,6 +55,13 @@ export function DeviceContextMenu({ device, children }: { device: Device; childr
           onSelect={() => void copyIp(device)}
         >
           Copy IP
+        </ContextMenuItem>
+        <ContextMenuItem
+          icon={<ScrollText size={14} />}
+          disabled={!device.connections.some((m) => m.kind === "ssh")}
+          onSelect={() => void grabConfig(device)}
+        >
+          Grab config
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem

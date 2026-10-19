@@ -45,6 +45,7 @@ russh-sftp = "3.0.1"
 rusqlite = { version = "0.40", default-features = false, features = ["bundled-sqlcipher-vendored-openssl"] }
 resvg = { version = "0.45.1", default-features = false, features = ["text", "system-fonts", "raster-images"] }
 sha2 = "0.10"
+similar = { version = "3.2", default-features = false, features = ["text"] }
 svg2pdf = { version = "0.13", default-features = false, features = ["text", "image"] }
 tempfile = "3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }

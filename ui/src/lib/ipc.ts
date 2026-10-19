@@ -1048,3 +1048,57 @@ export async function fileTransfer(
 }
 
 export const fileTransferCancel = (id: string) => call<null>("file_transfer_cancel", { id });
+
+// ---- Config grab and snapshots (M6) ----
+
+export interface SnapshotInfo {
+  id: number;
+  deviceId: number;
+  takenAt: string;
+  command: string;
+  sha256: string;
+  lines: number;
+  bytes: number;
+  note: string;
+}
+
+export interface ConfigSnapshot extends SnapshotInfo {
+  content: string;
+}
+
+export interface GrabResult {
+  snapshot: SnapshotInfo;
+  /** False when identical to the previous snapshot. */
+  changed: boolean;
+}
+
+export interface DiffLine {
+  n: number;
+  text: string;
+}
+
+export interface DiffRow {
+  kind: "same" | "added" | "removed" | "changed";
+  left: DiffLine | null;
+  right: DiffLine | null;
+}
+
+export interface ConfigDiff {
+  rows: DiffRow[];
+  added: number;
+  removed: number;
+}
+
+export const configGrab = (deviceId: number, sessionId: string) =>
+  call<GrabResult>("config_grab", { deviceId, sessionId });
+export const configSnapshots = (deviceId: number) =>
+  call<SnapshotInfo[]>("config_snapshots", { deviceId });
+export const configSnapshot = (id: number) => call<ConfigSnapshot>("config_snapshot", { id });
+export const configSnapshotNote = (id: number, note: string) =>
+  call<null>("config_snapshot_note", { id, note });
+export const configSnapshotDelete = (id: number) => call<null>("config_snapshot_delete", { id });
+export const configDiff = (oldId: number, newId: number) =>
+  call<ConfigDiff>("config_diff", { oldId, newId });
+/** Export a snapshot, or with `against` a unified diff from that older snapshot. */
+export const configExport = (id: number, against: number | null, path: string) =>
+  call<string>("config_export", { id, against, path });

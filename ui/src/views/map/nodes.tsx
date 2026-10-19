@@ -1,5 +1,16 @@
 import { Handle, NodeResizer, Position, type NodeProps } from "@xyflow/react";
-import { Copy, Globe, Lock, Pencil, PlugZap, Radar, Route, Server, Unlock } from "lucide-react";
+import {
+  Copy,
+  Globe,
+  Lock,
+  Pencil,
+  PlugZap,
+  Radar,
+  Route,
+  ScrollText,
+  Server,
+  Unlock,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ContextMenu,
@@ -14,6 +25,7 @@ import { Glyph } from "@/map/Glyph";
 import { DEVICE_SIZE, DEVICE_TILE } from "@/map/model";
 import { canOpen, connect, copyIp, methodLabel } from "@/views/inventory/deviceActions";
 import { usesLegacySsh } from "@/views/inventory/model";
+import { grabConfig } from "@/views/configs/grab";
 import { ping, showInInventory, traceroute } from "./nodeActions";
 import { useMapUi } from "./mapUi";
 import type { BandNode, BuildingNode, DeviceNode, PlanNode, ZoneNode } from "./types";
@@ -137,6 +149,13 @@ export function DeviceNodeView({ data, selected }: NodeProps<DeviceNode>) {
           onSelect={() => void copyIp(d)}
         >
           Copy IP
+        </ContextMenuItem>
+        <ContextMenuItem
+          icon={<ScrollText size={14} />}
+          disabled={!d.connections.some((m) => m.kind === "ssh")}
+          onSelect={() => void grabConfig(d)}
+        >
+          Grab config
         </ContextMenuItem>
         <ContextMenuSeparator />
         {!data.external && (

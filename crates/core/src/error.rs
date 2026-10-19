@@ -70,7 +70,7 @@ pub enum CoreError {
 }
 
 impl CoreError {
-    pub(crate) fn io(path: &std::path::Path, source: std::io::Error) -> Self {
+    pub fn io(path: &std::path::Path, source: std::io::Error) -> Self {
         Self::Io {
             path: path.display().to_string(),
             source,

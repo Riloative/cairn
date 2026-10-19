@@ -9,11 +9,13 @@ import type {
   RemoteEntry,
   Settings,
   TerminalPrefs,
+  ConfigSnapshot,
   FileOp,
   ForwardInfo,
   ForwardPreset,
   ForwardSpec,
   Snippet,
+  SnapshotInfo,
   TftpPrefs,
   TftpStatus,
   TransferRequest,
@@ -42,6 +44,19 @@ export const DEFAULT_SETTINGS: Settings = {
  * In-memory stand-in for the Rust backend, wired through Tauri's official IPC mock. It
  * mirrors the command contract in src-tauri/src/commands so UI flows can be tested.
  */
+function withoutContent(s: ConfigSnapshot): SnapshotInfo {
+  return {
+    id: s.id,
+    deviceId: s.deviceId,
+    takenAt: s.takenAt,
+    command: s.command,
+    sha256: s.sha256,
+    lines: s.lines,
+    bytes: s.bytes,
+    note: s.note,
+  };
+}
+
 export class FakeBackend {
   status: VaultStatus;
   password = "correct horse battery";
@@ -89,6 +104,9 @@ export class FakeBackend {
     "/home/admin/configs": [],
   };
   transfers: TransferRequest[] = [];
+  snapshots: ConfigSnapshot[] = [];
+  /** What the next config grab returns. */
+  nextConfig = "hostname sw1\n!\nend\n";
   forwardPresets: ForwardPreset[] = [];
   tftp: TftpStatus = {
     running: false,
@@ -264,6 +282,68 @@ export class FakeBackend {
         return null;
       case "plugin:dialog|save":
         return this.dialogResult;
+      case "config_grab": {
+        this.requireUnlocked();
+        const deviceId = args.deviceId as number;
+        const prev = this.snapshots.filter((x) => x.deviceId === deviceId).at(-1);
+        const sha = `sha-${this.nextConfig.length}-${this.nextConfig.charCodeAt(9)}`;
+        const snap: ConfigSnapshot = {
+          id: this.snapshots.length + 1,
+          deviceId,
+          takenAt: new Date(Date.UTC(2026, 9, 1 + this.snapshots.length, 12)).toISOString(),
+          command: "show running-config",
+          sha256: sha,
+          lines: this.nextConfig.split("\n").length - 1,
+          bytes: this.nextConfig.length,
+          note: "",
+          content: this.nextConfig,
+        };
+        this.snapshots.push(snap);
+        const info = withoutContent(snap);
+        this.log("config_grabbed", { deviceId, ok: true, sessionId: args.sessionId });
+        return { snapshot: info, changed: prev?.sha256 !== sha };
+      }
+      case "config_snapshots":
+        return this.snapshots
+          .filter((x) => x.deviceId === args.deviceId)
+          .map(withoutContent)
+          .reverse();
+      case "config_snapshot":
+        return structuredClone(this.snapshots.find((x) => x.id === args.id));
+      case "config_snapshot_delete":
+        this.snapshots = this.snapshots.filter((x) => x.id !== args.id);
+        return null;
+      case "config_snapshot_note":
+        return null;
+      case "config_diff": {
+        const lines = (id: unknown) =>
+          (this.snapshots.find((x) => x.id === id)?.content ?? "").replace(/\n$/, "").split("\n");
+        const a = lines(args.oldId);
+        const b = lines(args.newId);
+        const rows = Array.from({ length: Math.max(a.length, b.length) }, (_, i) => {
+          const l = a[i];
+          const r = b[i];
+          const kind =
+            l === r ? "same" : l === undefined ? "added" : r === undefined ? "removed" : "changed";
+          return {
+            kind,
+            left: l === undefined ? null : { n: i + 1, text: l },
+            right: r === undefined ? null : { n: i + 1, text: r },
+          };
+        });
+        return {
+          rows,
+          added: rows.filter((r) => r.kind !== "same" && r.right).length,
+          removed: rows.filter((r) => r.kind !== "same" && r.left).length,
+        };
+      }
+      case "config_export":
+        this.log("data_exported", {
+          what: "configuration",
+          path: args.path,
+          against: args.against,
+        });
+        return args.path;
       case "forward_start": {
         this.requireUnlocked();
         const spec = args.spec as ForwardSpec;

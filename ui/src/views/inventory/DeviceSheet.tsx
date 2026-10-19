@@ -11,7 +11,7 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/Sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import type { Device, InventorySnapshot } from "@/lib/ipc";
-import { useInventory } from "@/stores/inventory";
+import { useInventory, type DeviceTab } from "@/stores/inventory";
 import {
   canOpen,
   connect,
@@ -23,6 +23,7 @@ import {
 import { DeviceForm } from "./DeviceForm";
 import { DeviceTypeIcon } from "./DeviceTypeIcon";
 import { InterfacesPanel } from "./InterfacesPanel";
+import { ConfigHistory } from "@/views/configs/ConfigHistory";
 import { DEVICE_TYPE_LABEL } from "./labels";
 import { Markdown } from "./Markdown";
 import { customDisplay, locationLabel } from "./query";
@@ -226,19 +227,21 @@ export function DeviceSheet({ snapshot }: { snapshot: InventorySnapshot }) {
     body = (
       <Tabs
         value={sheet.tab ?? "overview"}
-        onValueChange={(v) =>
-          setSheet({ mode: "view", deviceId: device.id, tab: v as "overview" | "interfaces" })
-        }
+        onValueChange={(v) => setSheet({ mode: "view", deviceId: device.id, tab: v as DeviceTab })}
       >
         <TabsList className="mx-4 mt-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="interfaces">Interfaces ({device.interfaceCount})</TabsTrigger>
+          <TabsTrigger value="configs">Configs</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <Overview device={device} snapshot={snapshot} />
         </TabsContent>
         <TabsContent value="interfaces">
           <InterfacesPanel device={device} />
+        </TabsContent>
+        <TabsContent value="configs">
+          <ConfigHistory device={device} />
         </TabsContent>
       </Tabs>
     );
