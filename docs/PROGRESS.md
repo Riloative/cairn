@@ -337,3 +337,27 @@ export opened in LibreOffice/Excel/Numbers (formulas shown as text).
 once, the map of a real 300-device network (first layout time, panning), keyboard-only
 use of every view with a screen reader (VoiceOver, Orca), and the macOS `.dmg` install
 path from the README on a machine that has never run Cairn.
+
+### M10 (session 4): feedback from v0.1.0
+
+- **Saved connections** (D-046): Quick Connect → "Save…" names a target (SSH,
+  Telnet, Serial, RDP) and optionally picks a credential profile; a typed password is
+  used once and never saved. Saved connections are listed under Saved in the sidebar
+  (click to connect; menu or right-click to edit or delete) and in the palette. The
+  profile's username, key, password and enable secret are resolved in Rust.
+- **Dialogs scroll** instead of running off the window (Quick Connect with advanced
+  SSH options open).
+- **Alignment:** the terminal's surrounding padding showed the app's panel colour, so
+  any scheme different from the app (dark terminal, light app) looked like an inset,
+  misaligned box. The pane now takes the terminal's background and the terminal fills
+  the panel; existing text repaints right away after a scheme change.
+- **Colour scheme on the spot:** a palette button in the terminal header (and
+  "Change colour scheme…" in the palette) switches only that tab, like Ptyxis; "Use for
+  new tabs" saves it to the profile. Settings → Terminal palette previews are
+  clickable and apply to the profile being edited.
+- **Racks:** Inventory → Locations opens a rack into a drawing of its devices at their
+  U positions; the map's rack view uses the same drawing.
+- **Minimap** redrawn: links in colour, devices, buildings, zones and the visible area;
+  click or drag to move the view.
+- **Icons:** the original designs, polished to one grid and corner radius; the IP phone
+  and access point redrawn.

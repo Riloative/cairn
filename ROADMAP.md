@@ -155,10 +155,10 @@ both platforms, and there are no stubs/TODOs left inside it.
 
 ## M10 – Feedback from v0.1.0
 
-- [ ] Saved connections: name a Quick Connect target (SSH, Telnet, Serial, RDP) and reopen it in one click
-- [ ] Quick Connect scrolls when advanced settings are open; shell and dialogs line up with the window
-- [ ] Change a terminal's colour theme on the spot; Settings theme previews are clickable
-- [ ] Rack view shows the devices mounted in it
-- [ ] Minimap draws devices and links you can recognise
-- [ ] Device icons polished: one size grid and corner radius, clearer details (IP phone, access point, switch ports)
+- [x] Saved connections: name a Quick Connect target (SSH, Telnet, Serial, RDP) and reopen it in one click
+- [x] Quick Connect scrolls when advanced settings are open; shell and dialogs line up with the window
+- [x] Change a terminal's colour theme on the spot; Settings theme previews are clickable
+- [x] Rack view shows the devices mounted in it
+- [x] Minimap draws devices and links you can recognise
+- [x] Device icons polished: one size grid and corner radius, clearer details (IP phone, access point, switch ports)
 - [ ] CI green on both platforms for M10

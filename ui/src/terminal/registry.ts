@@ -161,7 +161,20 @@ export function applyOptions(handle: TerminalHandle, profile: TerminalProfile, p
   for (const [k, v] of Object.entries(opts)) {
     (handle.term.options as Record<string, unknown>)[k] = v;
   }
-  // Colors are baked into the WebGL glyph atlas; rebuild it and repaint everything.
+  // Colors are baked into the WebGL glyph atlas; rebuild it and repaint everything,
+  // again on the next frame: the first repaint can still use the old colours.
   handle.webgl?.clearTextureAtlas();
   handle.term.refresh(0, handle.term.rows - 1);
+  requestAnimationFrame(() => handle.term.refresh(0, handle.term.rows - 1));
+  paintHost(handle);
+}
+
+/**
+ * Give the pane around the terminal the terminal's background, so its padding blends
+ * in and the terminal fills the panel edge to edge in any colour scheme (a dark scheme
+ * in a light app used to look like a box inset in the window).
+ */
+export function paintHost(handle: TerminalHandle) {
+  const host = handle.element.parentElement;
+  if (host) host.style.background = handle.term.options.theme?.background ?? "";
 }
