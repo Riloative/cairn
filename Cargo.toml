@@ -15,7 +15,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.93"
 license = "MIT"
 repository = "https://github.com/riloative/cairn"
 authors = ["Cairn contributors"]
@@ -66,3 +66,7 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[patch.crates-io]
+# See D-039: lets IronRDP resolve alongside russh (curve25519-dalek 5).
+ironrdp-connector = { path = "vendor/ironrdp-connector" }

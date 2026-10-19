@@ -10,11 +10,20 @@ authors.workspace = true
 publish = false
 
 [dependencies]
+cairn-core.workspace = true
+futures.workspace = true
+ironrdp = { version = "0.17", features = ["connector", "session", "graphics", "input", "cliprdr", "displaycontrol", "dvc", "svc"] }
+ironrdp-tokio = "0.10"
+ironrdp-tls = { version = "0.2", features = ["rustls-ring"] }
 serde.workspace = true
+sha2.workspace = true
 thiserror.workspace = true
+tokio = { workspace = true, features = ["net", "io-util", "rt", "time", "sync", "macros"] }
+x509-cert = "0.2"
 
 [dev-dependencies]
 serde_json.workspace = true
+tokio = { workspace = true, features = ["net", "io-util", "rt-multi-thread", "macros"] }
 
 [lints]
 workspace = true

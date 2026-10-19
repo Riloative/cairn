@@ -347,3 +347,44 @@ Snippets hold no secrets (credentials stay referenced by ID), so `{{variable}}`
 substitution runs in the UI, where the variables dialog lives. The backend stores
 and validates them. A snippet goes through the same delivery path as typing, so it
 also reaches broadcast groups.
+
+## D-039 · IronRDP's connector is vendored with a newer `sspi` (M7)
+
+IronRDP 0.17's `ironrdp-connector` 0.10 pins `picky =7.0.0-rc.25`, which pins
+`curve25519-dalek =5.0.0-rc.1`. russh needs `curve25519-dalek ^5` (stable 5.0.0), and
+Cargo allows only one version in that range, so the two cannot resolve together. The
+connector is copied to `vendor/ironrdp-connector` and used through
+`[patch.crates-io]`, with `sspi` raised to 0.23 (which uses `picky` rc.26 and stable
+dalek) and two marked edits: `TsRequest::buffer_len()` now returns a `Result`, and an
+unfulfilled lint expectation is removed so `-D warnings` stays clean. Nothing else
+changes. Drop the patch once IronRDP releases a connector on `sspi` ≥ 0.22. IronRDP and
+`sspi` need Rust 1.93, so the workspace `rust-version` is now 1.93 (the pinned toolchain
+is 1.99).
+
+## D-040 · RDP engine: thread per session, pinned certificates, dirty-rect frames (M7)
+
+- **Thread per session.** IronRDP's connection future is not `Send` (its
+  `NetworkClient` trait returns an unbounded `impl Future`), so each RDP session runs on
+  its own thread with a current-thread Tokio runtime. Sessions are few, so the cost is
+  negligible, and no `Send` workarounds are needed in the protocol code.
+- **Certificates are pinned, not CA-validated.** RDP servers almost always use
+  self-signed certificates. After the TLS handshake and before CredSSP (or the Client
+  Info PDU) sends any credential, the SHA-256 fingerprint of the server's DER
+  certificate is checked against Cairn's known-hosts store (key type `x509`). Unknown
+  certificates prompt; changed ones get the same full warning as a changed SSH host key.
+- **NLA with fallback.** Cairn requests NLA (CredSSP) and accepts TLS when the server
+  only offers that (xrdp). Credentials are then sent in the Client Info PDU with
+  autologon so the server does not show its own logon screen. A "TLS" profile setting
+  skips CredSSP for servers that reject it. Kerberos is not supported (it would need
+  network calls to a KDC); NTLM works for local and domain accounts.
+- **Frames.** Updates are collected as dirty rectangles, merged when the union wastes
+  little area, and flushed at most every 16 ms as one binary message of RGBA crops
+  (format in `proto-rdp/src/frame.rs`). Each message carries the desktop size, so the
+  canvas follows a server-side resize without ordering against the JSON events. The
+  server's cursor is sent as its own bitmap message and shown as a CSS cursor, so it
+  moves without lag.
+- **Input** arrives as DOM `KeyboardEvent.code` values mapped to set 1 scancodes, so the
+  server's keyboard layout applies and shortcuts work regardless of the local layout.
+- **Resize** uses Display Control when the server offers it (Windows 8.1/2012 R2 and
+  later); otherwise the view scales the fixed desktop. No reconnect-on-resize.
+- **Clipboard** is plain Unicode text in both directions, per profile.
