@@ -388,3 +388,35 @@ is 1.99).
 - **Resize** uses Display Control when the server offers it (Windows 8.1/2012 R2 and
   later); otherwise the view scales the fixed desktop. No reconnect-on-resize.
 - **Clipboard** is plain Unicode text in both directions, per profile.
+
+## D-041 · RDP view: device pixels, key capture, external clients (M7)
+
+- **Device pixels.** The desktop is requested at the view's size × the device pixel
+  ratio, with that ratio as the desktop scale factor, so text is sharp on Retina and
+  HiDPI screens and Windows scales its UI to match. "Fit" scales the canvas into the
+  tab; "1:1" maps one desktop pixel to one device pixel and scrolls. When the profile
+  has no fixed resolution, the desktop follows the tab size (Display Control, 400 ms
+  after resizing stops).
+- **Keys belong to the remote desktop.** While the canvas has focus, every key is sent
+  to the server (Tab, F5, Ctrl+W, Alt+F4…). Only the command palette, tab switching and
+  Lock Cairn stay app shortcuts, so the user can always leave the session. F11 toggles
+  full screen. Keys held when focus leaves are released on the server.
+- **macOS.** Keys travel as physical codes, so the server's layout applies. ⌘ is sent as
+  Ctrl by default (⌘C/⌘V/⌘Z behave as on the Mac); a header toggle sends it as the
+  Windows key instead.
+- **Clipboard.** Text from the server is written to the local clipboard; the local
+  clipboard is offered to the server when the desktop gains focus and has changed (not
+  echoing what came from the server). Off per device when not wanted.
+- **Quick-connect passwords** are sent once; a reconnect asks again rather than keeping
+  the password in the frontend. Device passwords come from the vault in Rust.
+- **External clients.** FreeRDP gets the password on stdin (`/from-stdin`), never on the
+  command line where other users could see it in the process list. On macOS an `.rdp`
+  file (without password, the format cannot hold one safely) opens in the system RDP
+  app. SSH tunnels are only available in the built-in client.
+- **No reconnect-on-resize.** Servers without Display Control (older Windows, xrdp
+  0.9) keep their size and the view scales; reconnecting to resize would drop the
+  user's session state on servers that do not reattach.
+- **No RD Gateway yet.** IronRDP's gateway client (`ironrdp-mstsgu` 0.0.1) is
+  experimental and there is no gateway to test against here. An SSH tunnel through a
+  bastion covers the common "server behind a jump host" case; a gateway profile option
+  can be added when the crate matures.
