@@ -5,6 +5,7 @@ import { useNotifications } from "@/stores/notifications";
 import { useSettings } from "@/stores/settings";
 import { useUi, type View } from "@/stores/ui";
 import { CommandPalette } from "./CommandPalette";
+import { ShortcutsSheet } from "./ShortcutsSheet";
 import { NotificationCenter } from "./NotificationCenter";
 import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
@@ -106,6 +107,7 @@ export function Shell() {
         </main>
       </div>
       <CommandPalette />
+      <ShortcutsSheet />
       <NotificationCenter />
       <QuickConnectDialog />
       <SessionPrompts />

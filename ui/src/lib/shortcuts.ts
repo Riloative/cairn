@@ -43,6 +43,8 @@ const KEY_NAMES: Record<string, string> = {
   tab: "Tab",
   enter: "Enter",
   escape: "Esc",
+  " ": "Space",
+  space: "Space",
   arrowup: "↑",
   arrowdown: "↓",
   arrowleft: "←",

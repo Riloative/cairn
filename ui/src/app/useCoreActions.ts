@@ -80,6 +80,14 @@ export function coreActions(): Action[] {
       },
     },
     {
+      id: "help.shortcuts",
+      title: "Keyboard shortcuts",
+      group: "General",
+      keywords: ["keys", "help", "cheat sheet", "hotkeys"],
+      shortcut: "Mod+/",
+      run: () => ui().setShortcutsOpen(true),
+    },
+    {
       id: "notifications.open",
       title: "Show notifications",
       group: "General",
