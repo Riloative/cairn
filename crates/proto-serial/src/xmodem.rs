@@ -499,7 +499,7 @@ mod tests {
         fn send(&mut self, data: &[u8]) -> std::io::Result<()> {
             for &b in data {
                 self.sent += 1;
-                let b = if self.corrupt_every > 0 && self.sent % self.corrupt_every == 0 {
+                let b = if self.corrupt_every > 0 && self.sent.is_multiple_of(self.corrupt_every) {
                     b ^ 0x55
                 } else {
                     b

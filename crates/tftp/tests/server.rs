@@ -124,7 +124,7 @@ async fn put(
     }
     let mut block: u16 = 1;
     let mut chunks: Vec<&[u8]> = data.chunks(blksize).collect();
-    if data.len() % blksize == 0 {
+    if data.len().is_multiple_of(blksize) {
         chunks.push(&[]);
     }
     for chunk in chunks {
