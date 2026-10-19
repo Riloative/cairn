@@ -220,3 +220,43 @@ an IOS device's `flash:` when SFTP is off; dragging files from the desktop onto 
 file panel on macOS and GNOME; a SOCKS forward used by a browser; remote forwards
 on a server that only allows `GatewayPorts no`; broadcast from a map selection
 with a mix of SSH and serial devices.
+
+### M7 (session 3, continued)
+
+- `proto-rdp` on IronRDP 0.17 (D-039, D-040): connects over TCP or an SSH tunnel,
+  requests NLA and falls back to TLS (xrdp), pins the server certificate in the
+  known-hosts store before any credential is sent, streams dirty rectangles (≤ 60 fps,
+  one binary message per flush) and cursor bitmaps, takes keyboard (physical codes →
+  scancodes), mouse and wheel input, Ctrl+Alt+Del, Display Control resize with
+  Deactivation-Reactivation, and text clipboard both ways. One thread per session.
+- `ironrdp-connector` vendored with `sspi` 0.23 so it resolves next to russh; workspace
+  `rust-version` 1.93.
+- Tauri: `rdp_open` / `device_rdp_open` with password prompt, SSH tunnel prompts and the
+  certificate prompt on the session's event channel; input, resize, clipboard,
+  Ctrl+Alt+Del and close commands; session start/end and certificate decisions audited;
+  external client (FreeRDP with the password on stdin, `.rdp` on macOS).
+- UI (D-041): RDP tabs with a persistent canvas, fit / 1:1, desktop follows the tab
+  size, full screen (F11), ⌘-as-Ctrl on macOS, all keys to the server except palette,
+  tab switching and lock, certificate dialog (changed certificates get the host-key
+  warning), quick-connect RDP tab and palette action, device RDP settings (domain,
+  security, resolution, colors, clipboard, SSH tunnel, external client).
+- Tests: Rust unit tests (frames, keymap, input, clipboard backend, certificate,
+  errors, config), xrdp integration tests (certificate rejection stops before sign-in;
+  connect, real frames, typing, close), Tauri command tests (options, FreeRDP args never
+  carry the password, `.rdp` file), UI tests (quick connect → certificate → password →
+  frames → input → reconnect asks again; changed certificate; device and external
+  client). CI starts xrdp for the integration tests.
+- Verified in the release build under Xvfb against xrdp: quick connect, password
+  prompt, certificate trust dialog, the xterm desktop fitted to the tab, typing (Ctrl+U
+  and Ctrl+W go to the desktop, the tab stays), full screen, audit entries for trust,
+  start and end, and a second connection reattaching without a certificate prompt.
+- Found on the way: `parse_target("user@")` accepted an empty host (also affected SSH
+  jump hosts); fixed. Raising the MSRV turned on a clippy lint in two older tests.
+
+**Next:** M8 (audit and data).
+
+**Test manually:** RDP to Windows 10/11 and Server 2019/2022 with NLA (local and domain
+accounts, `DOMAIN\user`), a dynamic resize and the Retina sharpness on macOS, ⌘C/⌘V
+into Windows apps, clipboard both ways, Ctrl+Alt+Del to the security screen, an SSH
+tunnel through a bastion, the external client on Ubuntu (FreeRDP 3) and macOS (Windows
+App), and a changed server certificate (regenerate it) showing the warning.

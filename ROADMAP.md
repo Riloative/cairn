@@ -126,13 +126,14 @@ both platforms, and there are no stubs/TODOs left inside it.
 
 ## M7 – RDP
 
-- [ ] IronRDP session, dirty-rect frames over binary channel to canvas
-- [ ] Keyboard/mouse input incl. macOS key mapping
-- [ ] NLA/CredSSP, TLS cert trust prompt
-- [ ] Dynamic resize, fit/scaled, fullscreen, Ctrl+Alt+Del, text clipboard sync
-- [ ] RDP profiles (resolution, color depth, gateway if feasible, SSH tunnel)
-- [ ] External client fallback (FreeRDP on Linux, `.rdp` on macOS)
-- [ ] xrdp integration test if feasible
+- [x] IronRDP session, dirty-rect frames over binary channel to canvas
+- [x] Keyboard/mouse input incl. macOS key mapping
+- [x] NLA/CredSSP, TLS cert trust prompt
+- [x] Dynamic resize, fit/scaled, fullscreen, Ctrl+Alt+Del, text clipboard sync
+- [x] RDP profiles (resolution, color depth, SSH tunnel; RD Gateway not feasible yet, D-041)
+- [x] External client fallback (FreeRDP on Linux, `.rdp` on macOS)
+- [x] xrdp integration test
+- [ ] CI green on both platforms for M7
 
 ## M8 – Audit and data
 
