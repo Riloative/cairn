@@ -231,6 +231,8 @@ export function MapCanvas({
   });
   const [menu, setMenu] = useState<CanvasMenuState | null>(null);
   const [selection, setSelection] = useState<string[]>([]);
+  // A first layout of a big view takes a moment (in a worker); say so.
+  const [arranging, setArranging] = useState(false);
   const dragging = useRef(false);
   const dragStart = useRef<{
     positions: MapPosition[];
@@ -293,6 +295,7 @@ export function MapCanvas({
     const run = async () => {
       let positioned: NodeModel[];
       if (!placedAny) {
+        setArranging(true);
         const result = await autoLayout(
           model.nodes,
           model.edges,
@@ -318,6 +321,7 @@ export function MapCanvas({
       )
       .finally(() => {
         laying.current = false;
+        setArranging(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model]);
@@ -500,6 +504,14 @@ export function MapCanvas({
 
   return (
     <div className="relative size-full" data-map-view={model.key}>
+      {arranging && (
+        <div
+          role="status"
+          className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border bg-surface-raised px-3 py-1 text-xs text-fg-muted shadow-sm animate-fade-in"
+        >
+          Arranging {model.nodes.length} devices…
+        </div>
+      )}
       <ReactFlow<MapNode, LinkEdge>
         nodes={nodes}
         edges={edges.map((e) => (selection.includes(e.id) ? { ...e, selected: true } : e))}
