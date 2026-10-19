@@ -15,6 +15,9 @@ interface TerminalUiState {
   resolvePaste: (decision: "paste" | "slow" | "cancel") => void;
   overviewOpen: boolean;
   setOverviewOpen: (open: boolean) => void;
+  /** The colour scheme picker in the active terminal's header. */
+  schemePickerOpen: boolean;
+  setSchemePickerOpen: (open: boolean) => void;
 }
 
 export const useTerminalUi = create<TerminalUiState>((set, get) => ({
@@ -33,4 +36,6 @@ export const useTerminalUi = create<TerminalUiState>((set, get) => ({
   },
   overviewOpen: false,
   setOverviewOpen: (overviewOpen) => set({ overviewOpen }),
+  schemePickerOpen: false,
+  setSchemePickerOpen: (schemePickerOpen) => set({ schemePickerOpen }),
 }));

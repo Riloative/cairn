@@ -303,6 +303,15 @@ export function coreActions(): Action[] {
       run: () => useTerminalUi.getState().setSearchOpen(true),
     },
     {
+      id: "terminal.scheme",
+      scope: "terminal",
+      title: "Change colour scheme…",
+      group: "Terminal",
+      keywords: ["theme", "palette", "colors", "colours"],
+      enabled: terminalActive,
+      run: () => useTerminalUi.getState().setSchemePickerOpen(true),
+    },
+    {
       id: "terminal.copy",
       scope: "terminal",
       title: "Copy selection",

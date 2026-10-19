@@ -1,5 +1,4 @@
 import { Copy, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
@@ -35,14 +34,22 @@ export function ProfileEditor({
   prefs,
   palettes,
   onSave,
+  selectedId,
+  onSelect,
+  draft,
+  setDraft,
 }: {
   prefs: TerminalPrefs;
   palettes: readonly Palette[];
   onSave: (patch: Partial<TerminalPrefs>) => Promise<void>;
+  /** The profile being edited (shared with the palette grid below). */
+  selectedId: string;
+  onSelect: (id: string) => void;
+  /** Unsaved edits to the selected profile, or null. */
+  draft: TerminalProfile | null;
+  setDraft: (draft: TerminalProfile | null) => void;
 }) {
-  const [selectedId, setSelectedId] = useState(prefs.defaultProfileId);
   const stored = prefs.profiles.find((p) => p.id === selectedId) ?? prefs.profiles[0];
-  const [draft, setDraft] = useState<TerminalProfile | null>(null);
   if (!stored) return null;
   const p = draft ?? stored;
   const dirty = draft !== null && JSON.stringify(draft) !== JSON.stringify(stored);
@@ -51,7 +58,7 @@ export function ProfileEditor({
     setDraft({ ...p, [k]: v });
 
   const select = (id: string) => {
-    setSelectedId(id);
+    onSelect(id);
     setDraft(null);
   };
 

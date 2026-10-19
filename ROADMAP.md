@@ -152,3 +152,13 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] tauri-driver e2e smoke tests under xvfb + screenshot artifacts
 - [x] README with install notes (macOS quarantine, Ubuntu dialout)
 - [x] CI green on both platforms for M9 (run 57)
+
+## M10 – Feedback from v0.1.0
+
+- [ ] Saved connections: name a Quick Connect target (SSH, Telnet, Serial, RDP) and reopen it in one click
+- [ ] Quick Connect scrolls when advanced settings are open; shell and dialogs line up with the window
+- [ ] Change a terminal's colour theme on the spot; Settings theme previews are clickable
+- [ ] Rack view shows the devices mounted in it
+- [ ] Minimap draws devices and links you can recognise
+- [ ] Device icons in the familiar network-diagram style (router, switch, firewall…), kept as clean line icons
+- [ ] CI green on both platforms for M10

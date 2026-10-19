@@ -3,6 +3,7 @@ import type { SessionTab } from "@/stores/sessions";
 import { headerTint, type HeaderTint } from "./tint";
 import { PROTOCOL_LABEL, STATE_LABEL } from "@/app/protocol";
 import { RdpControls } from "@/rdp/RdpControls";
+import { SchemePicker } from "./SchemePicker";
 import { SessionControls } from "./SessionControls";
 import { SshControls } from "./SshControls";
 
@@ -46,6 +47,7 @@ export function TerminalHeader({ tab, privileged }: { tab: SessionTab; privilege
       <SshControls tab={tab} />
       <RdpControls tab={tab} />
       <SessionControls tab={tab} />
+      <SchemePicker tab={tab} />
       <span className="text-xs text-fg-subtle">{STATE_LABEL[tab.state]}</span>
     </div>
   );
