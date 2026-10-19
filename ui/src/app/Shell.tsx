@@ -12,6 +12,7 @@ import { TabBar } from "./TabBar";
 import { useActivityPing } from "./useActivityPing";
 import { useCoreActions } from "./useCoreActions";
 import { useDeviceActions } from "./useDeviceActions";
+import { useSavedActions } from "./useSavedActions";
 import { useToolActions } from "./useToolActions";
 import { BroadcastDialog } from "@/views/broadcast/BroadcastDialog";
 import { SnippetsManager } from "@/views/snippets/SnippetsManager";
@@ -84,6 +85,7 @@ export function Shell() {
   useCoreActions();
   useDeviceActions();
   useToolActions();
+  useSavedActions();
   useGlobalShortcuts();
   useActivityPing();
   useTerminalSetup();

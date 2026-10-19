@@ -10,6 +10,7 @@ import { DataDialogs } from "@/backup/DataDialogs";
 import { useInventory } from "@/stores/inventory";
 import { useMap } from "@/stores/map";
 import { useMapUi } from "@/views/map/mapUi";
+import { useSavedConnections } from "@/stores/savedConnections";
 import { useSnippets } from "@/stores/snippets";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
@@ -58,6 +59,7 @@ function Gate() {
       useMap.getState().clear();
       useMapUi.getState().reset();
       useSnippets.getState().clear();
+      useSavedConnections.getState().clear();
       useUi.setState({ paletteOpen: false, notificationsOpen: false });
     });
     return () => void unlisten.then((fn) => fn());
@@ -70,6 +72,7 @@ function Gate() {
       useMap.getState().clear();
       useMapUi.getState().reset();
       useSnippets.getState().clear();
+      useSavedConnections.getState().clear();
     }
   }, [info?.status]);
 

@@ -17,6 +17,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0006_audit_retention.sql"),
     include_str!("migrations/0007_recordings.sql"),
     include_str!("migrations/0008_audit_indexes.sql"),
+    include_str!("migrations/0009_saved_connections.sql"),
 ];
 
 /// Latest schema version this build knows.

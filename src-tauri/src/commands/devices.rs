@@ -84,7 +84,7 @@ fn address(d: &Device) -> String {
 }
 
 /// Destination auth from the profile, strongest first, then interactive fallbacks.
-fn ssh_auth(profile: Option<&CredentialProfile>, secrets: &Secrets) -> Vec<AuthMethod> {
+pub(crate) fn ssh_auth(profile: Option<&CredentialProfile>, secrets: &Secrets) -> Vec<AuthMethod> {
     let mut out = Vec::new();
     if let (Some(p), Some(data)) = (profile, &secrets.key_data) {
         out.push(AuthMethod::KeyData {
@@ -112,7 +112,7 @@ fn ssh_auth(profile: Option<&CredentialProfile>, secrets: &Secrets) -> Vec<AuthM
     out
 }
 
-fn enable_only(profile: Option<&CredentialProfile>, secrets: &Secrets) -> LoginPlan {
+pub(crate) fn enable_only(profile: Option<&CredentialProfile>, secrets: &Secrets) -> LoginPlan {
     LoginPlan {
         username: None,
         password: None,
@@ -123,7 +123,7 @@ fn enable_only(profile: Option<&CredentialProfile>, secrets: &Secrets) -> LoginP
 }
 
 /// Telnet and console logins: answer username, password and (optionally) enable.
-fn full_login(profile: Option<&CredentialProfile>, secrets: &Secrets) -> LoginPlan {
+pub(crate) fn full_login(profile: Option<&CredentialProfile>, secrets: &Secrets) -> LoginPlan {
     LoginPlan {
         username: profile
             .map(|p| p.username.clone())

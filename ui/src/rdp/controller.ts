@@ -255,7 +255,7 @@ export function openRdpDevice(
  * Open an ad-hoc RDP session. The password, if given, is sent once; a reconnect asks
  * again rather than keeping it in the frontend.
  */
-export function openRdp(options: ipc.RdpOptions): string {
+export function openRdp(options: ipc.RdpOptions, credentialId: number | null = null): string {
   let first: ipc.RdpOptions | null = options;
   return openRdpTab({
     title: options.host,
@@ -264,7 +264,8 @@ export function openRdp(options: ipc.RdpOptions): string {
     start: (view, cb) => {
       const o = first ?? { ...options, password: null };
       first = null;
-      return ipc.rdpOpen(o, view, cb);
+      // A credential profile is resolved in Rust on every (re)connect.
+      return ipc.rdpOpen(o, view, cb, credentialId);
     },
   });
 }

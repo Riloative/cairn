@@ -3,11 +3,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Switch } from "@/components/ui/Switch";
-import type { CustomPaletteDto, TerminalPrefs } from "@/lib/ipc";
+import type { CustomPaletteDto, TerminalPrefs, TerminalProfile } from "@/lib/ipc";
+import { cn } from "@/lib/cn";
 import { useNotifications } from "@/stores/notifications";
 import { customPalettes, useTerminalPrefs } from "@/stores/terminalPrefs";
 import type { Palette } from "@/terminal/palette";
-import { BUNDLED_PALETTES } from "@/terminal/palettes";
+import { appScheme } from "@/terminal/controller";
+import { BUNDLED_PALETTES, defaultPaletteFor } from "@/terminal/palettes";
 import { HighlightEditor } from "./HighlightEditor";
 import { ImportPaletteDialog } from "./ImportPaletteDialog";
 import { PalettePreview } from "./PalettePreview";
@@ -23,6 +25,35 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+/** A palette preview that selects the palette when clicked. */
+function PaletteCard({
+  palette,
+  name,
+  selected,
+  onSelect,
+}: {
+  palette: Palette;
+  name: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      aria-label={name}
+      onClick={onSelect}
+      className={cn(
+        "rounded-lg text-left ring-offset-2 ring-offset-surface transition-shadow duration-150 hover:ring-2 hover:ring-border-strong",
+        selected && "ring-2 ring-accent hover:ring-accent",
+      )}
+    >
+      <PalettePreview palette={palette} compact />
+    </button>
+  );
+}
+
 export function TerminalSettings() {
   const prefs = useTerminalPrefs((s) => s.prefs);
   const loaded = useTerminalPrefs((s) => s.loaded);
@@ -30,8 +61,13 @@ export function TerminalSettings() {
   const notify = useNotifications((s) => s.notify);
   const notifyError = useNotifications((s) => s.notifyError);
   const [importing, setImporting] = useState(false);
+  // The profile being edited; the palette grid applies to it too.
+  const [selected, setSelected] = useState<string | null>(null);
+  const [draft, setDraft] = useState<TerminalProfile | null>(null);
 
   if (!loaded) return <Skeleton className="mt-4 h-48" />;
+  const selectedId = selected ?? prefs.defaultProfileId;
+  const editing = prefs.profiles.find((p) => p.id === selectedId) ?? prefs.profiles[0];
 
   const save = async (patch: Partial<TerminalPrefs>) => {
     try {
@@ -43,27 +79,59 @@ export function TerminalSettings() {
   };
   const custom = customPalettes(prefs);
   const allPalettes: Palette[] = [...BUNDLED_PALETTES, ...custom];
+  const activePaletteId = (draft ?? editing)?.paletteId ?? null;
+
+  /** Use a palette for the edited profile right away; unsaved edits stay a draft. */
+  const choosePalette = (paletteId: string | null) => {
+    if (!editing) return;
+    if (draft) setDraft({ ...draft, paletteId });
+    void save({
+      profiles: prefs.profiles.map((p) => (p.id === editing.id ? { ...p, paletteId } : p)),
+    });
+  };
 
   return (
     <div>
       <Section title="Profiles">
-        <ProfileEditor prefs={prefs} palettes={allPalettes} onSave={save} />
+        <ProfileEditor
+          prefs={prefs}
+          palettes={allPalettes}
+          onSave={save}
+          selectedId={selectedId}
+          onSelect={setSelected}
+          draft={draft}
+          setDraft={setDraft}
+        />
       </Section>
 
       <Section title="Palettes">
         <div className="flex items-center justify-between py-2">
           <p className="text-xs text-fg-muted">
             {BUNDLED_PALETTES.length} bundled (MIT, see licenses/terminal-palettes.txt) ·{" "}
-            {custom.length} imported. Choose one per profile.
+            {custom.length} imported. Click one to use it for the profile “{editing?.name}”.
           </p>
           <Button size="sm" onClick={() => setImporting(true)}>
             <Upload size={14} /> Import…
           </Button>
         </div>
-        <div className="grid grid-cols-3 gap-3 pb-5">
+        <div role="radiogroup" aria-label="Palettes" className="grid grid-cols-3 gap-3 pb-5">
+          <div className="flex flex-col gap-1">
+            <PaletteCard
+              palette={defaultPaletteFor(appScheme())}
+              name="Follow app theme"
+              selected={activePaletteId === null}
+              onSelect={() => choosePalette(null)}
+            />
+            <span className="truncate text-xs">Follow app theme</span>
+          </div>
           {allPalettes.map((p) => (
             <div key={p.id} className="group relative flex flex-col gap-1">
-              <PalettePreview palette={p} compact />
+              <PaletteCard
+                palette={p}
+                name={p.name}
+                selected={activePaletteId === p.id}
+                onSelect={() => choosePalette(p.id)}
+              />
               <div className="flex items-center gap-1 text-xs">
                 <span className="flex-1 truncate">{p.name}</span>
                 {p.id.startsWith("custom-") && (

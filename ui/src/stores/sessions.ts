@@ -16,6 +16,8 @@ export interface SessionTab {
   device?: { id: number; vendor: string };
   /** The session is being recorded. */
   recording?: boolean;
+  /** Colour scheme chosen for this tab only; unset follows its profile. */
+  paletteId?: string;
 }
 
 interface SessionsStore {
@@ -28,6 +30,7 @@ interface SessionsStore {
   setState: (id: string, state: SessionState, detail?: string) => void;
   setVendor: (id: string, vendor: string) => void;
   setRecording: (id: string, recording: boolean) => void;
+  setPalette: (id: string, paletteId: string | undefined) => void;
 }
 
 export const useSessions = create<SessionsStore>((set, get) => ({
@@ -57,6 +60,8 @@ export const useSessions = create<SessionsStore>((set, get) => ({
   },
   setRecording: (id, recording) =>
     set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, recording } : t)) }),
+  setPalette: (id, paletteId) =>
+    set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, paletteId } : t)) }),
   setVendor: (id, vendor) =>
     set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, vendor } : t)) }),
   setState: (id, state, detail) =>

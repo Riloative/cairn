@@ -156,6 +156,10 @@ describe("map", () => {
     expect(screen.getByText("sw2")).toBeInTheDocument();
     // wan-edge is outside the building but linked to sw2: shown as a dimmed peer.
     expect(screen.getByText("wan-edge")).toBeInTheDocument();
+    // The overview draws the devices and the link between them, plus the visible area.
+    const overview = screen.getByRole("img", { name: "Map overview" });
+    await waitFor(() => expect(overview.querySelectorAll("line")).toHaveLength(1));
+    expect(overview.querySelectorAll("rect").length).toBeGreaterThanOrEqual(4);
     const crumbs = screen.getByRole("navigation", { name: "Map location" });
     expect(within(crumbs).getByRole("button", { name: "North" })).toHaveAttribute(
       "aria-current",

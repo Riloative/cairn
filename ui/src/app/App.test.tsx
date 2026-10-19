@@ -175,6 +175,25 @@ describe("shell", () => {
     await waitFor(() => expect(backend.terminalPrefs.profiles[0]?.fontSize).toBe(15));
   });
 
+  it("uses a palette for the edited profile when its preview is clicked", async () => {
+    const user = userEvent.setup();
+    useUi.setState({ view: "settings" });
+    render(<App />);
+    await user.click(await screen.findByRole("tab", { name: "Terminal" }));
+    const grid = await screen.findByRole("radiogroup", { name: "Palettes" });
+    const dracula = within(grid).getAllByRole("radio")[2];
+    if (!dracula) throw new Error("palette card missing");
+    await user.click(dracula);
+    await waitFor(() => expect(backend.terminalPrefs.profiles[0]?.paletteId).toBeTruthy());
+    expect(dracula).toHaveAttribute("aria-checked", "true");
+    // The profile editor's dropdown shows the same choice.
+    expect(screen.getByRole("combobox", { name: "Palette" })).toHaveValue(
+      backend.terminalPrefs.profiles[0]?.paletteId,
+    );
+    await user.click(within(grid).getByRole("radio", { name: "Follow app theme" }));
+    await waitFor(() => expect(backend.terminalPrefs.profiles[0]?.paletteId).toBeNull());
+  });
+
   it("validates privileged prompt patterns before saving", async () => {
     const user = userEvent.setup();
     useUi.setState({ view: "settings" });

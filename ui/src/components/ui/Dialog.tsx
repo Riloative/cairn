@@ -49,6 +49,9 @@ export function DialogContent({
       <DialogPrimitive.Content
         className={cn(
           "fixed top-1/2 left-1/2 z-50 w-[min(480px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2",
+          // Never taller than the window: long forms (Quick Connect with advanced
+          // settings open) scroll instead of running off screen.
+          "max-h-[calc(100vh-32px)] overflow-y-auto overscroll-contain",
           "rounded-xl border border-border bg-surface p-6 shadow-lg animate-pop-in focus:outline-none",
           className,
         )}

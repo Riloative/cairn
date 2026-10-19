@@ -93,6 +93,25 @@ export function paletteFor(profile: TerminalProfile): Palette {
   );
 }
 
+/** A tab's colour scheme: its own choice if it has one, else its profile's. */
+function paletteForTab(tabId: string, profile: TerminalProfile): Palette {
+  const own = tabOf(tabId)?.paletteId;
+  const prefs = useTerminalPrefs.getState().prefs;
+  return (own ? findPalette(own, customPalettes(prefs)) : undefined) ?? paletteFor(profile);
+}
+
+/**
+ * Change one tab's colour scheme on the spot (`null` returns it to its profile's).
+ * Other tabs and the saved profile are untouched.
+ */
+export function setTabPalette(tabId: string, paletteId: string | null) {
+  useSessions.getState().setPalette(tabId, paletteId ?? undefined);
+  const h = getTerminal(tabId);
+  if (!h) return;
+  const profile = profileById(useTerminalPrefs.getState().prefs, profiles.get(tabId));
+  applyOptions(h, profile, paletteForTab(tabId, profile));
+}
+
 /** Mark the tab when its session is recorded (shown in the header). */
 function checkRecording(tabId: string, sessionId: string) {
   ipc
@@ -379,7 +398,7 @@ export function openLocalShell(spec: ShellSpec | null = null, title = "Local she
 export function openSsh(
   options: ConnectOptions,
   title: string,
-  extra: { profileId?: string | null; vendor?: string } = {},
+  extra: { profileId?: string | null; vendor?: string; credentialId?: number | null } = {},
 ) {
   return openTerminalTab({
     title,
@@ -388,7 +407,7 @@ export function openSsh(
     vendor: extra.vendor,
     readyOnStart: false,
     start: async (tabId, cols, rows, cb) => {
-      const opened = await ipc.sshOpen(options, cols, rows, cb);
+      const opened = await ipc.sshOpen(options, cols, rows, cb, extra.credentialId ?? null);
       connections.set(tabId, opened.connectionId);
       reopeners.set(tabId, (c, r, callbacks) =>
         ipc.sshReconnect(opened.connectionId, c, r, callbacks),
@@ -402,9 +421,10 @@ export function openSsh(
 export function openTelnet(
   request: TelnetRequest,
   title: string,
-  extra: { profileId?: string | null; vendor?: string } = {},
+  extra: { profileId?: string | null; vendor?: string; credentialId?: number | null } = {},
 ) {
-  const start: Starter = (cols, rows, cb) => ipc.telnetOpen(request, cols, rows, cb);
+  const start: Starter = (cols, rows, cb) =>
+    ipc.telnetOpen(request, cols, rows, cb, extra.credentialId ?? null);
   return openTerminalTab({
     title,
     protocol: "telnet",
@@ -422,9 +442,10 @@ export function openTelnet(
 export function openSerial(
   options: SerialOptions,
   title: string,
-  extra: { profileId?: string | null; vendor?: string } = {},
+  extra: { profileId?: string | null; vendor?: string; credentialId?: number | null } = {},
 ) {
-  const start: Starter = (_cols, _rows, cb) => ipc.serialOpen(options, cb);
+  const start: Starter = (_cols, _rows, cb) =>
+    ipc.serialOpen(options, cb, extra.credentialId ?? null);
   return openTerminalTab({
     title,
     protocol: "serial",
@@ -595,7 +616,7 @@ export function refreshTerminals() {
   ruleCache.clear();
   for (const h of allTerminals()) {
     const profile = profileById(prefs, profiles.get(h.tabId));
-    applyOptions(h, profile, paletteFor(profile));
+    applyOptions(h, profile, paletteForTab(h.tabId, profile));
     highlighters.get(h.tabId)?.reset();
   }
 }

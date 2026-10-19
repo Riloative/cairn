@@ -17,6 +17,7 @@ pub mod login;
 pub mod map;
 pub mod protocol;
 pub mod recording;
+pub mod saved;
 pub mod secret;
 pub mod settings;
 pub mod terminal;

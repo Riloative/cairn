@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
-import { ensureOpened, getTerminal, promoteRenderer } from "./registry";
+import { ensureOpened, getTerminal, paintHost, promoteRenderer } from "./registry";
 
 /**
  * Hosts a tab's xterm element. Mounting attaches the persistent element; unmounting only
@@ -15,6 +15,7 @@ export function TerminalPane({ tabId, active }: { tabId: string; active: boolean
     if (!host || !handle) return;
     host.appendChild(handle.element);
     ensureOpened(handle);
+    paintHost(handle);
     const fit = () => {
       // Hidden panes report 0×0; fitting then would collapse the terminal.
       if (host.clientWidth > 0 && host.clientHeight > 0) handle.fit.fit();

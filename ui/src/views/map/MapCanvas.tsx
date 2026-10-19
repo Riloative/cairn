@@ -5,7 +5,6 @@ import {
   BackgroundVariant,
   ConnectionMode,
   Controls,
-  MiniMap,
   ReactFlow,
   SelectionMode,
   useReactFlow,
@@ -36,6 +35,7 @@ import { useMap, type HistoryEntry } from "@/stores/map";
 import { useNotifications } from "@/stores/notifications";
 import { connect } from "@/views/inventory/deviceActions";
 import { CanvasMenu, type CanvasMenuState } from "./CanvasMenu";
+import { Overview } from "./Overview";
 import { SelectionBar } from "./SelectionBar";
 import { useMapUi } from "./mapUi";
 import { EDGE_TYPES, NODE_TYPES } from "./flowTypes";
@@ -561,18 +561,7 @@ export function MapCanvas({
           color="var(--border-strong)"
         />
         <Controls showInteractive={false} position="bottom-left" fitViewOptions={FIT} />
-        {prefs.showMinimap && (
-          <MiniMap
-            pannable
-            zoomable
-            position="bottom-right"
-            nodeColor={(n) =>
-              n.type === "zone" || n.type === "band" ? "transparent" : "var(--fg-subtle)"
-            }
-            maskColor="color-mix(in srgb, var(--bg) 70%, transparent)"
-            style={{ background: "var(--surface-raised)" }}
-          />
-        )}
+        {prefs.showMinimap && <Overview />}
         <ViewportPortal>
           {guides.vertical !== null && (
             <div

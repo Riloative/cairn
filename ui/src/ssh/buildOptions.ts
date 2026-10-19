@@ -87,11 +87,13 @@ function jumpAuth(form: QuickConnectForm): AuthMethod[] {
   return methods;
 }
 
-export function validate(form: QuickConnectForm): FormErrors {
+/** `userFromProfile`: a credential profile supplies the username when it is empty. */
+export function validate(form: QuickConnectForm, userFromProfile = false): FormErrors {
   const errors: FormErrors = {};
   const target = parseTarget(form.destination);
   if (!target) errors.destination = "Enter a host, e.g. admin@10.0.0.1 or core-sw1:2222.";
-  else if (!target.user && !form.username.trim()) errors.username = "Enter a username.";
+  else if (!target.user && !form.username.trim() && !userFromProfile)
+    errors.username = "Enter a username.";
   if (form.auth === "key" && !form.keyPath.trim()) errors.keyPath = "Choose a private key file.";
   if (form.jumps.trim() && !parseJumps(form.jumps))
     errors.jumps = "Use user@host:port, separated by commas.";
@@ -103,8 +105,9 @@ export function validate(form: QuickConnectForm): FormErrors {
 /** Build connect options and a tab title; null when the form is invalid. */
 export function buildOptions(
   form: QuickConnectForm,
+  userFromProfile = false,
 ): { options: ConnectOptions; title: string } | null {
-  if (Object.keys(validate(form)).length > 0) return null;
+  if (Object.keys(validate(form, userFromProfile)).length > 0) return null;
   const target = parseTarget(form.destination);
   if (!target) return null;
   const user = target.user ?? form.username.trim();

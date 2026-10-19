@@ -82,10 +82,12 @@ pub(crate) fn resolve(req: &TelnetRequest) -> CommandResult<TelnetOptions> {
 /// Open a Telnet (or raw TCP) session. `connected` arrives on `on_event` once the
 /// TCP connection is up.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn telnet_open(
     state: State<'_, AppState>,
     sessions: State<'_, Arc<SessionManager>>,
     request: TelnetRequest,
+    credential_id: Option<i64>,
     cols: u16,
     rows: u16,
     on_data: Channel<InvokeResponseBody>,
@@ -93,16 +95,12 @@ pub async fn telnet_open(
 ) -> CommandResult<SessionId> {
     require_unlocked(&state)?;
     let opts = resolve(&request)?;
+    let login = match super::saved::credential(&state, credential_id)? {
+        Some((profile, secrets)) => super::devices::full_login(Some(&profile), &secrets),
+        None => LoginPlan::default(),
+    };
     start(
-        &state,
-        &sessions,
-        opts,
-        None,
-        LoginPlan::default(),
-        cols,
-        rows,
-        on_data,
-        on_event,
+        &state, &sessions, opts, None, login, cols, rows, on_data, on_event,
     )
 }
 

@@ -9,6 +9,7 @@ import { useVault } from "@/stores/vault";
 import { CairnMark } from "@/screens/AuthLayout";
 import { NAV_ITEMS } from "./nav";
 import { PROTOCOL_DOT } from "./protocol";
+import { SavedList } from "./SavedList";
 import { SessionStateIcon } from "./SessionStateIcon";
 
 export function Sidebar() {
@@ -67,6 +68,7 @@ export function Sidebar() {
         })}
       </nav>
 
+      {!collapsed && <SavedList />}
       {!collapsed && (
         <section aria-label="Open sessions" className="mt-6 flex min-h-0 flex-1 flex-col px-2">
           <h2 className="px-2.5 pb-1 text-[11px] font-medium tracking-wide text-fg-subtle uppercase">

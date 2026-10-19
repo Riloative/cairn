@@ -534,3 +534,40 @@ is 1.99).
   some nested elements, so text lookups read `textContent` in the page. CI runs the
   smoke scenario against the release binary under `xvfb-run` (Linux only: there is no
   WKWebView WebDriver for Tauri on macOS) and uploads a screenshot per step.
+
+## D-046 · Saved connections, per-tab colour schemes, rack and overview drawings (M10)
+
+- **Saved connections are not devices.** A Quick Connect target can be saved under a
+  name without entering the inventory: `saved_connections` stores the protocol's form
+  as JSON (so new form fields need no migration; missing ones take their defaults) and
+  an optional credential profile. Secrets are never part of it: the frontend drops the
+  typed password and `core::saved` refuses settings with a password, passphrase or
+  secret key (defence in depth). Deleting the profile keeps the connection
+  (`ON DELETE SET NULL`).
+- **Credentials resolved in Rust, as for devices.** `ssh_open`, `telnet_open`,
+  `serial_open` and `rdp_open` take an optional `credential_id`. For SSH the profile's
+  username fills an empty one, its key and password are tried first, then the form's
+  own methods of other kinds (a key file is always kept), and its enable secret drives
+  the login; Telnet and serial get the profile's full login; RDP gets its username and
+  password. Without a profile the session prompts, exactly like Quick Connect.
+- **Colour scheme per tab.** The tab stores an optional palette id that overrides its
+  profile's on every restyle; "Use for new tabs" writes it to the profile. Settings →
+  Terminal palette previews apply to the profile being edited (shared state with the
+  profile editor; an unsaved draft is updated, not discarded).
+- **The terminal fills its panel.** The pane around xterm keeps a few pixels of
+  padding (so text never touches the rounded edge) but is painted with the terminal's
+  own background. Before, the padding showed the app surface, so a dark scheme in a
+  light app looked like a box inset in the window ("not aligned"). A colour change also
+  repaints on the next frame, as the first repaint can still use the old colours.
+- **Dialogs scroll.** `DialogContent` is capped at the window height with its own
+  scroll, so long forms (Quick Connect with advanced SSH options) stay usable.
+- **One rack drawing.** `RackElevation` (read-only, in Inventory → Locations) and the
+  map's draggable rack view share units, rails and device faces.
+- **Own minimap.** React Flow's minimap draws grey node boxes and no edges, which
+  told nothing about a network. The overview draws links in their link colours,
+  devices, buildings, zones and the visible area, from the same store, and pans the
+  view on click or drag. Building names in it are drawing labels; tests ignore them
+  for text queries.
+- **Icons kept, polished.** The device icons keep their designs (a trial of
+  network-diagram shapes was dropped at the user's request) but share one 3–21 grid
+  and corner radius; the IP phone and access point were redrawn to read clearly.

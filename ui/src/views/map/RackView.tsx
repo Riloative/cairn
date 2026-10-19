@@ -4,7 +4,8 @@ import { cn } from "@/lib/cn";
 import * as ipc from "@/lib/ipc";
 import type { Device, InventorySnapshot, Rack } from "@/lib/ipc";
 import { Glyph } from "@/map/Glyph";
-import { fits, U_PX } from "@/map/rack";
+import { fits, rackTop, U_PX } from "@/map/rack";
+import { RACK_BODY, RACK_DEVICE, RackFace, RackUnits } from "@/map/RackElevation";
 import { Rows3 } from "lucide-react";
 import { useInventory } from "@/stores/inventory";
 import { useUi } from "@/stores/ui";
@@ -115,22 +116,13 @@ export function RackView({ floorId, inv }: { floorId: number; inv: InventorySnap
               </span>
             </header>
             <div className="flex">
-              <ol
-                aria-hidden
-                className="mr-1 flex flex-col-reverse text-right font-mono text-[9px] text-fg-subtle"
-              >
-                {Array.from({ length: rack.heightU }, (_, i) => (
-                  <li key={i} style={{ height: U_PX }} className="leading-[20px]">
-                    {i + 1}
-                  </li>
-                ))}
-              </ol>
+              <RackUnits heightU={rack.heightU} />
               <div
                 ref={(el) => {
                   if (el) columns.current.set(rack.id, el);
                   else columns.current.delete(rack.id);
                 }}
-                className="relative w-56 rounded-md border-2 border-border-strong bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_19px,var(--border)_19px,var(--border)_20px)]"
+                className={cn(RACK_BODY, "w-64")}
                 style={{ height: rack.heightU * U_PX }}
               >
                 {devices.map((d) => (
@@ -142,19 +134,16 @@ export function RackView({ floorId, inv }: { floorId: number; inv: InventorySnap
                     onDoubleClick={() => connect(d)}
                     onKeyDown={(e) => nudge(e, d, rack)}
                     className={cn(
-                      "absolute inset-x-0.5 flex cursor-grab items-center gap-2 rounded-sm border border-border bg-surface-raised px-2 text-left text-xs shadow-sm hover:border-accent focus-visible:border-accent focus-visible:outline-none",
+                      RACK_DEVICE,
+                      "cursor-grab hover:border-accent focus-visible:border-accent focus-visible:outline-none",
                       drag?.device.id === d.id && "opacity-40",
                     )}
                     style={{
-                      top: (rack.heightU - ((d.rackU ?? 1) + d.uHeight - 1)) * U_PX + 1,
+                      top: rackTop(rack, d.rackU ?? 1, d.uHeight) + 1,
                       height: d.uHeight * U_PX - 2,
                     }}
                   >
-                    <Glyph type={d.deviceType} size={14} className="shrink-0 text-fg-muted" />
-                    <span className="truncate font-medium">{d.hostname}</span>
-                    <span className="ml-auto shrink-0 text-[10px] text-fg-subtle">
-                      {d.uHeight}U
-                    </span>
+                    <RackFace device={d} />
                   </button>
                 ))}
                 {preview && drag && (
@@ -165,7 +154,7 @@ export function RackView({ floorId, inv }: { floorId: number; inv: InventorySnap
                       preview.ok ? "border-success bg-success/10" : "border-danger bg-danger/10",
                     )}
                     style={{
-                      top: (rack.heightU - (preview.u + drag.device.uHeight - 1)) * U_PX,
+                      top: rackTop(rack, preview.u, drag.device.uHeight),
                       height: drag.device.uHeight * U_PX,
                     }}
                   />

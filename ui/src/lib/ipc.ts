@@ -346,12 +346,14 @@ export interface SshOpened {
   connectionId: string;
 }
 
+/** `credentialId`: a saved connection's credential profile, resolved in Rust. */
 export const sshOpen = (
   options: ConnectOptions,
   cols: number,
   rows: number,
   cb: SessionCallbacks,
-) => call<SshOpened>("ssh_open", { options, cols, rows, ...channels(cb) });
+  credentialId: number | null = null,
+) => call<SshOpened>("ssh_open", { options, credentialId, cols, rows, ...channels(cb) });
 
 export const sshReconnect = (
   connectionId: string,
@@ -435,8 +437,11 @@ export const serialPortsWatch = (onChange: (c: PortsChanged) => void) =>
 
 export const serialPortsUnwatch = () => call<null>("serial_ports_unwatch");
 
-export const serialOpen = (options: SerialOptions, cb: SessionCallbacks) =>
-  call<string>("serial_open", { options, ...channels(cb) });
+export const serialOpen = (
+  options: SerialOptions,
+  cb: SessionCallbacks,
+  credentialId: number | null = null,
+) => call<string>("serial_open", { options, credentialId, ...channels(cb) });
 
 export const serialSetLines = (id: string, lines: { dtr?: boolean; rts?: boolean }) =>
   call<null>("serial_set_lines", { id, dtr: lines.dtr ?? null, rts: lines.rts ?? null });
@@ -489,7 +494,8 @@ export const telnetOpen = (
   cols: number,
   rows: number,
   cb: SessionCallbacks,
-) => call<string>("telnet_open", { request, cols, rows, ...channels(cb) });
+  credentialId: number | null = null,
+) => call<string>("telnet_open", { request, credentialId, cols, rows, ...channels(cb) });
 
 export const sessionResize = (id: string, cols: number, rows: number) =>
   call<null>("session_resize", { id, cols, rows });
@@ -916,8 +922,12 @@ function rdpChannels(cb: RdpCallbacks) {
   return { onFrame, onEvent };
 }
 
-export const rdpOpen = (options: RdpOptions, view: RdpViewSize, cb: RdpCallbacks) =>
-  call<RdpOpened>("rdp_open", { options, view, ...rdpChannels(cb) });
+export const rdpOpen = (
+  options: RdpOptions,
+  view: RdpViewSize,
+  cb: RdpCallbacks,
+  credentialId: number | null = null,
+) => call<RdpOpened>("rdp_open", { options, credentialId, view, ...rdpChannels(cb) });
 export const deviceRdpOpen = (
   deviceId: number,
   method: number,
@@ -1119,6 +1129,26 @@ export interface Snippet {
 export const snippetsList = () => call<Snippet[]>("snippets_list");
 export const snippetSave = (snippet: Snippet) => call<Snippet>("snippet_save", { snippet });
 export const snippetDelete = (id: number) => call<null>("snippet_delete", { id });
+
+// ---- Saved connections (M10) ----
+
+export type SavedProtocol = "ssh" | "telnet" | "serial" | "rdp";
+
+/** A named Quick Connect target. `settings` is that protocol's form, never a secret. */
+export interface SavedConnection {
+  id: number;
+  name: string;
+  protocol: SavedProtocol;
+  settings: Record<string, unknown>;
+  credentialId: number | null;
+  lastUsedAt: string | null;
+}
+
+export const savedConnectionsList = () => call<SavedConnection[]>("saved_connections_list");
+export const savedConnectionSave = (connection: SavedConnection) =>
+  call<SavedConnection>("saved_connection_save", { connection });
+export const savedConnectionDelete = (id: number) => call<null>("saved_connection_delete", { id });
+export const savedConnectionUsed = (id: number) => call<null>("saved_connection_used", { id });
 
 /** Audit broadcast mode (session labels only; typed input is never logged). */
 export const broadcastStarted = (targets: string[]) => call<null>("broadcast_started", { targets });

@@ -345,11 +345,21 @@ pub async fn rdp_open(
     state: State<'_, AppState>,
     service: State<'_, RdpService>,
     options: RdpOptions,
+    credential_id: Option<i64>,
     view: ViewSize,
     on_frame: Channel<InvokeResponseBody>,
     on_event: Channel<RdpMessage>,
 ) -> CommandResult<RdpOpened> {
     require_unlocked(&state)?;
+    let mut options = options;
+    if let Some((profile, secrets)) = super::saved::credential(&state, credential_id)? {
+        if options.username.trim().is_empty() {
+            options.username = profile.username.clone();
+        }
+        if options.password.is_none() {
+            options.password = secrets.password.clone();
+        }
+    }
     let title = options.host.clone();
     launch(
         &state,
