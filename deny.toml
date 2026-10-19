@@ -1,0 +1,45 @@
+# cargo-deny configuration: https://embarkstudios.github.io/cargo-deny/
+[graph]
+all-features = false
+
+[advisories]
+# Unmaintained-crate notices are reviewed case by case; vulnerabilities always fail.
+unmaintained = "workspace"
+ignore = [
+  # Marvin timing attack in `rsa` (via russh/ssh-key); no fixed release exists. Cairn only
+  # signs SSH user-auth challenges (one signature per login), which does not give an
+  # attacker the many timing samples the attack needs. See docs/DECISIONS.md D-019.
+  { id = "RUSTSEC-2023-0071", reason = "no fix available; only low-volume SSH client signing (D-019)" },
+]
+
+[licenses]
+# Permissive licenses only (plus MPL-2.0, file-level copyleft, used by Servo-derived
+# CSS crates that Tauri depends on).
+allow = [
+  "MIT",
+  "MIT-0",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "0BSD",
+  "CC0-1.0",
+  "BSL-1.0",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "MPL-2.0",
+  "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

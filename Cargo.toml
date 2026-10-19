@@ -1,0 +1,72 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/core",
+  "crates/proto-ssh",
+  "crates/proto-serial",
+  "crates/proto-telnet",
+  "crates/proto-rdp",
+  "crates/tftp",
+  "crates/export",
+  "crates/pty",
+  "src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.93"
+license = "MIT"
+repository = "https://github.com/riloative/cairn"
+authors = ["Cairn contributors"]
+
+[workspace.dependencies]
+cairn-core = { path = "crates/core" }
+cairn-proto-ssh = { path = "crates/proto-ssh" }
+cairn-proto-serial = { path = "crates/proto-serial" }
+cairn-proto-telnet = { path = "crates/proto-telnet" }
+cairn-proto-rdp = { path = "crates/proto-rdp" }
+cairn-tftp = { path = "crates/tftp" }
+cairn-export = { path = "crates/export" }
+cairn-pty = { path = "crates/pty" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+argon2 = { version = "0.6", default-features = false, features = ["alloc", "zeroize"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+futures = "0.3"
+getrandom = "0.4"
+hex = "0.4"
+parking_lot = "0.12"
+portable-pty = "0.9"
+serialport = "4.10"
+russh = { version = "0.64", default-features = false, features = ["flate2", "ring", "rsa", "des"] }
+russh-sftp = "3.0.1"
+rusqlite = { version = "0.40", default-features = false, features = ["bundled-sqlcipher-vendored-openssl"] }
+resvg = { version = "0.45.1", default-features = false, features = ["text", "system-fonts", "raster-images"] }
+sha2 = "0.10"
+similar = { version = "3.2", default-features = false, features = ["text"] }
+svg2pdf = { version = "0.13", default-features = false, features = ["text", "image"] }
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+zeroize = { version = "1", features = ["derive"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
+
+[patch.crates-io]
+# See D-039: lets IronRDP resolve alongside russh (curve25519-dalek 5).
+ironrdp-connector = { path = "vendor/ironrdp-connector" }

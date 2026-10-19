@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  # Every branch push runs CI (a PR from this repo shows these checks too).
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  frontend:
+    name: Frontend (lint, typecheck, test)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm audit --audit-level=high
+
+  rust:
+    name: Rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+    runs-on: ${{ matrix.os }}
+    env:
+      # Debug info makes the workspace's test binaries outgrow the runner's free disk.
+      CARGO_PROFILE_DEV_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@v5
+      - name: Free disk space (unused preinstalled SDKs)
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - if: runner.os == 'Linux'
+        run: scripts/install-linux-deps.sh
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.1"
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # tauri::generate_context! embeds the built frontend, so it must exist first.
+      - run: npm run build
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Start test servers (OpenSSH modern + legacy; socat/lrzsz for serial; telnetd; xrdp)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y --no-install-recommends openssh-server openssh-client socat lrzsz inetutils-telnetd xrdp xorgxrdp xterm dbus-x11
+          sudo scripts/test-sshd.sh /tmp/cairn-sshd
+          sudo scripts/test-telnetd.sh 2323
+          sudo scripts/test-xrdp.sh /tmp/cairn-xrdp
+          echo "CAIRN_TELNET_PORT=2323" >> "$GITHUB_ENV"
+          sed 's/^export //' /tmp/cairn-sshd/env >> "$GITHUB_ENV"
+          sed 's/^export //' /tmp/cairn-xrdp/env >> "$GITHUB_ENV"
+          echo "CAIRN_SSH_TESTS=1" >> "$GITHUB_ENV"
+          echo "CAIRN_RDP_TESTS=1" >> "$GITHUB_ENV"
+      - run: cargo test --workspace --locked
+
+  supply-chain:
+    name: Supply chain (cargo deny, cargo audit)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.1"
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      - run: cargo audit
+
+  bundle-linux:
+    name: Bundle .deb (ubuntu-24.04)
+    needs: [frontend, rust]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: scripts/install-linux-deps.sh
+      - run: sudo apt-get install -y --no-install-recommends xvfb imagemagick x11-utils xdotool webkit2gtk-driver
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.1"
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo install tauri-driver --version 2.1.0 --locked
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run tauri build -- --bundles deb
+      - name: UI smoke test with screenshots (Xvfb)
+        run: scripts/ui-smoke.sh target/release/cairn screenshots
+      - name: WebDriver e2e smoke test (tauri-driver, Xvfb)
+        run: xvfb-run -a -s "-screen 0 1400x900x24" node e2e/smoke.mjs target/release/cairn screenshots/e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cairn-linux-deb
+          path: target/release/bundle/deb/*.deb
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots-linux
+          path: screenshots/
+          if-no-files-found: error
+
+  bundle-macos:
+    name: Bundle .dmg (macos-14, aarch64)
+    needs: [frontend, rust]
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.1"
+          targets: aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run tauri build -- --target aarch64-apple-darwin --bundles dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cairn-macos-dmg
+          path: target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error

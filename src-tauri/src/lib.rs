@@ -1,0 +1,179 @@
+//! Tauri application layer for Cairn.
+//!
+//! This crate is intentionally thin: commands validate input, call into the `cairn-*`
+//! crates and map their errors to user-facing payloads.
+
+mod audit_queue;
+mod autolock;
+mod commands;
+mod error;
+mod prompts;
+mod sessions;
+mod state;
+
+use cairn_core::Vault;
+use tauri::Manager;
+
+/// Build and run the Tauri application.
+pub fn run() {
+    let result = tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_notification::init())
+        .setup(|app| {
+            let dir = app.path().app_data_dir()?;
+            app.manage(state::AppState::new(Vault::new(dir)));
+            app.manage(sessions::SessionManager::new());
+            app.manage(commands::serial::PortWatcher::default());
+            app.manage(commands::tftp::TftpService::default());
+            app.manage(commands::rdp::RdpService::default());
+            app.manage(commands::forwards::ForwardService::default());
+            app.manage(commands::files::FileService::default());
+            autolock::spawn(app.handle().clone());
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::app::app_info,
+            commands::app::ui_log_error,
+            commands::vault::vault_status,
+            commands::vault::vault_setup,
+            commands::vault::vault_unlock,
+            commands::vault::vault_lock,
+            commands::vault::vault_change_password,
+            commands::vault::activity_ping,
+            commands::settings::settings_get,
+            commands::settings::settings_update,
+            commands::audit::audit_verify,
+            commands::audit::audit_query,
+            commands::audit::audit_facets,
+            commands::audit::audit_export,
+            commands::dataexport::data_export,
+            commands::backup::backup_create,
+            commands::backup::backup_inspect,
+            commands::backup::backup_restore,
+            commands::recordings::recordings_list,
+            commands::recordings::recording_cast,
+            commands::recordings::recording_export,
+            commands::recordings::recording_delete,
+            commands::recordings::session_recording,
+            commands::session::session_open_local,
+            commands::session::session_write,
+            commands::session::session_resize,
+            commands::session::session_close,
+            commands::session::local_containers,
+            commands::session::local_default_shell,
+            commands::session::session_prompt_reply,
+            commands::session::session_break,
+            commands::serial::serial_ports,
+            commands::serial::serial_ports_watch,
+            commands::serial::serial_ports_unwatch,
+            commands::serial::serial_open,
+            commands::serial::serial_set_lines,
+            commands::serial::serial_send_files,
+            commands::serial::serial_receive_files,
+            commands::serial::serial_transfer_cancel,
+            commands::telnet::telnet_open,
+            commands::ssh::ssh_open,
+            commands::ssh::ssh_reconnect,
+            commands::ssh::ssh_forget,
+            commands::ssh::known_hosts_list,
+            commands::ssh::known_hosts_remove,
+            commands::inventory::inventory_snapshot,
+            commands::inventory::location_save,
+            commands::inventory::location_delete,
+            commands::inventory::vendor_add,
+            commands::inventory::device_save,
+            commands::inventory::device_delete,
+            commands::inventory::device_duplicate,
+            commands::inventory::interfaces_list,
+            commands::inventory::interface_save,
+            commands::inventory::interfaces_bulk_create,
+            commands::inventory::interfaces_delete,
+            commands::inventory::interfaces_expand,
+            commands::inventory::vlan_save,
+            commands::inventory::vlan_delete,
+            commands::inventory::field_save,
+            commands::inventory::field_delete,
+            commands::inventory::view_save,
+            commands::inventory::view_delete,
+            commands::inventory::credential_save,
+            commands::inventory::credential_delete,
+            commands::inventory::credential_reveal,
+            commands::inventory::credential_copy,
+            commands::devices::device_connect,
+            commands::map::map_snapshot,
+            commands::map::link_save,
+            commands::map::link_delete,
+            commands::map::map_positions_save,
+            commands::map::zone_save,
+            commands::map::zone_delete,
+            commands::map::map_prefs_update,
+            commands::map::floor_plan_image,
+            commands::map::floor_plan_upload,
+            commands::map::floor_plan_place,
+            commands::map::floor_plan_delete,
+            commands::map::map_export,
+            commands::terminal::terminal_prefs_get,
+            commands::terminal::terminal_prefs_update,
+            commands::tools::snippets_list,
+            commands::tools::snippet_save,
+            commands::tools::snippet_delete,
+            commands::tools::broadcast_started,
+            commands::tools::broadcast_ended,
+            commands::tftp::tftp_status,
+            commands::tftp::tftp_prefs_update,
+            commands::tftp::tftp_start,
+            commands::tftp::tftp_stop,
+            commands::tftp::tftp_clear_log,
+            commands::tftp::local_addresses,
+            commands::forwards::forward_start,
+            commands::forwards::forward_stop,
+            commands::forwards::forwards_list,
+            commands::forwards::forwards_autostart,
+            commands::forwards::forward_presets_list,
+            commands::forwards::forward_preset_save,
+            commands::forwards::forward_preset_delete,
+            commands::files::sftp_home,
+            commands::files::sftp_list,
+            commands::files::sftp_op,
+            commands::files::file_transfer,
+            commands::files::file_transfer_cancel,
+            commands::configs::config_grab,
+            commands::configs::config_snapshots,
+            commands::configs::config_snapshot,
+            commands::configs::config_snapshot_note,
+            commands::configs::config_snapshot_delete,
+            commands::configs::config_diff,
+            commands::configs::config_export,
+            commands::rdp::rdp_open,
+            commands::rdp::device_rdp_open,
+            commands::rdp::rdp_input,
+            commands::rdp::rdp_resize,
+            commands::rdp::rdp_clipboard,
+            commands::rdp::rdp_ctrl_alt_del,
+            commands::rdp::rdp_close,
+            commands::rdp::rdp_external,
+        ])
+        .build(tauri::generate_context!())
+        .map(|app| {
+            app.run(|handle, event| {
+                if let tauri::RunEvent::Exit = event {
+                    // Kill child shells and drop connections before the process exits.
+                    handle
+                        .state::<std::sync::Arc<sessions::SessionManager>>()
+                        .close_all();
+                    let state = handle.state::<state::AppState>();
+                    handle
+                        .state::<commands::tftp::TftpService>()
+                        .stop(&state.vault, &state.audit);
+                    handle.state::<commands::rdp::RdpService>().close_all();
+                }
+            })
+        });
+    if let Err(err) = result {
+        // Nothing to recover to: the webview could not start.
+        eprintln!("Cairn failed to start: {err}");
+        std::process::exit(1);
+    }
+}
