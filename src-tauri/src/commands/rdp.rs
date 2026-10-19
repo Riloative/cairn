@@ -56,6 +56,11 @@ impl RdpService {
     }
 
     /// Close every session (app exit).
+    /// Whether no remote desktop is open.
+    pub fn is_empty(&self) -> bool {
+        self.sessions.lock().is_empty()
+    }
+
     pub fn close_all(&self) {
         for (_, entry) in self.sessions.lock().drain() {
             match entry {

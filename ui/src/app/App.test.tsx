@@ -13,7 +13,7 @@ import { App } from "./App";
 let backend: FakeBackend;
 
 function resetStores() {
-  useVault.setState({ info: null, lockReason: null });
+  useVault.setState({ info: null, lockReason: null, justCreated: false });
   useSettings.setState({ settings: null });
   useUi.setState({ view: "sessions", paletteOpen: false, notificationsOpen: false });
   useNotifications.setState({ items: [] });
@@ -52,7 +52,12 @@ describe("first launch", () => {
     expect(submit).toBeEnabled();
     await user.click(submit);
 
+    // Right after setup, an encrypted backup is offered (once).
+    const offer = await screen.findByRole("dialog", { name: "Create a backup" });
+    expect(within(offer).getByText(/Your vault is ready/)).toBeVisible();
+    await user.click(within(offer).getByRole("button", { name: "Cancel" }));
     expect(await screen.findByRole("navigation", { name: "Sections" })).toBeVisible();
+    expect(useVault.getState().justCreated).toBe(false);
     expect(backend.calls.find((c) => c.cmd === "vault_setup")?.args.password).toBe(
       "glacier-tandem-orbit-velvet",
     );

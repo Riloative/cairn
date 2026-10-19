@@ -99,6 +99,9 @@ export class FakeBackend {
   recordings: { info: RecordingInfo; cast: string }[] = [];
   /** Sessions the fake reports as recorded. */
   recordingSessions = new Set<string>();
+  /** The password the fake's backups are encrypted with. */
+  backupPassword = "backup password 42";
+  restoredFrom: string | null = null;
   /** Files written by export commands. */
   exports: { what: string; format: string; path: string }[] = [];
   forwards: ForwardInfo[] = [];
@@ -237,6 +240,16 @@ export class FakeBackend {
         return false;
       return true;
     });
+  }
+
+  private backupSummary(recordings: boolean) {
+    return {
+      createdAt: "2026-01-01T00:00:00.000Z",
+      appVersion: "0.1.0",
+      schemaVersion: 7,
+      recordings,
+      bytes: 123_456,
+    };
   }
 
   private requireUnlocked() {
@@ -539,6 +552,47 @@ export class FakeBackend {
         return { name: "Cairn", version: "0.1.0", os: "linux", arch: "x86_64" };
       case "vault_status":
         return this.info();
+      case "backup_create": {
+        this.requireUnlocked();
+        if (String(args.password).length < 10)
+          this.fail({
+            code: "validation",
+            message: "The backup password must be at least 10 characters.",
+            hint: null,
+          });
+        this.exports.push({ what: "backup", format: "cairn-backup", path: args.path as string });
+        this.log("data_exported", { what: "full backup", format: "cairn-backup", path: args.path });
+        return this.backupSummary(Boolean(args.recordings));
+      }
+      case "backup_inspect":
+        if (!String(args.path).endsWith(".cairn-backup"))
+          this.fail({
+            code: "validation",
+            message: "This file is not a Cairn backup.",
+            hint: null,
+          });
+        return this.backupSummary(true);
+      case "backup_restore": {
+        if (this.status === "locked")
+          this.fail({ code: "vault.locked", message: "Cairn is locked.", hint: null });
+        if (args.backupPassword !== this.backupPassword)
+          this.fail({
+            code: "vault.wrong_password",
+            message: "The master password is incorrect.",
+            hint: null,
+          });
+        if (this.status === "unlocked" && args.masterPassword !== this.password)
+          this.fail({
+            code: "vault.wrong_password",
+            message: "The master password is incorrect.",
+            hint: null,
+          });
+        this.password = String(args.masterPassword);
+        this.status = "unlocked";
+        this.restoredFrom = args.path as string;
+        this.log("backup_restored", { backupCreatedAt: "2026-01-01T00:00:00.000Z" });
+        return this.info();
+      }
       case "vault_setup":
         this.password = String(args.password);
         this.status = "unlocked";

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { CommandError } from "@/lib/ipc";
+import { RestoreDialog } from "@/backup/RestoreDialog";
 import { useVault } from "@/stores/vault";
 import { AuthLayout, WorkingBar } from "./AuthLayout";
 import { PasswordStrengthMeter } from "./PasswordStrength";
@@ -21,6 +22,7 @@ export function SetupScreen() {
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
   const strength = useStrength(password);
 
   const tooShort = password.length < minLength;
@@ -107,6 +109,18 @@ export function SetupScreen() {
           {busy ? "Securing your vault…" : "Create vault"}
         </Button>
       </form>
+      <p className="mt-4 text-center text-xs text-fg-muted">
+        Moving from another computer?{" "}
+        <button
+          type="button"
+          className="text-accent hover:underline"
+          onClick={() => setRestoring(true)}
+          disabled={busy}
+        >
+          Restore from a backup
+        </button>
+      </p>
+      {restoring && <RestoreDialog mode="setup" onClose={() => setRestoring(false)} />}
     </AuthLayout>
   );
 }

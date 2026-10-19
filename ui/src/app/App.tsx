@@ -5,6 +5,7 @@ import { CommandError, isTauri, logUiError, onVaultLocked } from "@/lib/ipc";
 import { applyTheme, cachedThemePrefs, watchSystemTheme } from "@/lib/theme";
 import { LockScreen } from "@/screens/LockScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
+import { BackupOffer } from "@/backup/BackupOffer";
 import { useInventory } from "@/stores/inventory";
 import { useMap } from "@/stores/map";
 import { useMapUi } from "@/views/map/mapUi";
@@ -78,7 +79,12 @@ function Gate() {
     case "locked":
       return <LockScreen />;
     case "unlocked":
-      return <Shell />;
+      return (
+        <>
+          <Shell />
+          <BackupOffer />
+        </>
+      );
   }
 }
 

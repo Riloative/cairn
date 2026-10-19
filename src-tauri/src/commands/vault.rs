@@ -16,7 +16,7 @@ pub struct VaultInfo {
     pub min_password_length: usize,
 }
 
-fn info(state: &AppState) -> CommandResult<VaultInfo> {
+pub(crate) fn info(state: &AppState) -> CommandResult<VaultInfo> {
     let vault = state.vault.lock();
     Ok(VaultInfo {
         status: vault.status(),
@@ -26,7 +26,7 @@ fn info(state: &AppState) -> CommandResult<VaultInfo> {
 }
 
 /// Run CPU-heavy vault work (Argon2id) off the async runtime.
-async fn blocking<T: Send + 'static>(
+pub(crate) async fn blocking<T: Send + 'static>(
     f: impl FnOnce() -> CommandResult<T> + Send + 'static,
 ) -> CommandResult<T> {
     tauri::async_runtime::spawn_blocking(f)

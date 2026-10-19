@@ -8,6 +8,11 @@ interface VaultState {
   lockReason: LockReason | null;
   refresh: () => Promise<void>;
   setup: (password: string) => Promise<void>;
+  /** Set after first-run setup, until the backup offer is answered. */
+  justCreated: boolean;
+  dismissBackupOffer: () => void;
+  /** Replace all data with a backup (see `ipc.backupRestore`). */
+  restore: (path: string, backupPassword: string, masterPassword: string) => Promise<void>;
   unlock: (password: string) => Promise<void>;
   lock: () => Promise<void>;
   /** Called when the backend locks on its own (idle, sleep). */
@@ -18,7 +23,16 @@ export const useVault = create<VaultState>((set, get) => ({
   info: null,
   lockReason: null,
   refresh: async () => set({ info: await ipc.vaultStatus() }),
-  setup: async (password) => set({ info: await ipc.vaultSetup(password), lockReason: null }),
+  setup: async (password) =>
+    set({ info: await ipc.vaultSetup(password), lockReason: null, justCreated: true }),
+  justCreated: false,
+  dismissBackupOffer: () => set({ justCreated: false }),
+  restore: async (path, backupPassword, masterPassword) =>
+    set({
+      info: await ipc.backupRestore(path, backupPassword, masterPassword),
+      lockReason: null,
+      justCreated: false,
+    }),
   unlock: async (password) => {
     try {
       set({ info: await ipc.vaultUnlock(password), lockReason: null });

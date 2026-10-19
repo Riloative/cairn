@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Shortcut } from "@/components/ui/Kbd";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -18,6 +18,8 @@ import {
 import { confirmAction } from "@/stores/confirm";
 import { useNotifications } from "@/stores/notifications";
 import { useSettings } from "@/stores/settings";
+import { BackupSettings } from "./BackupSettings";
+import { Row } from "./Row";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { KnownHosts } from "./KnownHosts";
 import { TerminalSettings } from "./terminal/TerminalSettings";
@@ -60,26 +62,6 @@ async function changeRetention(
     if (!ok) return;
   }
   update({ auditRetentionDays: next });
-}
-
-function Row({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-6 border-b border-border py-4 last:border-0">
-      <div className="flex-1">
-        <p className="font-medium">{title}</p>
-        {description && <p className="text-xs text-fg-muted">{description}</p>}
-      </div>
-      {children}
-    </div>
-  );
 }
 
 function ThemeCard({
@@ -376,6 +358,7 @@ export function SettingsView() {
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="terminal">Terminal</TabsTrigger>
+            <TabsTrigger value="backup">Backup</TabsTrigger>
             <TabsTrigger value="shortcuts">Shortcuts</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
@@ -396,6 +379,9 @@ export function SettingsView() {
           )}
           <TabsContent value="terminal">
             <TerminalSettings />
+          </TabsContent>
+          <TabsContent value="backup">
+            <BackupSettings />
           </TabsContent>
           <TabsContent value="shortcuts">
             <Shortcuts />

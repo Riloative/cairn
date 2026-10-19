@@ -692,7 +692,7 @@ fn to_json<T: Serialize>(v: &T) -> Result<String, CoreError> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::super::locations::{save_building, save_floor, save_rack, Building, Floor, Rack};
     use super::super::testutil;
     use super::*;

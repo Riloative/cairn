@@ -163,6 +163,13 @@ pub enum AuditEvent {
         root: String,
         allow_write: bool,
     },
+    /// All data was replaced with a backup (`backup_created_at` is when it was made).
+    #[serde(rename_all = "camelCase")]
+    BackupRestored {
+        backup_created_at: String,
+        app_version: String,
+        recordings: bool,
+    },
     /// A session recording was deleted.
     #[serde(rename_all = "camelCase")]
     RecordingDeleted {
@@ -219,6 +226,7 @@ impl AuditEvent {
             AuditEvent::TftpServer { .. } => "tftp_server",
             AuditEvent::AuditPruned { .. } => "audit_pruned",
             AuditEvent::RecordingDeleted { .. } => "recording_deleted",
+            AuditEvent::BackupRestored { .. } => "backup_restored",
         }
     }
 }

@@ -85,6 +85,28 @@ export const vaultChangePassword = (current: string, next: string) =>
   call<null>("vault_change_password", { current, new: next });
 export const activityPing = () => call<null>("activity_ping");
 
+// ── Backup ─────────────────────────────────────────────────────────────────────────
+
+/** Mirrors `cairn_core::backup::BackupSummary`. */
+export interface BackupSummary {
+  createdAt: string;
+  appVersion: string;
+  schemaVersion: number;
+  recordings: boolean;
+  bytes: number;
+}
+
+export const backupCreate = (path: string, password: string, recordings: boolean) =>
+  call<BackupSummary>("backup_create", { path, password, recordings });
+/** What a backup file holds (no password needed). */
+export const backupInspect = (path: string) => call<BackupSummary>("backup_inspect", { path });
+/**
+ * Replace all data with a backup. On first launch `masterPassword` becomes the master
+ * password; when unlocked it must be the current one.
+ */
+export const backupRestore = (path: string, backupPassword: string, masterPassword: string) =>
+  call<VaultInfo>("backup_restore", { path, backupPassword, masterPassword });
+
 export function onVaultLocked(handler: (reason: LockReason) => void): Promise<UnlistenFn> {
   return listen<LockReason>("vault://locked", (e) => handler(e.payload));
 }

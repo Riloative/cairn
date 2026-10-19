@@ -195,6 +195,107 @@ impl Vault {
         Ok(())
     }
 
+    /// The Argon2id parameters of the master password (for backups made with fresh
+    /// salts but the same costs).
+    pub fn kdf_params(&self) -> Result<KdfParams, CoreError> {
+        Ok(self.read_vault_file(VAULT_FILE)?.kdf)
+    }
+
+    /// Replace all data with a backup.
+    ///
+    /// On first launch `master` becomes the master password. When unlocked it must be
+    /// the current master password (restoring replaces everything, so it is confirmed).
+    /// The current database is kept until the restored one has opened.
+    pub fn restore(
+        &mut self,
+        backup: &Path,
+        backup_password: &SecretString,
+        master: &SecretString,
+    ) -> Result<crate::backup::BackupHeader, CoreError> {
+        self.restore_with_params(backup, backup_password, master, KdfParams::calibrate)
+    }
+
+    pub fn restore_with_params(
+        &mut self,
+        backup: &Path,
+        backup_password: &SecretString,
+        master: &SecretString,
+        new_params: impl FnOnce() -> Result<KdfParams, CoreError>,
+    ) -> Result<crate::backup::BackupHeader, CoreError> {
+        let first_launch = match self.status() {
+            VaultStatus::Locked => return Err(CoreError::Locked),
+            VaultStatus::Uninitialized => true,
+            VaultStatus::Unlocked => false,
+        };
+        let params = if first_launch {
+            check_password_policy(master)?;
+            if self.db_path().exists() {
+                // As in setup: never replace a database whose metadata is missing.
+                return Err(CoreError::CorruptVaultFile(format!(
+                    "{} exists but {VAULT_FILE} is missing",
+                    self.db_path().display()
+                )));
+            }
+            new_params()?
+        } else {
+            self.kdf_params()?
+        };
+        let key = kdf::derive_key(master, &params)?;
+        if !first_launch {
+            // Confirm the master password before replacing everything.
+            drop(db::open(&self.db_path(), &key)?);
+        }
+        fs::create_dir_all(&self.dir).map_err(|e| CoreError::io(&self.dir, e))?;
+        let tag = hex::encode(kdf::random_bytes::<8>()?);
+        let tmp = self.dir.join(format!(".restore-{tag}.tmp"));
+        let header = crate::backup::restore_to(backup, backup_password, &tmp, &key)?;
+
+        let db = self.db_path();
+        let previous = self.dir.join(format!("{DB_FILE}.before-restore"));
+        if let Some(conn) = self.conn.take() {
+            conn.close().map_err(|(_, e)| CoreError::Database(e))?;
+        }
+        if db.exists() {
+            fs::rename(&db, &previous).map_err(|e| CoreError::io(&db, e))?;
+        }
+        let swapped = fs::rename(&tmp, &db)
+            .map_err(|e| CoreError::io(&db, e))
+            .and_then(|()| db::open(&db, &key));
+        let conn = match swapped {
+            Ok(conn) => conn,
+            Err(e) => {
+                // Put the previous database back and stay where we were.
+                let _ = fs::remove_file(&tmp);
+                if previous.exists() {
+                    let _ = fs::rename(&previous, &db);
+                    if !first_launch {
+                        self.conn = db::open(&db, &key).ok();
+                    }
+                }
+                return Err(e);
+            }
+        };
+        if first_launch {
+            let file = VaultFile {
+                version: FORMAT_VERSION,
+                created_at: audit::now(),
+                kdf: params,
+            };
+            write_json_atomic(&self.dir.join(VAULT_FILE), &file)?;
+        }
+        audit::append(
+            &conn,
+            &AuditEvent::BackupRestored {
+                backup_created_at: header.created_at.clone(),
+                app_version: header.app_version.clone(),
+                recordings: header.recordings,
+            },
+        )?;
+        self.conn = Some(conn);
+        let _ = fs::remove_file(&previous);
+        Ok(header)
+    }
+
     /// Run a closure with the open database.
     pub fn with_conn<T>(
         &self,

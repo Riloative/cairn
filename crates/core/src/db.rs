@@ -33,6 +33,19 @@ pub fn open(path: &Path, key: &Key256) -> Result<Connection, CoreError> {
     Ok(conn)
 }
 
+/// Open with a key but without configuring or migrating (backup copies, which must
+/// stay single-file: no WAL).
+pub(crate) fn open_keyed(path: &Path, key: &Key256) -> Result<Connection, CoreError> {
+    let conn = Connection::open(path)?;
+    apply_key(&conn, key)?;
+    Ok(conn)
+}
+
+/// The raw-key form SQLCipher accepts in `PRAGMA key` and `ATTACH … KEY`.
+pub(crate) fn key_literal(key: &Key256) -> Zeroizing<String> {
+    Zeroizing::new(format!("x'{}'", hex::encode(key.as_ref())))
+}
+
 /// Open an in-memory encrypted database (tests and dry runs).
 pub fn open_in_memory(key: &Key256) -> Result<Connection, CoreError> {
     let conn = Connection::open_in_memory()?;

@@ -197,9 +197,13 @@ impl SessionManager {
         }
     }
 
-    #[cfg(test)]
+    /// Open sessions.
     pub fn len(&self) -> usize {
         self.sessions.lock().len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
@@ -302,7 +306,7 @@ mod tests {
             .write(b"abc\n")
             .expect("write");
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-        while mgr.len() > 0 && std::time::Instant::now() < deadline {
+        while !mgr.is_empty() && std::time::Instant::now() < deadline {
             std::thread::sleep(std::time::Duration::from_millis(20));
         }
         let text = String::from_utf8_lossy(&out.data.lock()).into_owned();

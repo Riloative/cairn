@@ -468,3 +468,31 @@ is 1.99).
   §10). A REC mark in the session header shows it. Deleting a recording is audited.
 - **Replay** writes events into a read-only xterm; seeking back resets the terminal
   and replays up to the new time. "Shorten pauses" caps idle gaps at 2 s.
+
+## D-044 · `.cairn-backup`: an encrypted database copy with its own password (M8)
+
+- **Format:** `CAIRNBK\x01`, a length-prefixed JSON header (created, app version,
+  schema version, recordings included, Argon2id parameters and salt), then the whole
+  database as a SQLCipher file keyed with Argon2id of the backup password. Everything
+  Cairn keeps is in the database (floor plan images, snapshots, recordings, settings,
+  themes, snippets), so this is the full backup SPEC §11 asks for.
+- **No plaintext on disk at any point.** The copy is `ATTACH … KEY` +
+  `sqlcipher_export` into a database encrypted from its first page, in the data
+  directory, removed on every path. Leaving recordings out deletes them from the copy
+  and VACUUMs it so their pages are gone. The header is not secret; a wrong password
+  or a modified file fails SQLCipher's per-page HMAC (first page = "wrong password",
+  later pages = "damaged").
+- **Own password, master-password costs.** The backup password is chosen at export
+  (same length and strength rules as the master password) so a backup can be restored
+  on another machine or after the master password is lost. Argon2id costs are the
+  vault's calibrated ones, with a fresh salt.
+- **Restore** decrypts into a temporary file, checks integrity, re-keys it to the
+  master key, migrates older schemas (newer ones are refused), and swaps it in; the
+  previous database is kept until the restored one opens and is put back on failure.
+  When unlocked it replaces everything, so it needs the current master password and no
+  open sessions (terminal or RDP); the app reloads afterwards. On first launch the
+  restore sets a new master password instead of creating an empty vault. The restored
+  audit chain continues with a `backup_restored` entry.
+- **Post-setup offer** (D-012): after creating the vault, Cairn offers a backup once,
+  explaining that a lost master password cannot be recovered but a backup can be
+  restored. Settings → Backup offers backup and restore any time.
