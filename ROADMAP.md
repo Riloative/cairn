@@ -151,4 +151,4 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Empty states, onboarding, keyboard shortcuts sheet
 - [x] tauri-driver e2e smoke tests under xvfb + screenshot artifacts
 - [x] README with install notes (macOS quarantine, Ubuntu dialout)
-- [ ] CI green on both platforms for M9
+- [x] CI green on both platforms for M9 (run 57)

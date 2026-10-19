@@ -330,7 +330,7 @@ export opened in LibreOffice/Excel/Numbers (formulas shown as text).
 - **README:** features, install notes (macOS quarantine, Ubuntu `dialout`, FreeRDP),
   first run without recovery, data locations, security summary, troubleshooting.
 
-**Next:** all milestones done once M9 CI is green on both platforms.
+**Next:** all roadmap milestones are done; M9 CI green on both platforms (run 57, including the WebDriver e2e smoke).
 
 **Test manually:** cold start on an Apple Silicon Mac and a real Ubuntu desktop
 (hardware GL), 30+ SSH sessions to real devices with output streaming in several at
