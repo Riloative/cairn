@@ -113,7 +113,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Export PNG (1x/2x/4x), SVG, PDF (Rust `svg2pdf`) with title/legend/date, theme or forced light
 - [x] CI green on both platforms for M5 (run 21)
 
-## M6 – Power tools
+## M6 – Power tools ✅
 
 - [x] SFTP side panel (tree, DnD, rename/delete/mkdir/chmod, transfer queue) + SCP
 - [x] Port forwarding manager (local/remote/dynamic, presets, live status)
@@ -124,7 +124,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Audit integration for all of the above
 - [x] CI green on both platforms for M6 (run 30)
 
-## M7 – RDP
+## M7 – RDP ✅
 
 - [x] IronRDP session, dirty-rect frames over binary channel to canvas
 - [x] Keyboard/mouse input incl. macOS key mapping
@@ -135,7 +135,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] xrdp integration test
 - [x] CI green on both platforms for M7 (run 37)
 
-## M8 – Audit and data
+## M8 – Audit and data ✅
 
 - [x] Audit view: filters (time, device, event, protocol), verify integrity, CSV/JSON export, retention
 - [x] asciicast v2 recording (per device / global), replay player (seek, speed), transcript export
@@ -144,7 +144,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] JSON/CSV readable export (credentials opt-in with warning)
 - [x] CI green on both platforms for M8 (run 45)
 
-## M9 – Polish
+## M9 – Polish ✅
 
 - [x] Performance: 300 devices, 30 sessions, 500-link map; cold start < 1.5 s
 - [x] Accessibility: focus rings, contrast checks in all themes
