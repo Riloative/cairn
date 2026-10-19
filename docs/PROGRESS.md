@@ -264,3 +264,45 @@ accounts, `DOMAIN\user`), a dynamic resize and the Retina sharpness on macOS, �
 into Windows apps, clipboard both ways, Ctrl+Alt+Del to the security screen, an SSH
 tunnel through a bastion, the external client on Ubuntu (FreeRDP 3) and macOS (Windows
 App), and a changed server certificate (regenerate it) showing the warning.
+
+### M8 (session 3, continued)
+
+- **Audit view** (D-042): search, time-range presets and custom dates, event-type,
+  device and protocol filters (a device also matches what happened in its sessions),
+  expandable entries with hashes, paging, CSV/JSON export of what is shown (CSV
+  neutralizes spreadsheet formulas). Retention (default: keep everything) prunes on
+  unlock and when shortened, after a confirmation; an `audit_pruned` entry and a
+  forward-only anchor keep the chain verifiable and expose a moved anchor.
+- **Recordings** (D-043): asciicast v2, output and resizes only (never typed input),
+  stored in the encrypted database, per device or for all sessions; REC mark in the
+  session header; Audit → Recordings with replay (seek, speed, shorten pauses), export
+  as `.cast` or text transcript, audited deletion. Events buffer while locked and are
+  stored on unlock.
+- **Backup** (D-044): `.cairn-backup` = the database copied with `sqlcipher_export`
+  into a file keyed with Argon2id of its own password (no plaintext on disk), optional
+  recordings; restore checks integrity, re-keys, migrates and swaps the database in,
+  keeping the old one until the new one opens. Restore from the setup screen (sets the
+  master password) or Settings → Backup (needs the master password, no open sessions).
+  One-time backup offer after setup (D-012).
+- **Readable export**: locations, devices, interfaces, links and VLANs as JSON or a
+  folder of CSV tables with names instead of ids; credentials with their secrets only
+  after a plain-text warning is confirmed; audited.
+- Palette actions for backup, restore and export.
+- Verified in the release build under Xvfb: backup offer after setup, recording a local
+  shell (REC mark), recordings list and replay, backup to a file (magic header, no
+  recorded text readable, no temp files left), restore into a fresh install through
+  the setup screen (audit history and recording restored, chain verifies), inventory
+  export to JSON. Fixed on the way: the player's controls were pushed off screen by a
+  tall terminal, recordings row actions wrapped, `backup_restored` had no label.
+- Found earlier this session: the config grab could record a prompt split across
+  reads and then wait 5 minutes (CI run 35); the first prompt is now taken after the
+  output goes quiet.
+
+**Next:** M9 (polish).
+
+**Test manually:** an audit log of a few thousand entries (filters and paging feel
+fast), retention on a log with entries older than the cutoff, recording a long SSH
+session with full-screen apps (vim, top) and replaying it with seeking, a 50+ MB
+recording, backup and restore of a vault with real inventory and floor plans across
+Ubuntu ↔ macOS, a backup made by this version restored by the next one, and the CSV
+export opened in LibreOffice/Excel/Numbers (formulas shown as text).
