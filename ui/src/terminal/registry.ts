@@ -5,6 +5,7 @@ import { SerializeAddon } from "@xterm/addon-serialize";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
+import { forget, touch } from "./gpuPool";
 import { Terminal, type ITerminalOptions } from "@xterm/xterm";
 import type { TerminalProfile } from "@/lib/ipc";
 import { toXtermTheme, type Palette } from "./palette";
@@ -89,23 +90,51 @@ export function createTerminal(
   return handle;
 }
 
-/** Open the terminal into its element once it is in the document, then enable WebGL. */
+/** Open the terminal into its element once it is in the document. */
 export function ensureOpened(handle: TerminalHandle) {
   if (handle.opened || !handle.element.isConnected) return;
   handle.term.open(handle.element);
   handle.opened = true;
+}
+
+/** Terminals holding a WebGL renderer, most recently used first (see `gpuPool`). */
+let gpuOrder: string[] = [];
+
+function enableWebgl(handle: TerminalHandle) {
+  if (handle.webgl || !handle.opened) return;
   try {
     const webgl = new WebglAddon();
     webgl.onContextLoss(() => {
       webgl.dispose();
       handle.webgl = null;
+      gpuOrder = forget(gpuOrder, handle.tabId);
     });
     handle.term.loadAddon(webgl);
     handle.webgl = webgl;
   } catch {
-    // No WebGL (e.g. software rendering): xterm falls back to its DOM renderer.
+    // No WebGL (e.g. software rendering): xterm keeps its DOM renderer.
     handle.webgl = null;
   }
+}
+
+function disableWebgl(handle: TerminalHandle) {
+  // Disposing the addon switches xterm back to its DOM renderer.
+  handle.webgl?.dispose();
+  handle.webgl = null;
+}
+
+/**
+ * The terminal became visible: give it WebGL, taking it from the least recently used
+ * terminal when the pool is full.
+ */
+export function promoteRenderer(handle: TerminalHandle) {
+  const { order, evict } = touch(gpuOrder, handle.tabId);
+  gpuOrder = order;
+  for (const id of evict) {
+    const h = handles.get(id);
+    if (h) disableWebgl(h);
+  }
+  enableWebgl(handle);
 }
 
 export function getTerminal(tabId: string): TerminalHandle | undefined {
@@ -120,6 +149,7 @@ export function disposeTerminal(tabId: string) {
   const h = handles.get(tabId);
   if (!h) return;
   handles.delete(tabId);
+  gpuOrder = forget(gpuOrder, tabId);
   h.term.dispose();
   h.element.remove();
 }

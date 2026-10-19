@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
-import { ensureOpened, getTerminal } from "./registry";
+import { ensureOpened, getTerminal, promoteRenderer } from "./registry";
 
 /**
  * Hosts a tab's xterm element. Mounting attaches the persistent element; unmounting only
@@ -32,6 +32,7 @@ export function TerminalPane({ tabId, active }: { tabId: string; active: boolean
     if (!active) return;
     const handle = getTerminal(tabId);
     if (!handle) return;
+    promoteRenderer(handle);
     // Refit after becoming visible, then focus for typing.
     requestAnimationFrame(() => {
       if (hostRef.current && hostRef.current.clientWidth > 0) handle.fit.fit();

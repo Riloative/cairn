@@ -579,20 +579,25 @@ fn filter_sql(f: &AuditFilter) -> Result<(String, Vec<SqlValue>), CoreError> {
         clauses.push(format!("kind IN ({})", vec!["?"; f.kinds.len()].join(", ")));
         params.extend(f.kinds.iter().map(|k| SqlValue::Text(k.clone())));
     }
+    // Each branch matches an index in migration 0008; a UNION of lookups lets SQLite
+    // use them, where one OR across different expressions would scan every payload.
     if let Some(device) = non_empty(&f.device) {
         clauses.push(format!(
-            "(json_extract(payload, '$.device') = ? COLLATE NOCASE \
-              OR (kind = 'inventory_changed' AND json_extract(payload, '$.entity') = 'device' \
-                  AND json_extract(payload, '$.name') = ? COLLATE NOCASE) \
-              OR json_extract(payload, '$.sessionId') IN ({}))",
+            "seq IN (\
+               SELECT seq FROM audit_log WHERE json_extract(payload, '$.device') = ? COLLATE NOCASE \
+               UNION SELECT seq FROM audit_log WHERE kind = 'inventory_changed' \
+                 AND json_extract(payload, '$.entity') = 'device' \
+                 AND json_extract(payload, '$.name') = ? COLLATE NOCASE \
+               UNION SELECT seq FROM audit_log WHERE json_extract(payload, '$.sessionId') IN ({}))",
             SESSIONS_WHERE.replace("{field}", "device")
         ));
         params.extend((0..3).map(|_| SqlValue::Text(device.to_owned())));
     }
     if let Some(protocol) = non_empty(&f.protocol) {
         clauses.push(format!(
-            "(json_extract(payload, '$.protocol') = ? COLLATE NOCASE \
-              OR json_extract(payload, '$.sessionId') IN ({}))",
+            "seq IN (\
+               SELECT seq FROM audit_log WHERE json_extract(payload, '$.protocol') = ? COLLATE NOCASE \
+               UNION SELECT seq FROM audit_log WHERE json_extract(payload, '$.sessionId') IN ({}))",
             SESSIONS_WHERE.replace("{field}", "protocol")
         ));
         params.extend((0..2).map(|_| SqlValue::Text(protocol.to_owned())));
@@ -1263,5 +1268,37 @@ mod tests {
         assert!(c
             .execute("DELETE FROM audit_log WHERE seq = 1", [])
             .is_err());
+    }
+
+    #[test]
+    fn device_and_protocol_filters_use_indexes() {
+        let c = conn();
+        for f in [
+            AuditFilter {
+                device: Some("sw1".into()),
+                ..Default::default()
+            },
+            AuditFilter {
+                protocol: Some("ssh".into()),
+                ..Default::default()
+            },
+        ] {
+            let (w, p) = filter_sql(&f).expect("sql");
+            let mut st = c
+                .prepare(&format!(
+                    "EXPLAIN QUERY PLAN SELECT COUNT(*) FROM audit_log WHERE {w}"
+                ))
+                .expect("plan");
+            let plan: Vec<String> = st
+                .query_map(params_from_iter(p.iter()), |r| r.get::<_, String>(3))
+                .expect("rows")
+                .collect::<Result<_, _>>()
+                .expect("plan");
+            // A full scan reads every payload; with thousands of entries it is slow.
+            assert!(
+                !plan.iter().any(|l| l.starts_with("SCAN audit_log")),
+                "{plan:#?}"
+            );
+        }
     }
 }
