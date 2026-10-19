@@ -25,7 +25,11 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { cn } from "@/lib/cn";
 import * as ipc from "@/lib/ipc";
 import type { InventorySnapshot, LocationInput, LocationKind } from "@/lib/ipc";
+import { RackElevation } from "@/map/RackElevation";
 import { confirmAction } from "@/stores/confirm";
+import { useInventory } from "@/stores/inventory";
+import { useMap } from "@/stores/map";
+import { useUi } from "@/stores/ui";
 import { mutate } from "./mutate";
 import { blankLocation } from "./model";
 
@@ -170,7 +174,19 @@ function Node({ icon, label, meta, depth, open, onToggle, menu, children }: Node
           <span className="w-3.5" />
         )}
         <span className="text-fg-muted">{icon}</span>
-        <span className="font-medium">{label}</span>
+        {onToggle ? (
+          // Clicking the name opens the node too, not only the chevron.
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={onToggle}
+            className="font-medium hover:underline"
+          >
+            {label}
+          </button>
+        ) : (
+          <span className="font-medium">{label}</span>
+        )}
         {meta && <span className="text-xs text-fg-subtle">{meta}</span>}
         <span className="flex-1" />
         <span className="opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100">
@@ -228,6 +244,19 @@ export function LocationsSection({ snapshot }: { snapshot: InventorySnapshot }) 
       return n;
     });
   const isOpen = (key: string) => !collapsed.has(key);
+  // Racks start collapsed: their elevation is tall.
+  const [openRacks, setOpenRacks] = useState<Set<number>>(new Set());
+  const toggleRack = (id: number) =>
+    setOpenRacks((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const openInMap = (floorId: number) => {
+    useMap.getState().setView({ kind: "rack", floorId });
+    useUi.getState().setView("map");
+  };
   const count = (pred: (d: InventorySnapshot["devices"][number]) => boolean) => {
     const n = snapshot.devices.filter(pred).length;
     return n ? `${n} device${n === 1 ? "" : "s"}` : undefined;
@@ -344,6 +373,8 @@ export function LocationsSection({ snapshot }: { snapshot: InventorySnapshot }) 
                           .filter(Boolean)
                           .join(" · ")}
                         depth={multiSite ? 3 : 2}
+                        open={openRacks.has(r.id)}
+                        onToggle={() => toggleRack(r.id)}
                         menu={
                           <NodeMenu
                             label={r.name}
@@ -352,7 +383,23 @@ export function LocationsSection({ snapshot }: { snapshot: InventorySnapshot }) 
                             onDelete={() => void remove("rack", r.id, r.name)}
                           />
                         }
-                      />
+                      >
+                        <li
+                          className="flex items-start gap-4 py-3"
+                          style={{ paddingLeft: 8 + (multiSite ? 4 : 3) * 20 }}
+                        >
+                          <RackElevation
+                            rack={r}
+                            devices={snapshot.devices}
+                            onOpen={(d) =>
+                              useInventory.getState().setSheet({ mode: "view", deviceId: d.id })
+                            }
+                          />
+                          <Button size="sm" variant="ghost" onClick={() => openInMap(f.id)}>
+                            <Rows3 size={14} /> Open in map
+                          </Button>
+                        </li>
+                      </Node>
                     );
                   })}
               </Node>

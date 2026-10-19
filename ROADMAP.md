@@ -160,5 +160,5 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [ ] Change a terminal's colour theme on the spot; Settings theme previews are clickable
 - [ ] Rack view shows the devices mounted in it
 - [ ] Minimap draws devices and links you can recognise
-- [ ] Device icons in the familiar network-diagram style (router, switch, firewall…), kept as clean line icons
+- [ ] Device icons polished: one size grid and corner radius, clearer details (IP phone, access point, switch ports)
 - [ ] CI green on both platforms for M10

@@ -21,3 +21,15 @@ export function fits(
       d.rackU + d.uHeight - 1 >= u,
   );
 }
+
+/** Top offset (px) of a device whose lowest unit is `rackU`; U1 is at the bottom. */
+export function rackTop(rack: Rack, rackU: number, uHeight: number): number {
+  return (rack.heightU - (rackU + uHeight - 1)) * U_PX;
+}
+
+/** The devices mounted in `rack`, sorted top to bottom. */
+export function mountedIn(rack: Rack, devices: readonly Device[]): Device[] {
+  return devices
+    .filter((d) => d.rackId === rack.id && d.rackU !== null)
+    .sort((a, b) => (b.rackU ?? 0) - (a.rackU ?? 0));
+}

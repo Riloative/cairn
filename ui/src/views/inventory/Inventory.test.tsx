@@ -311,4 +311,26 @@ describe("other sections", () => {
       expect(backend.inventory.snap.devices[0]?.custom).toEqual({ owner: "SecOps" }),
     );
   });
+
+  it("shows a rack's devices when the rack is opened", async () => {
+    const user = userEvent.setup();
+    const inv = backend.inventory.snap;
+    inv.buildings = [{ id: 10, siteId: 1, name: "North", code: "N", address: "", notes: "" }];
+    inv.floors = [{ id: 20, buildingId: 10, name: "Ground", level: 0, notes: "" }];
+    inv.racks = [{ id: 30, floorId: 20, roomId: null, name: "R1", heightU: 12, notes: "" }];
+    seed([
+      { hostname: "core-sw1", buildingId: 10, floorId: 20, rackId: 30, rackU: 5, uHeight: 2 },
+      { hostname: "loose-ap", buildingId: 10, floorId: 20 },
+    ]);
+    useInventory.setState({ section: "locations" });
+    renderView();
+    // Collapsed at first; clicking the rack's name opens its elevation.
+    expect(screen.queryByRole("figure", { name: "Rack R1 elevation" })).toBeNull();
+    await user.click(await screen.findByRole("button", { name: "R1" }));
+    const rack = await screen.findByRole("figure", { name: "Rack R1 elevation" });
+    expect(within(rack).getByRole("button", { name: "core-sw1, U5–U6" })).toBeVisible();
+    expect(within(rack).queryByText("loose-ap")).toBeNull();
+    await user.click(within(rack).getByRole("button", { name: "core-sw1, U5–U6" }));
+    expect(useInventory.getState().sheet).toEqual({ mode: "view", deviceId: 1 });
+  });
 });
