@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/cn";
 import { Button } from "./Button";
 import { Shortcut } from "./Kbd";
 
@@ -8,11 +9,17 @@ interface EmptyStateProps {
   description: ReactNode;
   /** The single next step. */
   action?: { label: string; onClick: () => void; shortcut?: string };
+  className?: string;
 }
 
-export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center animate-fade-in">
+    <div
+      className={cn(
+        "flex h-full flex-col items-center justify-center gap-3 p-8 text-center animate-fade-in",
+        className,
+      )}
+    >
       <div className="mb-1 flex size-12 items-center justify-center rounded-xl bg-surface-raised text-fg-muted">
         {icon}
       </div>

@@ -136,6 +136,8 @@ export interface Settings {
   auditRetentionDays: number;
   /** Record every terminal session (devices can also opt in one by one). */
   recordSessions: boolean;
+  /** The "Get started" card was dismissed. */
+  onboardingDone: boolean;
 }
 
 export const settingsGet = () => call<Settings>("settings_get");

@@ -44,6 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
   longCommandNotifySecs: 10,
   auditRetentionDays: 0,
   recordSessions: false,
+  onboardingDone: false,
 };
 
 /**

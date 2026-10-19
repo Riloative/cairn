@@ -1,5 +1,6 @@
 import { TerminalSquare } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { GettingStarted } from "@/app/GettingStarted";
 import { useSessions } from "@/stores/sessions";
 import { backendSessionId, openLocalShell } from "@/terminal/controller";
 import { RdpPane } from "@/rdp/RdpPane";
@@ -21,16 +22,20 @@ export function SessionsView() {
 
   if (!active) {
     return (
-      <EmptyState
-        icon={<TerminalSquare size={20} />}
-        title="No open sessions"
-        description="Start a local shell, or connect to a device over SSH, Telnet or a serial cable (Ctrl/⌘ N)."
-        action={{
-          label: "New local shell",
-          onClick: () => void openLocalShell(),
-          shortcut: "Mod+T",
-        }}
-      />
+      <div className="flex h-full flex-col justify-center overflow-y-auto p-6">
+        <EmptyState
+          className="h-auto"
+          icon={<TerminalSquare size={20} />}
+          title="No open sessions"
+          description="Start a local shell, or connect to a device over SSH, Telnet, a serial cable or RDP (Ctrl/⌘ N)."
+          action={{
+            label: "New local shell",
+            onClick: () => void openLocalShell(),
+            shortcut: "Mod+T",
+          }}
+        />
+        <GettingStarted />
+      </div>
     );
   }
 

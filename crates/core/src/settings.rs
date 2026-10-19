@@ -48,6 +48,8 @@ pub struct Settings {
     pub record_sessions: bool,
     /// Remove audit entries older than this many days (on unlock); 0 keeps everything.
     pub audit_retention_days: u32,
+    /// The "Get started" card was dismissed.
+    pub onboarding_done: bool,
 }
 
 impl Default for Settings {
@@ -66,6 +68,7 @@ impl Default for Settings {
             long_command_notify_secs: 10,
             record_sessions: false,
             audit_retention_days: 0,
+            onboarding_done: false,
         }
     }
 }
