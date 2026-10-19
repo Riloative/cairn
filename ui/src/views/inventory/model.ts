@@ -131,6 +131,7 @@ export const NEW_DEVICE: Device = {
   notes: "",
   custom: {},
   interfaceCount: 0,
+  recordSessions: false,
   createdAt: "",
   updatedAt: "",
 };

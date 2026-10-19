@@ -6,6 +6,7 @@ import type {
   RdpMessage,
   AuditEntry,
   AuditFilter,
+  RecordingInfo,
   ErrorPayload,
   PortInfo,
   PortsChanged,
@@ -42,6 +43,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sessionLogging: false,
   longCommandNotifySecs: 10,
   auditRetentionDays: 0,
+  recordSessions: false,
 };
 
 /**
@@ -94,6 +96,9 @@ export class FakeBackend {
   rdpClosed: string[] = [];
   rdpExternal: { deviceId: number; method: number }[] = [];
   promptReplies: { promptId: number; answer: unknown }[] = [];
+  recordings: { info: RecordingInfo; cast: string }[] = [];
+  /** Sessions the fake reports as recorded. */
+  recordingSessions = new Set<string>();
   /** Files written by export commands. */
   exports: { what: string; format: string; path: string }[] = [];
   forwards: ForwardInfo[] = [];
@@ -639,6 +644,35 @@ export class FakeBackend {
           ),
         };
       }
+      case "recordings_list":
+        this.requireUnlocked();
+        return this.recordings.map((r) => r.info);
+      case "recording_cast": {
+        this.requireUnlocked();
+        const r = this.recordings.find((x) => x.info.id === args.id);
+        if (!r)
+          this.fail({
+            code: "validation",
+            message: "That recording no longer exists.",
+            hint: null,
+          });
+        return r.cast;
+      }
+      case "recording_export":
+        this.requireUnlocked();
+        this.exports.push({
+          what: `recording ${String(args.id)}`,
+          format: args.format as string,
+          path: args.path as string,
+        });
+        return null;
+      case "recording_delete":
+        this.requireUnlocked();
+        this.recordings = this.recordings.filter((r) => r.info.id !== args.id);
+        this.log("recording_deleted", { recordingId: args.id });
+        return null;
+      case "session_recording":
+        return this.recordingSessions.has(args.sessionId as string);
       case "audit_export": {
         this.requireUnlocked();
         const count = this.auditMatching(args.filter as AuditFilter).length;

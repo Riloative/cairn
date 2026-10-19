@@ -14,6 +14,8 @@ export interface SessionTab {
   vendor?: string;
   /** The inventory device this tab is connected to, if any. */
   device?: { id: number; vendor: string };
+  /** The session is being recorded. */
+  recording?: boolean;
 }
 
 interface SessionsStore {
@@ -25,6 +27,7 @@ interface SessionsStore {
   activateRelative: (offset: number) => void;
   setState: (id: string, state: SessionState, detail?: string) => void;
   setVendor: (id: string, vendor: string) => void;
+  setRecording: (id: string, recording: boolean) => void;
 }
 
 export const useSessions = create<SessionsStore>((set, get) => ({
@@ -52,6 +55,8 @@ export const useSessions = create<SessionsStore>((set, get) => ({
     const next = tabs[(idx + offset + tabs.length) % tabs.length];
     if (next) set({ activeId: next.id });
   },
+  setRecording: (id, recording) =>
+    set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, recording } : t)) }),
   setVendor: (id, vendor) =>
     set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, vendor } : t)) }),
   setState: (id, state, detail) =>

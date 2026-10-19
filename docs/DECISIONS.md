@@ -445,3 +445,26 @@ is 1.99).
 - **CSV exports neutralize formulas** (`=`, `+`, `-`, `@`, tab, CR get a `'` prefix).
   Hostnames, banners and file names come from devices, so opening an export in a
   spreadsheet must not run anything. JSON exports keep entries whole, with hashes.
+
+## D-043 · Session recordings: output only, inside the encrypted database (M8)
+
+- **Stored in SQLCipher, not as files.** Recordings contain whatever devices print
+  (configurations, `show` output, sometimes secrets in banners), so they get the same
+  protection as the vault: chunks of asciicast event lines in `recording_chunks`,
+  encrypted with the vault key, deleted with their row, included in full backups. The
+  existing "session logging" option still writes plain text files and now says so.
+- **Output and resizes only.** asciicast can hold input (`i` events), but typed input
+  is where passwords are. Recording only what the device prints keeps commands (as
+  echo) and leaves passwords out (prompts do not echo), with no prompt detection.
+- **Buffered writes.** Events are stored every 2 s or 64 KB. While Cairn is locked
+  they stay in memory (up to 32 MB, then the recording is marked cut) and are stored
+  on unlock; a recording is capped at 256 MB.
+- **Header at read time.** The asciicast header (size, start time, title) is built
+  from the row when replaying or exporting, so exported `.cast` files play in
+  asciinema. Transcripts are the output with escape sequences removed and carriage
+  returns/backspaces applied.
+- **Who is recorded:** every terminal session when "Record sessions" is on, plus
+  sessions to devices with "Record terminal sessions" set. RDP is not recorded (SPEC
+  §10). A REC mark in the session header shows it. Deleting a recording is audited.
+- **Replay** writes events into a read-only xterm; seeking back resets the terminal
+  and replays up to the new time. "Shorten pauses" caps idle gaps at 2 s.

@@ -20,12 +20,14 @@ import {
 } from "@/components/ui/Menu";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/Popover";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/cn";
 import * as ipc from "@/lib/ipc";
 import type { AuditEntry, AuditFacets, IntegrityReport } from "@/lib/ipc";
 import { activeFilterCount, toAuditFilter, useAuditView, type TimeRange } from "@/stores/auditView";
 import { useNotifications } from "@/stores/notifications";
+import { RecordingsList } from "@/recordings/RecordingsList";
 import { dateFormat, LABELS, summarize } from "./auditFormat";
 
 const PAGE = 200;
@@ -118,7 +120,42 @@ function EntryDetails({ entry }: { entry: AuditEntry }) {
   );
 }
 
+const SECTIONS = [
+  { value: "log", label: "Audit log" },
+  { value: "recordings", label: "Recordings" },
+] as const;
+
+/** The section switch doubles as the view's title (the heading is for screen readers). */
+function SectionSwitch() {
+  const section = useAuditView((s) => s.section);
+  const setSection = useAuditView((s) => s.setSection);
+  return (
+    <>
+      <h1 className="sr-only">{SECTIONS.find((x) => x.value === section)?.label}</h1>
+      <SegmentedControl
+        label="Audit section"
+        value={section}
+        options={SECTIONS}
+        onChange={setSection}
+      />
+    </>
+  );
+}
+
 export function AuditView() {
+  const section = useAuditView((s) => s.section);
+  if (section === "log") return <AuditLog />;
+  return (
+    <div className="flex h-full flex-col">
+      <header className="flex items-center gap-3 px-6 pt-5 pb-3">
+        <SectionSwitch />
+      </header>
+      <RecordingsList />
+    </div>
+  );
+}
+
+function AuditLog() {
   const filter = useAuditView((s) => s.filter);
   const setFilter = useAuditView((s) => s.set);
   const reset = useAuditView((s) => s.reset);
@@ -225,7 +262,8 @@ export function AuditView() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex items-center gap-3 px-6 pt-5 pb-3">
-        <h1 className="flex-1 text-[15px] font-semibold tracking-tight">Audit log</h1>
+        <SectionSwitch />
+        <span className="flex-1" />
         {report && (
           <span
             className={cn(

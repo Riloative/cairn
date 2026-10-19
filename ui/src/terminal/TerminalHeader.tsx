@@ -28,6 +28,15 @@ export function TerminalHeader({ tab, privileged }: { tab: SessionTab; privilege
       {tab.title !== PROTOCOL_LABEL[tab.protocol] && (
         <span className="text-xs text-fg-muted">{PROTOCOL_LABEL[tab.protocol]}</span>
       )}
+      {tab.recording && (
+        <span
+          className="flex items-center gap-1 text-[11px] font-medium text-danger"
+          title="This session is recorded (Audit → Recordings)"
+        >
+          <span className="size-1.5 rounded-full bg-danger" aria-hidden />
+          REC
+        </span>
+      )}
       {privileged && (
         <span className="rounded-sm bg-danger px-1.5 py-px text-[11px] font-medium text-white">
           privileged

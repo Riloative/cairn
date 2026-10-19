@@ -106,6 +106,8 @@ export interface Settings {
   longCommandNotifySecs: number;
   /** Audit entries older than this many days are removed on unlock; 0 keeps all. */
   auditRetentionDays: number;
+  /** Record every terminal session (devices can also opt in one by one). */
+  recordSessions: boolean;
 }
 
 export const settingsGet = () => call<Settings>("settings_get");
@@ -636,6 +638,8 @@ export interface Device {
   notes: string;
   custom: Record<string, CustomValue>;
   interfaceCount: number;
+  /** Record terminal sessions to this device. */
+  recordSessions: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -901,6 +905,36 @@ export const rdpClose = (sessionId: string) => call<null>("rdp_close", { session
 /** Launch the device in FreeRDP / the system RDP app; returns what was opened. */
 export const rdpExternal = (deviceId: number, method: number) =>
   call<string>("rdp_external", { deviceId, method });
+
+// ── Recordings ─────────────────────────────────────────────────────────────────────
+
+/** Mirrors `cairn_core::recording::RecordingInfo`. */
+export interface RecordingInfo {
+  id: number;
+  sessionId: string;
+  protocol: string;
+  target: string;
+  deviceId: number | null;
+  /** Hostname when recorded; empty for ad-hoc sessions. */
+  device: string;
+  cols: number;
+  rows: number;
+  startedAt: string;
+  /** Null while the session runs. */
+  endedAt: string | null;
+  durationMs: number;
+  bytes: number;
+  truncated: boolean;
+}
+
+export const recordingsList = () => call<RecordingInfo[]>("recordings_list");
+/** The recording as an asciicast v2 file. */
+export const recordingCast = (id: number) => call<string>("recording_cast", { id });
+export const recordingExport = (id: number, format: "cast" | "text", path: string) =>
+  call<null>("recording_export", { id, format, path });
+export const recordingDelete = (id: number) => call<null>("recording_delete", { id });
+export const sessionRecording = (sessionId: string) =>
+  call<boolean>("session_recording", { sessionId });
 
 // ── Map ────────────────────────────────────────────────────────────────────────────
 

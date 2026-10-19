@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Switch } from "@/components/ui/Switch";
 import * as ipc from "@/lib/ipc";
 import type { Device, DeviceType, InventorySnapshot } from "@/lib/ipc";
 import { useNotifications } from "@/stores/notifications";
@@ -318,6 +319,14 @@ export function DeviceForm({
           mgmtIp={d.mgmtIp.trim()}
         />
         {errors.connections && <p className="text-xs text-danger">{errors.connections}</p>}
+        <label className="flex items-center gap-2 text-[13px]">
+          <Switch
+            checked={d.recordSessions}
+            onCheckedChange={(v) => set("recordSessions", v)}
+            aria-label="Record sessions"
+          />
+          Record terminal sessions to this device
+        </label>
       </Section>
 
       <Section title="Network">

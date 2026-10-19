@@ -273,8 +273,18 @@ function Security({ s, update }: { s: Settings; update: (p: Partial<Settings>) =
         />
       </Row>
       <Row
+        title="Record sessions"
+        description="Record every terminal session for replay (Audit → Recordings). Recordings are encrypted with your vault; typed input is not recorded. Devices can also be recorded one by one."
+      >
+        <Switch
+          aria-label="Record sessions"
+          checked={s.recordSessions}
+          onCheckedChange={(v) => update({ recordSessions: v })}
+        />
+      </Row>
+      <Row
         title="Session logging"
-        description="Save raw session output with timestamps to the logs folder in Cairn's data directory. Typed input is not logged."
+        description="Save raw session output with timestamps as plain, unencrypted text files in the logs folder of Cairn's data directory. Typed input is not logged."
       >
         <Switch
           aria-label="Session logging"

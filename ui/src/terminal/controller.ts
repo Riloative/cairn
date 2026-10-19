@@ -93,6 +93,14 @@ export function paletteFor(profile: TerminalProfile): Palette {
   );
 }
 
+/** Mark the tab when its session is recorded (shown in the header). */
+function checkRecording(tabId: string, sessionId: string) {
+  ipc
+    .sessionRecording(sessionId)
+    .then((recording) => useSessions.getState().setRecording(tabId, recording))
+    .catch(() => {});
+}
+
 function newTabId(): string {
   return `t-${crypto.randomUUID()}`;
 }
@@ -340,6 +348,7 @@ export async function openTerminalTab(opts: OpenOptions): Promise<string> {
       return tabId;
     }
     backendIds.set(tabId, id);
+    checkRecording(tabId, id);
     // The pane may have been fitted while the session was starting.
     ipc.sessionResize(id, handle.term.cols, handle.term.rows).catch(() => {});
     if (opts.readyOnStart) useSessions.getState().setState(tabId, "connected");
@@ -513,6 +522,7 @@ export async function reconnectTab(tabId: string, opts: { automatic?: boolean } 
       return;
     }
     backendIds.set(tabId, id);
+    checkRecording(tabId, id);
     if (tabOf(tabId)?.protocol === "serial") {
       // Serial has no handshake: open means usable.
       useReconnect.getState().clear(tabId);

@@ -68,13 +68,19 @@ export function activeFilterCount(f: AuditViewFilter): number {
   );
 }
 
+export type AuditSection = "log" | "recordings";
+
 interface AuditViewStore {
+  section: AuditSection;
+  setSection: (section: AuditSection) => void;
   filter: AuditViewFilter;
   set: (patch: Partial<AuditViewFilter>) => void;
   reset: () => void;
 }
 
 export const useAuditView = create<AuditViewStore>((set, get) => ({
+  section: "log",
+  setSection: (section) => set({ section }),
   filter: EMPTY_AUDIT_FILTER,
   set: (patch) => set({ filter: { ...get().filter, ...patch } }),
   reset: () => set({ filter: EMPTY_AUDIT_FILTER }),
