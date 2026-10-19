@@ -169,4 +169,4 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] "+" opens a New session menu (local shell, containers, SSH, Telnet, Serial, RDP, saved connections); a Search button opens the command search
 - [x] Tabs: right-click menu (reconnect, close, close others, close to the right), drag to reorder, close button always on the active tab, double-click the empty bar for a shell
 - [x] Asset number field for devices (form, details, table column, search, export)
-- [ ] CI green on both platforms for M11
+- [x] CI green on both platforms for M11 (run 69)
