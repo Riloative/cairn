@@ -64,17 +64,23 @@ export class Driver {
     );
   }
 
-  /** The first element matching `css` whose text contains `text`. */
+  /**
+   * The first visible element matching `css` whose text contains `text`. Matches on
+   * textContent in the page: WebKitWebDriver's element text is empty for some
+   * elements it considers hidden (e.g. buttons wrapped in tooltip triggers).
+   */
   async findText(css, text, timeout) {
     return this.until(
       `"${text}" in ${css}`,
       async () => {
-        const els = await this.cmd("POST", "/elements", { using: "css selector", value: css });
-        for (const e of els) {
-          const t = await this.cmd("GET", `/element/${e[ELEMENT]}/text`);
-          if (t.includes(text)) return e[ELEMENT];
-        }
-        return null;
+        const el = await this.run(
+          `return [...document.querySelectorAll(arguments[0])].find(
+           (e) => e.textContent.includes(arguments[1]) && e.getClientRects().length > 0,
+         ) ?? null;`,
+          css,
+          text,
+        );
+        return el ? el[ELEMENT] : null;
       },
       timeout,
     );

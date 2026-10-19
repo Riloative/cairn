@@ -71,6 +71,8 @@ Run from the repo root.
 | RDP integration tests (Linux, root; xrdp + xorgxrdp) | `sudo scripts/test-xrdp.sh && source /tmp/cairn-xrdp/env && CAIRN_RDP_TESTS=1 cargo test -p cairn-proto-rdp` |
 | Demo data (map, inventory) | `echo "<password>" \| cargo run -p cairn-core --example seed_demo -- <vault dir>` |
 | UI smoke test (Linux, needs Xvfb + xdotool) | `npm run tauri build -- --bundles deb && scripts/ui-smoke.sh target/release/cairn screenshots` |
+| WebDriver e2e smoke (Linux: `apt install webkit2gtk-driver`, `cargo install tauri-driver`) | `xvfb-run -a node e2e/smoke.mjs target/release/cairn screenshots/e2e` |
+| Scale data + read timings | `echo "<password>" \| cargo run --release -p cairn-core --example seed_scale -- <vault dir>` |
 
 Linux build deps: `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libudev-dev libssl-dev pkg-config build-essential patchelf`.
 

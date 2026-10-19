@@ -77,12 +77,14 @@ try {
 
   // Inventory: add a device and see it in the table.
   await nav("Inventory");
-  await d.click(await d.findText("button", "New device"));
+  await d.click(await d.findText("button", "Add a device"));
   await d.type(await byLabel("Hostname"), "e2e-core-sw1");
   await d.type(await byLabel("Management IP"), "10.99.0.1");
   await d.click(await d.findText('button[type="submit"]', "Add device"));
   await d.findText("table td, [role='row'] *", "e2e-core-sw1");
   await shot("inventory");
+  // The new device's sheet stays open; close it.
+  await d.click(await d.find('[role="dialog"] button[aria-label="Close"]'));
 
   // Audit: the change is logged and the chain verifies.
   await nav("Audit");

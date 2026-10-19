@@ -42,22 +42,25 @@ export function ShortcutsSheet() {
         className="w-[min(760px,calc(100vw-32px))]"
         onClosed={focusActiveTerminal}
       >
-        <div className="max-h-[60vh] columns-2 gap-8 overflow-y-auto">
-          {[...groups].map(([group, rows]) => (
-            <section key={group} className="mb-4 break-inside-avoid">
-              <h3 className="mb-1 text-xs font-medium text-fg-muted">{group}</h3>
-              <ul>
-                {rows.map((r) => (
-                  <li key={r.id} className="flex items-center gap-3 py-1 text-[13px]">
-                    <span className="flex-1">{r.title}</span>
-                    {r.keys.split(" ").map((k) => (
-                      <Shortcut key={k} keys={k} />
-                    ))}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+        {/* Scroll the box, not the columns: a height-capped column box overflows sideways. */}
+        <div className="max-h-[60vh] overflow-y-auto">
+          <div className="columns-2 gap-8">
+            {[...groups].map(([group, rows]) => (
+              <section key={group} className="mb-4 break-inside-avoid">
+                <h3 className="mb-1 text-xs font-medium text-fg-muted">{group}</h3>
+                <ul>
+                  {rows.map((r) => (
+                    <li key={r.id} className="flex items-center gap-3 py-1 text-[13px]">
+                      <span className="flex-1">{r.title}</span>
+                      {r.keys.split(" ").map((k) => (
+                        <Shortcut key={k} keys={k} />
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
