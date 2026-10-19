@@ -161,4 +161,4 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Rack view shows the devices mounted in it
 - [x] Minimap draws devices and links you can recognise
 - [x] Device icons polished: one size grid and corner radius, clearer details (IP phone, access point, switch ports)
-- [ ] CI green on both platforms for M10
+- [x] CI green on both platforms for M10 (runs 65–66)
