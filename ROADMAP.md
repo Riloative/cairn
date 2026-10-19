@@ -115,13 +115,14 @@ both platforms, and there are no stubs/TODOs left inside it.
 
 ## M6 – Power tools
 
-- [ ] SFTP side panel (tree, DnD, rename/delete/mkdir/chmod, transfer queue) + SCP
-- [ ] Port forwarding manager (local/remote/dynamic, presets, live status)
-- [ ] TFTP server (root, bind, rw perms, transfer log, custom port + setcap/authbind docs)
-- [ ] Snippets library with variables, palette + snippet bar
-- [ ] Broadcast from tabs and map with banner
-- [ ] Grab config (vendor commands, paging) + snapshots + side-by-side diff + export
-- [ ] Audit integration for all of the above
+- [x] SFTP side panel (tree, DnD, rename/delete/mkdir/chmod, transfer queue) + SCP
+- [x] Port forwarding manager (local/remote/dynamic, presets, live status)
+- [x] TFTP server (root, bind, rw perms, transfer log, custom port + setcap/authbind docs)
+- [x] Snippets library with variables, palette + snippet bar
+- [x] Broadcast from tabs and map with banner
+- [x] Grab config (vendor commands, paging) + snapshots + side-by-side diff + export
+- [x] Audit integration for all of the above
+- [ ] CI green on both platforms for M6
 
 ## M7 – RDP
 

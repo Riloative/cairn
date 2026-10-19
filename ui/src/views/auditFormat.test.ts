@@ -71,4 +71,55 @@ describe("audit summaries", () => {
       ),
     ).toBe("file not received: The transfer was cancelled.");
   });
+
+  it("summarizes the M6 tool events", () => {
+    for (const kind of ["broadcast_started", "config_grabbed", "port_forward", "tftp_server"])
+      expect(LABELS[kind]).toBeTruthy();
+    expect(summarize(entry("broadcast_ended", { targets: ["sw1", "sw2"], durationSecs: 42 }))).toBe(
+      "to sw1, sw2 after 42 s",
+    );
+    expect(
+      summarize(
+        entry("config_grabbed", {
+          device: "sw1",
+          bytes: 2048,
+          changed: true,
+          ok: true,
+          error: null,
+        }),
+      ),
+    ).toBe("sw1: 2048 bytes, changed");
+    expect(
+      summarize(
+        entry("port_forward", {
+          forward: "L 127.0.0.1:8443 → 10.0.0.5:443",
+          target: "admin@sw1",
+          action: "failed",
+          error: "Port in use",
+        }),
+      ),
+    ).toBe("L 127.0.0.1:8443 → 10.0.0.5:443 on admin@sw1 failed: Port in use");
+    expect(
+      summarize(
+        entry("file_transferred", {
+          sessionId: "tftp 10.0.0.9:50123",
+          protocol: "tftp",
+          direction: "download",
+          file: "sw1.cfg",
+          bytes: 900,
+          ok: true,
+        }),
+      ),
+    ).toBe("sw1.cfg received from 10.0.0.9:50123 (900 bytes, tftp)");
+    expect(
+      summarize(
+        entry("tftp_server", {
+          action: "started",
+          bind: "0.0.0.0:6969",
+          root: "/srv/tftp",
+          allowWrite: true,
+        }),
+      ),
+    ).toBe("started on 0.0.0.0:6969 serving /srv/tftp (uploads allowed)");
+  });
 });

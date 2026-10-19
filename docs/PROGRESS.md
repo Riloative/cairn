@@ -162,3 +162,37 @@ performance, auto-layout time, readability of routes); PDF export opened in a PD
 viewer and printed; a multi-page PDF floor plan (page choice); trackpad pinch/zoom
 and Cmd-click multi-select on macOS; the map in each theme, including "light theme"
 exports from a dark theme.
+
+### M6 (session 3, continued)
+
+- Schema v5 (`0005_tools.sql`): snippets (with starter snippets), port-forward presets
+  per device, config snapshots.
+- Shared SSH connection (D-034): SFTP, SCP, forwards and Grab config open extra
+  channels on the open tab's connection, so there is no second login and no second
+  OTP prompt.
+- SFTP file panel next to SSH tabs: browse, path bar, mkdir, rename, delete, chmod,
+  drag and drop from the desktop, and a sequential transfer queue with progress and
+  cancel. SCP is available as the transfer protocol for devices without SFTP; IOS
+  paths like `flash:` work.
+- Port forwarding manager (Tools, Mod+5): local, remote and dynamic (SOCKS5)
+  forwards with live connection and byte counters, presets per device, and
+  autostart when a session connects.
+- TFTP server (`cairn-tftp`, D-036): root jail, bind address and port (6969 by
+  default on Linux, with setcap/authbind help), read/write/overwrite switches,
+  blksize/tsize/timeout options, a live transfer log, and atomic uploads.
+- Snippets: a library with folders and `{{variables}}`, a variables dialog, a snippet
+  bar (Mod+Shift+S), and one palette entry per snippet.
+- Broadcast (D-037): choose tabs or select devices on the map, type once into all of
+  them. A banner and a tab marker show the group. Mod+Shift+B stops it.
+- Grab config (D-035): the vendor's show command runs on a hidden channel, handling
+  enable, paging and prompts for Cisco, Juniper, Fortinet, Aruba/HP, MikroTik and
+  Ubiquiti. Each grab is stored as a snapshot. The Configs tab in the device sheet
+  shows the history, a side-by-side diff that folds unchanged lines, and export as
+  text or unified diff. Grab is also in the device and map menus and the SSH tab
+  header.
+- Audit: broadcast start and end, config grabs, port forwards, the TFTP server and
+  its transfers, SFTP/SCP transfers and exports, all with readable summaries in the
+  audit view.
+- Tests: core (snippets, forwards, snapshots, grab per vendor, diff), the TFTP server
+  over UDP, proto-ssh tool tests against a real sshd (forwards, SFTP, SCP, grab), and
+  UI tests for each new panel.

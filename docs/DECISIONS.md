@@ -289,3 +289,61 @@ slots, ordered by where they go, and their port labels fan out. This is a heuris
 not a full obstacle-avoiding router: ELK's own edge routes would be better but go
 stale as soon as a node is dragged, and dragging must stay at 60 fps with a few
 hundred links.
+
+## D-034 · Tools reuse the open SSH connection (M6)
+
+SFTP, SCP, port forwards and Grab config open extra channels on the connection of
+an already open SSH tab (`SshSession::connection()`, looked up by session id in
+`AppState.ssh_sessions`) rather than logging in again. A second login would repeat
+OTP or keyboard-interactive prompts, double the session count on devices with a low
+vty limit, and need the secret to leave the session that already used it. The
+session holds only a `Weak` in the map, so closing the tab ends the connection and
+every tool on it: forwards notice on a 2 s tick and close their listeners; transfers
+fail with "the session has ended". Remote forwards register a route on the
+connection, and the client handler matches incoming `forwarded-tcpip` channels
+against those routes.
+
+## D-035 · Grab config is a transport-independent state machine (M6)
+
+`core::tools::grab::Grabber` is fed terminal output and returns what to send next
+(enter enable, turn paging off, run the show command), or done or failed. Prompt
+detection, `--More--` handling, output cleanup and CLI error detection live there,
+unit-tested per vendor without a device. The SSH side runs it on its own wide pty
+channel (511×200, so lines are not wrapped) and calls `idle()` after 900 ms of
+silence; a 300 s deadline stops a hung device. Running the grab on a separate
+channel keeps the user's terminal untouched. A session-less exec channel was
+rejected because many network OSes do not accept exec, or ignore paging settings
+there. Snapshots are deduplicated by SHA-256 (an identical grab is marked
+unchanged), and diffs come from the `similar` crate, with changed lines paired up for
+the side-by-side view.
+
+## D-036 · TFTP server: one socket per transfer, root jail, atomic uploads (M6)
+
+The `cairn-tftp` server follows RFC 1350 with the blksize, tsize and timeout options
+(RFC 2347–2349). Each transfer gets its own ephemeral socket, block numbers roll over
+past 65535 for large images, and lost packets are retransmitted. Paths are resolved
+inside the chosen root. `..`, absolute paths and symlinks that point outside the
+root are refused. Uploads are written to `.name.cairn-part` and renamed when they
+complete, so a failed push never leaves a truncated config behind. Overwriting
+existing files is a separate switch. The default port is 6969 on Linux (69 needs
+`cap_net_bind_service`, explained in the UI and the bind error with setcap and
+authbind commands) and 69 on macOS. The server only runs while the user has it
+switched on and stops when the app exits. Like open sessions, it keeps running while
+the app is locked, so a firmware push is not cut off by auto-lock. Transfers in that
+time are queued for the audit log and written on unlock.
+
+## D-037 · Broadcast mirrors input in the frontend and never logs it (M6)
+
+Broadcast mirrors at the point where a tab's typed input, pastes and snippets are
+delivered (`controller.deliver`), so every protocol behaves the same and no backend
+fan-out is needed. The audit records who was in the group and for how long, never
+the keystrokes: they may include passwords typed at a prompt, and the per-session
+transcripts already handle redaction. A banner in every member tab and a marker in
+the tab bar show that typing goes to more than one device.
+
+## D-038 · Snippets are rendered in the frontend (M6)
+
+Snippets hold no secrets (credentials stay referenced by ID), so `{{variable}}`
+substitution runs in the UI, where the variables dialog lives. The backend stores
+and validates them. A snippet goes through the same delivery path as typing, so it
+also reaches broadcast groups.
