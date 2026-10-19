@@ -1,18 +1,11 @@
 import { cn } from "@/lib/cn";
 import type { SessionTab } from "@/stores/sessions";
-import { headerTint, type HeaderTint } from "./tint";
+import { headerTint, TINT_CLASS } from "./tint";
 import { PROTOCOL_LABEL, STATE_LABEL } from "@/app/protocol";
 import { RdpControls } from "@/rdp/RdpControls";
 import { SchemePicker } from "./SchemePicker";
 import { SessionControls } from "./SessionControls";
 import { SshControls } from "./SshControls";
-
-const TINT_CLASS: Record<HeaderTint, string> = {
-  local: "bg-surface",
-  remote: "bg-tint-remote",
-  serial: "bg-tint-serial",
-  privileged: "bg-tint-privileged",
-};
 
 /** Context-colored bar above the terminal (Ptyxis-style). */
 export function TerminalHeader({ tab, privileged }: { tab: SessionTab; privileged: boolean }) {

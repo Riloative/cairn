@@ -2,7 +2,9 @@ import { lazy, Suspense, useEffect } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SessionsView } from "@/views/SessionsView";
 import { useNotifications } from "@/stores/notifications";
+import { useSessions } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
+import { cn } from "@/lib/cn";
 import { useUi, type View } from "@/stores/ui";
 import { CommandPalette } from "./CommandPalette";
 import { ShortcutsSheet } from "./ShortcutsSheet";
@@ -79,6 +81,8 @@ function ViewFor({ view }: { view: View }) {
 /** The unlocked app: sidebar, session tabs and the active view. */
 export function Shell() {
   const view = useUi((s) => s.view);
+  const firstTabActive = useSessions((s) => s.tabs.length > 0 && s.tabs[0]?.id === s.activeId);
+  const tabOnCard = view === "sessions" && firstTabActive;
   const load = useSettings((s) => s.load);
   const notifyError = useNotifications((s) => s.notifyError);
 
@@ -103,7 +107,11 @@ export function Shell() {
         <TabBar />
         <main
           aria-label={view}
-          className="mr-2 mb-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-surface shadow-sm"
+          className={cn(
+            "mr-2 mb-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-surface shadow-sm",
+            // The active first tab sits flush on the card's corner.
+            tabOnCard && "rounded-tl-none",
+          )}
         >
           <ActiveView view={view} />
         </main>

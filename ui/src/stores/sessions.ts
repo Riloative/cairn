@@ -31,6 +31,8 @@ interface SessionsStore {
   setVendor: (id: string, vendor: string) => void;
   setRecording: (id: string, recording: boolean) => void;
   setPalette: (id: string, paletteId: string | undefined) => void;
+  /** Move a tab to another position (drag to reorder). */
+  move: (id: string, toIndex: number) => void;
 }
 
 export const useSessions = create<SessionsStore>((set, get) => ({
@@ -60,6 +62,15 @@ export const useSessions = create<SessionsStore>((set, get) => ({
   },
   setRecording: (id, recording) =>
     set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, recording } : t)) }),
+  move: (id, toIndex) => {
+    const tabs = [...get().tabs];
+    const from = tabs.findIndex((t) => t.id === id);
+    if (from < 0) return;
+    const [tab] = tabs.splice(from, 1);
+    if (!tab) return;
+    tabs.splice(Math.max(0, Math.min(toIndex, tabs.length)), 0, tab);
+    set({ tabs });
+  },
   setPalette: (id, paletteId) =>
     set({ tabs: get().tabs.map((t) => (t.id === id ? { ...t, paletteId } : t)) }),
   setVendor: (id, vendor) =>

@@ -162,3 +162,11 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Minimap draws devices and links you can recognise
 - [x] Device icons polished: one size grid and corner radius, clearer details (IP phone, access point, switch ports)
 - [x] CI green on both platforms for M10 (runs 65–66)
+
+## M11 – Mouse comfort and inventory
+
+- [x] Session tabs line up with the card; the active tab continues the header below it
+- [x] "+" opens a New session menu (local shell, containers, SSH, Telnet, Serial, RDP, saved connections); a Search button opens the command search
+- [x] Tabs: right-click menu (reconnect, close, close others, close to the right), drag to reorder, close button always on the active tab, double-click the empty bar for a shell
+- [x] Asset number field for devices (form, details, table column, search, export)
+- [ ] CI green on both platforms for M11

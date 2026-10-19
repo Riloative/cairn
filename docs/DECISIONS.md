@@ -571,3 +571,23 @@ is 1.99).
 - **Icons kept, polished.** The device icons keep their designs (a trial of
   network-diagram shapes was dropped at the user's request) but share one 3–21 grid
   and corner radius; the IP phone and access point were redrawn to read clearly.
+
+## D-047 · Tabs that sit on the card, a menu behind "+", asset numbers (M11)
+
+- **Tab and card are one shape.** The tab bar has no left inset, so the first tab
+  starts at the card's edge, and the card's top-left corner is square while the first
+  tab is active in Sessions. The active tab takes the colour of the session header
+  below it. Header tints are translucent, so the tab draws the tint over the card
+  surface (`tintOverSurface`) instead of over the darker bar; otherwise the two
+  lavenders differ. Outside Sessions the card holds another view, so the active tab
+  is drawn selected but detached.
+- **"+" is for starting things.** It used to open the command palette, which was a
+  surprise with the mouse. It now opens a New session menu (local shell, container
+  shells from the action registry, each protocol's Quick Connect tab, the first saved
+  connections); the palette has its own Search button with the shortcut in its tooltip.
+- **Mouse paths for tab housekeeping:** context menu, drag to reorder (a
+  `sessions.move` action; the drop side follows the pointer's half of the tab),
+  middle-click and an always-visible close button on the active tab, double-click on
+  the empty bar for a local shell.
+- **Asset number** is a plain device column (migration 0010) rather than a custom field:
+  it is common enough to deserve search, a table column and a place in the export.
