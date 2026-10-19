@@ -5,6 +5,7 @@ import { snippetPath } from "@/lib/snippets";
 import { useBroadcast } from "@/stores/broadcast";
 import { useSessions } from "@/stores/sessions";
 import { useSnippets } from "@/stores/snippets";
+import { useUi } from "@/stores/ui";
 import { runSnippet } from "@/terminal/snippetRun";
 
 const hasTerminal = () => {
@@ -27,6 +28,13 @@ export function snippetActions(list: readonly Snippet[]): Action[] {
 }
 
 const STATIC: Action[] = [
+  {
+    id: "tools.tftp",
+    title: "TFTP server…",
+    group: "Tools",
+    keywords: ["firmware", "image", "config backup", "upload", "download"],
+    run: () => useUi.getState().openTool("tftp"),
+  },
   {
     id: "snippets.manage",
     title: "Snippets: Manage library…",

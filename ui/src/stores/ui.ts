@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
-export type View = "sessions" | "inventory" | "map" | "audit" | "settings";
+export type View = "sessions" | "inventory" | "map" | "audit" | "tools" | "settings";
+export type ToolsTab = "tftp" | "forwards";
 export type ConnectProtocol = "ssh" | "telnet" | "serial";
 
 interface UiState {
@@ -17,6 +18,10 @@ interface UiState {
   setView: (view: View) => void;
   setPaletteOpen: (open: boolean) => void;
   setNotificationsOpen: (open: boolean) => void;
+  toolsTab: ToolsTab;
+  setToolsTab: (tab: ToolsTab) => void;
+  /** Show a tools tab. */
+  openTool: (tab: ToolsTab) => void;
 }
 
 export const useUi = create<UiState>((set) => ({
@@ -31,4 +36,7 @@ export const useUi = create<UiState>((set) => ({
   setView: (view) => set({ view }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setNotificationsOpen: (notificationsOpen) => set({ notificationsOpen }),
+  toolsTab: "tftp",
+  setToolsTab: (toolsTab) => set({ toolsTab }),
+  openTool: (toolsTab) => set({ toolsTab, view: "tools" }),
 }));

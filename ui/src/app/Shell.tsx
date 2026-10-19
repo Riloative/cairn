@@ -3,6 +3,7 @@ import { AuditView } from "@/views/AuditView";
 import { SessionsView } from "@/views/SessionsView";
 import { SettingsView } from "@/views/settings/SettingsView";
 import { MapView } from "@/views/map/MapView";
+import { ToolsView } from "@/views/tools/ToolsView";
 import { useNotifications } from "@/stores/notifications";
 import { useSettings } from "@/stores/settings";
 import { useUi, type View } from "@/stores/ui";
@@ -38,6 +39,8 @@ function ActiveView({ view }: { view: View }) {
       return <MapView />;
     case "audit":
       return <AuditView />;
+    case "tools":
+      return <ToolsView />;
     case "settings":
       return <SettingsView />;
   }

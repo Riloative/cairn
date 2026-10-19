@@ -4,6 +4,7 @@ import { useNotifications } from "@/stores/notifications";
 import { useSerial, type TransferDirection } from "@/stores/serial";
 import { useSessions } from "@/stores/sessions";
 import { backendSessionId } from "./controller";
+import { formatBytes } from "@/lib/format";
 
 /** Line controls, BREAK and X/Ymodem transfers for serial (and BREAK for Telnet) tabs. */
 
@@ -40,12 +41,6 @@ export async function setLine(tabId: string, line: "dtr" | "rts", on: boolean) {
   } catch (e) {
     useNotifications.getState().notifyError(e, `Could not set ${line.toUpperCase()}`);
   }
-}
-
-export function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KiB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MiB`;
 }
 
 /**

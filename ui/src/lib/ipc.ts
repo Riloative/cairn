@@ -905,3 +905,49 @@ export const snippetDelete = (id: number) => call<null>("snippet_delete", { id }
 export const broadcastStarted = (targets: string[]) => call<null>("broadcast_started", { targets });
 export const broadcastEnded = (targets: string[], durationSecs: number) =>
   call<null>("broadcast_ended", { targets, durationSecs });
+
+// ---- TFTP server (M6) ----
+
+export interface TftpPrefs {
+  root: string;
+  bindHost: string;
+  port: number;
+  allowRead: boolean;
+  allowWrite: boolean;
+  overwrite: boolean;
+}
+
+export interface TftpLogEntry {
+  /** 0 for refused requests. */
+  id: number;
+  at: string;
+  peer: string;
+  file: string;
+  /** From the client's side: "read" = the device downloads from Cairn. */
+  direction: "read" | "write";
+  size: number | null;
+  bytes: number;
+  state: "running" | "done" | "failed" | "refused";
+  error: string | null;
+}
+
+export interface TftpStatus {
+  running: boolean;
+  address: string | null;
+  prefs: TftpPrefs;
+  log: TftpLogEntry[];
+}
+
+export interface LocalAddress {
+  interface: string;
+  address: string;
+}
+
+export const TFTP_TRANSFER_EVENT = "tftp://transfer";
+export const tftpStatus = () => call<TftpStatus>("tftp_status");
+export const tftpPrefsUpdate = (prefs: TftpPrefs) =>
+  call<TftpPrefs>("tftp_prefs_update", { prefs });
+export const tftpStart = (prefs: TftpPrefs) => call<TftpStatus>("tftp_start", { prefs });
+export const tftpStop = () => call<TftpStatus>("tftp_stop");
+export const tftpClearLog = () => call<null>("tftp_clear_log");
+export const localAddresses = () => call<LocalAddress[]>("local_addresses");

@@ -8,7 +8,8 @@ import { useNotifications } from "@/stores/notifications";
 import { useSerial } from "@/stores/serial";
 import { useSessions } from "@/stores/sessions";
 import { focusActiveTerminal } from "./controller";
-import { cancelTransfer, formatBytes, runTransfer, VARIANT_LABEL } from "./serialControls";
+import { formatBytes } from "@/lib/format";
+import { cancelTransfer, runTransfer, VARIANT_LABEL } from "./serialControls";
 
 const VARIANTS: readonly { value: TransferVariant; label: string }[] = [
   { value: "xmodem", label: VARIANT_LABEL.xmodem },

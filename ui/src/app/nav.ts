@@ -4,6 +4,7 @@ import {
   Server,
   Settings,
   ShieldCheck,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import type { View } from "@/stores/ui";
@@ -20,5 +21,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { view: "inventory", label: "Inventory", icon: Server, shortcut: "Mod+2" },
   { view: "map", label: "Map", icon: MapIcon, shortcut: "Mod+3" },
   { view: "audit", label: "Audit", icon: ShieldCheck, shortcut: "Mod+4" },
+  { view: "tools", label: "Tools", icon: Wrench, shortcut: "Mod+5" },
   { view: "settings", label: "Settings", icon: Settings, shortcut: "Mod+," },
 ];

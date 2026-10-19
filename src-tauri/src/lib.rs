@@ -26,6 +26,7 @@ pub fn run() {
             app.manage(state::AppState::new(Vault::new(dir)));
             app.manage(sessions::SessionManager::new());
             app.manage(commands::serial::PortWatcher::default());
+            app.manage(commands::tftp::TftpService::default());
             autolock::spawn(app.handle().clone());
             Ok(())
         })
@@ -106,6 +107,12 @@ pub fn run() {
             commands::tools::snippet_delete,
             commands::tools::broadcast_started,
             commands::tools::broadcast_ended,
+            commands::tftp::tftp_status,
+            commands::tftp::tftp_prefs_update,
+            commands::tftp::tftp_start,
+            commands::tftp::tftp_stop,
+            commands::tftp::tftp_clear_log,
+            commands::tftp::local_addresses,
         ])
         .build(tauri::generate_context!())
         .map(|app| {
@@ -115,6 +122,10 @@ pub fn run() {
                     handle
                         .state::<std::sync::Arc<sessions::SessionManager>>()
                         .close_all();
+                    let state = handle.state::<state::AppState>();
+                    handle
+                        .state::<commands::tftp::TftpService>()
+                        .stop(&state.vault, &state.audit);
                 }
             })
         });

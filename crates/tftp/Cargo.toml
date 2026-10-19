@@ -10,11 +10,15 @@ authors.workspace = true
 publish = false
 
 [dependencies]
+cairn-core.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+tokio = { workspace = true, features = ["net", "fs", "io-util", "time", "sync", "macros", "rt"] }
 
 [dev-dependencies]
 serde_json.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["net", "fs", "io-util", "time", "sync", "macros", "rt-multi-thread"] }
 
 [lints]
 workspace = true

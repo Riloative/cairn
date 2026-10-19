@@ -9,6 +9,8 @@ import type {
   Settings,
   TerminalPrefs,
   Snippet,
+  TftpPrefs,
+  TftpStatus,
   TransferStatus,
   VaultStatus,
 } from "@/lib/ipc";
@@ -55,6 +57,19 @@ export class FakeBackend {
     (payload) => this.fail(payload),
   );
   snippets: Snippet[] = [];
+  tftp: TftpStatus = {
+    running: false,
+    address: null,
+    prefs: {
+      root: "",
+      bindHost: "0.0.0.0",
+      port: 6969,
+      allowRead: true,
+      allowWrite: false,
+      overwrite: false,
+    },
+    log: [],
+  };
   /** Session ids written to, with the text, in order (broadcast assertions). */
   writes: { sessionId: string; text: string }[] = [];
   /** What the native open/save dialog returns. */
@@ -145,6 +160,38 @@ export class FakeBackend {
       case "snippet_delete":
         this.snippets = this.snippets.filter((x) => x.id !== args.id);
         return null;
+      case "tftp_status":
+        return structuredClone(this.tftp);
+      case "tftp_prefs_update":
+        this.tftp.prefs = args.prefs as TftpPrefs;
+        return this.tftp.prefs;
+      case "tftp_start": {
+        this.requireUnlocked();
+        const prefs = args.prefs as TftpPrefs;
+        if (prefs.port < 1024)
+          this.fail({
+            code: "tftp.permission",
+            message: `Cairn may not listen on ${prefs.bindHost}:${prefs.port}: permission denied`,
+            hint: "Port is privileged.",
+          });
+        this.tftp = {
+          ...this.tftp,
+          running: true,
+          prefs,
+          address: `${prefs.bindHost}:${prefs.port}`,
+        };
+        this.log("tftp_server", { action: "started" });
+        return structuredClone(this.tftp);
+      }
+      case "tftp_stop":
+        if (this.tftp.running) this.log("tftp_server", { action: "stopped" });
+        this.tftp = { ...this.tftp, running: false, address: null };
+        return structuredClone(this.tftp);
+      case "tftp_clear_log":
+        this.tftp.log = [];
+        return null;
+      case "local_addresses":
+        return [{ interface: "eth0", address: "192.168.1.10" }];
       case "broadcast_started":
         this.log("broadcast_started", { targets: args.targets });
         return null;
