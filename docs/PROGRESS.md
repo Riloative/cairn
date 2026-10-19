@@ -298,7 +298,7 @@ App), and a changed server certificate (regenerate it) showing the warning.
   reads and then wait 5 minutes (CI run 35); the first prompt is now taken after the
   output goes quiet.
 
-**Next:** M9 (polish).
+**Next:** M9 (polish). M8 CI green on both platforms (run 45).
 
 **Test manually:** an audit log of a few thousand entries (filters and paging feel
 fast), retention on a log with entries older than the cutoff, recording a long SSH

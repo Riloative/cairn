@@ -142,7 +142,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Encrypted `.cairn-backup` full backup + restore
 - [x] Offer an encrypted backup right after first-run setup (moved here from M1, see D-012)
 - [x] JSON/CSV readable export (credentials opt-in with warning)
-- [ ] CI green on both platforms for M8
+- [x] CI green on both platforms for M8 (run 45)
 
 ## M9 – Polish
 
