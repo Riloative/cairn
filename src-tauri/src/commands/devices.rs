@@ -347,6 +347,7 @@ mod tests {
             model: String::new(),
             serial: String::new(),
             firmware: String::new(),
+            asset_number: String::new(),
             building_id: None,
             floor_id: None,
             room_id: None,

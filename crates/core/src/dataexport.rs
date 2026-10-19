@@ -264,6 +264,7 @@ pub fn write_csv(data: &DataExport, dir: &Path) -> Result<Vec<PathBuf>, CoreErro
             "model",
             "serial",
             "firmware",
+            "asset_number",
             "building",
             "floor",
             "room",
@@ -290,6 +291,7 @@ pub fn write_csv(data: &DataExport, dir: &Path) -> Result<Vec<PathBuf>, CoreErro
                     d.model.clone(),
                     d.serial.clone(),
                     d.firmware.clone(),
+                    d.asset_number.clone(),
                     d.building_id
                         .and_then(|i| building.get(&i).map(|b| b.name.clone()))
                         .unwrap_or_default(),

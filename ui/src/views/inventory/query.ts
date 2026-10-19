@@ -45,6 +45,7 @@ export function searchText(d: Device, s: InventorySnapshot): string {
     d.model,
     d.serial,
     d.firmware,
+    d.assetNumber,
     locationLabel(d, s),
     cred,
     d.tags.join(" "),

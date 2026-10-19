@@ -101,6 +101,7 @@ describe("devices", () => {
         mgmtIp: "10.0.0.10",
         vendor: "Cisco",
         serial: "FOC123",
+        assetNumber: "INV-004211",
         tags: ["core"],
       },
       { hostname: "edge-fw", mgmtIp: "10.0.0.9", vendor: "Juniper", deviceType: "firewall" },
@@ -114,6 +115,10 @@ describe("devices", () => {
     await user.type(screen.getByLabelText("Search devices"), "foc123");
     expect(rows()).toHaveLength(1);
     expect(screen.getByText("1 of 3 devices")).toBeVisible();
+    await user.clear(screen.getByLabelText("Search devices"));
+    // The asset number is searchable too.
+    await user.type(screen.getByLabelText("Search devices"), "inv-0042");
+    expect(rows()).toHaveLength(1);
     await user.clear(screen.getByLabelText("Search devices"));
 
     await user.click(screen.getByRole("button", { name: /Filter/ }));

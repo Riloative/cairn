@@ -271,6 +271,9 @@ pub struct Device {
     pub serial: String,
     #[serde(default)]
     pub firmware: String,
+    /// Asset number (inventory tag), free text.
+    #[serde(default)]
+    pub asset_number: String,
     #[serde(default)]
     pub building_id: Option<i64>,
     #[serde(default)]
@@ -323,7 +326,8 @@ pub struct SaveResult {
 const COLS: &str = "SELECT id, hostname, mgmt_ip, device_type, vendor, model, serial, firmware,
     building_id, floor_id, room_id, rack_id, rack_u, u_height, credential_id, connections,
     vlans, tags, notes, custom, created_at, updated_at,
-    (SELECT count(*) FROM interfaces i WHERE i.device_id = devices.id), record_sessions
+    (SELECT count(*) FROM interfaces i WHERE i.device_id = devices.id), record_sessions,
+    asset_number
     FROM devices";
 
 fn row(r: &Row<'_>) -> rusqlite::Result<Device> {
@@ -337,6 +341,7 @@ fn row(r: &Row<'_>) -> rusqlite::Result<Device> {
         model: r.get(5)?,
         serial: r.get(6)?,
         firmware: r.get(7)?,
+        asset_number: r.get(24)?,
         building_id: r.get(8)?,
         floor_id: r.get(9)?,
         room_id: r.get(10)?,
@@ -448,6 +453,7 @@ fn clean(conn: &Connection, input: &Device) -> Result<Device, CoreError> {
     d.model = validate::text(&d.model, "model", 100)?;
     d.serial = validate::text(&d.serial, "serial number", 100)?;
     d.firmware = validate::text(&d.firmware, "firmware version", 100)?;
+    d.asset_number = validate::text(&d.asset_number, "asset number", 100)?;
     d.notes = validate::text(&d.notes, "notes", 100_000)?;
     if !(1..=60).contains(&d.u_height) {
         return Err(CoreError::Validation("Height must be 1–60 U.".into()));
@@ -542,9 +548,10 @@ pub fn save(conn: &Connection, input: &Device) -> Result<SaveResult, CoreError> 
         tx.execute(
             "INSERT INTO devices (hostname, mgmt_ip, device_type, vendor, model, serial, firmware,
              building_id, floor_id, room_id, rack_id, rack_u, u_height, credential_id,
-             connections, vlans, tags, notes, custom, created_at, updated_at, record_sessions)
+             connections, vlans, tags, notes, custom, created_at, updated_at, record_sessions,
+             asset_number)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17,
-             ?18, ?19, ?20, ?20, ?21)",
+             ?18, ?19, ?20, ?20, ?21, ?22)",
             params![
                 d.hostname,
                 d.mgmt_ip,
@@ -566,7 +573,8 @@ pub fn save(conn: &Connection, input: &Device) -> Result<SaveResult, CoreError> 
                 d.notes,
                 to_json(&d.custom)?,
                 now,
-                d.record_sessions
+                d.record_sessions,
+                d.asset_number
             ],
         )?;
         (None, tx.last_insert_rowid())
@@ -577,7 +585,7 @@ pub fn save(conn: &Connection, input: &Device) -> Result<SaveResult, CoreError> 
              model = ?6, serial = ?7, firmware = ?8, building_id = ?9, floor_id = ?10,
              room_id = ?11, rack_id = ?12, rack_u = ?13, u_height = ?14, credential_id = ?15,
              connections = ?16, vlans = ?17, tags = ?18, notes = ?19, custom = ?20,
-             updated_at = ?21, record_sessions = ?22 WHERE id = ?1",
+             updated_at = ?21, record_sessions = ?22, asset_number = ?23 WHERE id = ?1",
             params![
                 d.id,
                 d.hostname,
@@ -600,7 +608,8 @@ pub fn save(conn: &Connection, input: &Device) -> Result<SaveResult, CoreError> 
                 d.notes,
                 to_json(&d.custom)?,
                 now,
-                d.record_sessions
+                d.record_sessions,
+                d.asset_number
             ],
         )?;
         (Some(old), d.id)
@@ -708,6 +717,7 @@ pub(crate) mod tests {
             model: "C9300-48P".into(),
             serial: String::new(),
             firmware: String::new(),
+            asset_number: String::new(),
             building_id: None,
             floor_id: None,
             room_id: None,
@@ -899,6 +909,14 @@ pub(crate) mod tests {
         assert_eq!(update["action"], "updated");
         assert_eq!(update["changes"].as_array().map(Vec::len), Some(1));
         assert_eq!(update["changes"][0]["field"], "model");
+
+        // The asset number round-trips and its change is audited like any field.
+        let mut tagged = get(&c, d.id).expect("get").expect("some");
+        tagged.asset_number = "  INV-004211 ".into();
+        let saved = save(&c, &tagged).expect("asset number").device;
+        assert_eq!(saved.asset_number, "INV-004211");
+        let log = testutil::changes(&c);
+        assert_eq!(log[3]["changes"][0]["field"], "assetNumber");
 
         let copy = duplicate(&c, d.id).expect("dup").device;
         assert_eq!(copy.hostname, "sw1-copy");

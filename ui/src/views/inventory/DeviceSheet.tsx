@@ -57,6 +57,7 @@ function Overview({ device, snapshot }: { device: Device; snapshot: InventorySna
         </Row>
         {device.serial && <Row label="Serial">{device.serial}</Row>}
         {device.firmware && <Row label="Firmware">{device.firmware}</Row>}
+        {device.assetNumber && <Row label="Asset number">{device.assetNumber}</Row>}
         <Row label="Location">{locationLabel(device, snapshot) || "—"}</Row>
         <Row label="Credentials">{cred?.name ?? "None"}</Row>
         {vlans.length > 0 && (

@@ -661,6 +661,8 @@ export interface Device {
   model: string;
   serial: string;
   firmware: string;
+  /** Asset number (inventory tag). */
+  assetNumber: string;
   buildingId: number | null;
   floorId: number | null;
   roomId: number | null;
