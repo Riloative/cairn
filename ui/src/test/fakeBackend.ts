@@ -2,6 +2,8 @@ import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { emit } from "@tauri-apps/api/event";
 import type { Channel } from "@tauri-apps/api/core";
 import type {
+  RdpInput,
+  RdpMessage,
   AuditEntry,
   ErrorPayload,
   PortInfo,
@@ -78,6 +80,18 @@ export class FakeBackend {
     (payload) => this.fail(payload),
   );
   snippets: Snippet[] = [];
+  /** Opened RDP sessions with their channels, for tests to drive. */
+  rdpSessions: {
+    sessionId: string;
+    args: Record<string, unknown>;
+    onFrame: Channel<ArrayBuffer>;
+    onEvent: Channel<RdpMessage>;
+  }[] = [];
+  rdpInputs: { sessionId: string; events: RdpInput[] }[] = [];
+  rdpClipboard: string[] = [];
+  rdpClosed: string[] = [];
+  rdpExternal: { deviceId: number; method: number }[] = [];
+  promptReplies: { promptId: number; answer: unknown }[] = [];
   forwards: ForwardInfo[] = [];
   /** Remote folders for the SFTP panel, by path. Null = SFTP not available. */
   remoteFs: Record<string, RemoteEntry[]> | null = {
@@ -195,6 +209,47 @@ export class FakeBackend {
       if (r.handled) return r.result;
     }
     switch (cmd) {
+      case "rdp_open":
+      case "device_rdp_open": {
+        this.requireUnlocked();
+        const sessionId = `r${this.rdpSessions.length + 1}`;
+        this.rdpSessions.push({
+          sessionId,
+          args,
+          onFrame: args.onFrame as Channel<ArrayBuffer>,
+          onEvent: args.onEvent as Channel<RdpMessage>,
+        });
+        const view = args.view as { width: number; height: number };
+        const options = args.options as { host?: string } | undefined;
+        return {
+          sessionId,
+          title: options?.host ?? "device",
+          width: view.width,
+          height: view.height,
+        };
+      }
+      case "session_prompt_reply":
+        this.promptReplies.push({ promptId: args.promptId as number, answer: args.answer });
+        return null;
+      case "rdp_input":
+        this.rdpInputs.push({
+          sessionId: args.sessionId as string,
+          events: args.events as RdpInput[],
+        });
+        return null;
+      case "rdp_clipboard":
+        this.rdpClipboard.push(args.text as string);
+        return null;
+      case "rdp_close":
+        this.rdpClosed.push(args.sessionId as string);
+        return null;
+      case "rdp_resize":
+      case "rdp_ctrl_alt_del":
+        return null;
+      case "rdp_external":
+        this.requireUnlocked();
+        this.rdpExternal.push({ deviceId: args.deviceId as number, method: args.method as number });
+        return "Opened in xfreerdp3";
       case "snippets_list":
         this.requireUnlocked();
         return structuredClone(this.snippets);

@@ -1,3 +1,4 @@
+import { CertificatePrompt } from "@/rdp/CertificatePrompt";
 import { useNotifications } from "@/stores/notifications";
 import { usePrompts } from "@/stores/prompts";
 import { CredentialPrompt } from "./CredentialPrompt";
@@ -13,6 +14,15 @@ export function SessionPrompts() {
   const reply = (a: Parameters<typeof answer>[1]) =>
     answer(current.id, a).catch((e: unknown) => notifyError(e, "Could not send the answer"));
 
+  if (current.type === "certificate") {
+    return (
+      <CertificatePrompt
+        key={current.id}
+        p={current}
+        onAnswer={(accept) => void reply({ kind: "hostKey", accept })}
+      />
+    );
+  }
   if (current.type === "host_key") {
     return (
       <HostKeyPrompt

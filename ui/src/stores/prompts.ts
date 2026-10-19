@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import * as ipc from "@/lib/ipc";
-import type { HostKeyInfo, HostKeyStatus, PromptAnswer, SshPrompt } from "@/lib/ipc";
+import type { CertInfo, HostKeyInfo, HostKeyStatus, PromptAnswer, SshPrompt } from "@/lib/ipc";
 
 export type PendingPrompt =
   | {
@@ -11,7 +11,8 @@ export type PendingPrompt =
       status: HostKeyStatus;
       openssh: "match" | "mismatch" | "unknown";
     }
-  | { id: number; tabId: string; type: "prompt"; prompt: SshPrompt };
+  | { id: number; tabId: string; type: "prompt"; prompt: SshPrompt }
+  | { id: number; tabId: string; type: "certificate"; cert: CertInfo; status: HostKeyStatus };
 
 interface PromptsState {
   /** Oldest first; the UI shows the first one. */

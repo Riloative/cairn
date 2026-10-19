@@ -6,7 +6,9 @@ import { confirmAction } from "@/stores/confirm";
 import { useInventory } from "@/stores/inventory";
 import { useNotifications } from "@/stores/notifications";
 import { useUi } from "@/stores/ui";
+import { openRdpDevice } from "@/rdp/controller";
 import { openDevice } from "@/terminal/controller";
+import { methodError } from "./model";
 import { mutate } from "./mutate";
 
 /** Label for a connection method in menus. */
@@ -27,9 +29,9 @@ export function methodLabel(m: ConnectionMethod): string {
   }
 }
 
-/** Whether Cairn can open this method in a tab now (RDP arrives later). */
+/** Whether a method can be opened: its settings are complete. */
 export function canOpen(m: ConnectionMethod): boolean {
-  return m.kind !== "rdp";
+  return methodError(m) === undefined;
 }
 
 /** Open a connection method: a terminal tab, or the browser for web UIs. */
@@ -39,7 +41,7 @@ export function connect(device: Device, index = 0) {
     useNotifications.getState().notify({
       variant: "warning",
       title: `${device.hostname} has no connection methods`,
-      description: "Edit the device and add SSH, Telnet, serial or a console server.",
+      description: "Edit the device and add SSH, Telnet, serial, a console server or RDP.",
     });
     return;
   }
@@ -50,11 +52,18 @@ export function connect(device: Device, index = 0) {
     return;
   }
   if (m.kind === "rdp") {
-    useNotifications.getState().notify({
-      variant: "info",
-      title: "RDP is not available yet",
-      description: "RDP sessions arrive in a later version of Cairn.",
-    });
+    if (m.external) {
+      ipc.rdpExternal(device.id, index).then(
+        (what) =>
+          useNotifications
+            .getState()
+            .notify({ variant: "success", title: `${device.hostname}: ${what}` }),
+        (e: unknown) => useNotifications.getState().notifyError(e, "Could not open the RDP client"),
+      );
+      return;
+    }
+    useUi.getState().setView("sessions");
+    openRdpDevice(device, index, m);
     return;
   }
   useUi.getState().setView("sessions");

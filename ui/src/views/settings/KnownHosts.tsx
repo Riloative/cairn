@@ -31,7 +31,7 @@ export function KnownHosts() {
 
   if (hosts === null) return <Skeleton className="h-16" />;
   if (hosts.length === 0)
-    return <p className="py-2 text-xs text-fg-subtle">No trusted host keys yet.</p>;
+    return <p className="py-2 text-xs text-fg-subtle">No trusted host keys or certificates yet.</p>;
   return (
     <ul className="flex flex-col">
       {hosts.map((h) => (
@@ -45,7 +45,7 @@ export function KnownHosts() {
               {h.port !== 22 && <span className="text-fg-subtle">:{h.port}</span>}
             </p>
             <p className="truncate font-mono text-xs text-fg-muted" data-selectable>
-              {h.keyType} {h.fingerprint}
+              {h.keyType === "x509" ? "RDP certificate" : h.keyType} {h.fingerprint}
             </p>
           </div>
           <span className="text-xs text-fg-subtle">

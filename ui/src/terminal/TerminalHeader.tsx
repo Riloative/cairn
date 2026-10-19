@@ -2,6 +2,7 @@ import { cn } from "@/lib/cn";
 import type { SessionTab } from "@/stores/sessions";
 import { headerTint, type HeaderTint } from "./tint";
 import { PROTOCOL_LABEL, STATE_LABEL } from "@/app/protocol";
+import { RdpControls } from "@/rdp/RdpControls";
 import { SessionControls } from "./SessionControls";
 import { SshControls } from "./SshControls";
 
@@ -34,6 +35,7 @@ export function TerminalHeader({ tab, privileged }: { tab: SessionTab; privilege
       )}
       <span className="flex-1" />
       <SshControls tab={tab} />
+      <RdpControls tab={tab} />
       <SessionControls tab={tab} />
       <span className="text-xs text-fg-subtle">{STATE_LABEL[tab.state]}</span>
     </div>

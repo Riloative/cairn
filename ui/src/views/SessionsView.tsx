@@ -2,6 +2,7 @@ import { TerminalSquare } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useSessions } from "@/stores/sessions";
 import { backendSessionId, openLocalShell } from "@/terminal/controller";
+import { RdpPane } from "@/rdp/RdpPane";
 import { FilePanel } from "@/terminal/FilePanel";
 import { TerminalHeader } from "@/terminal/TerminalHeader";
 import { TerminalPane } from "@/terminal/TerminalPane";
@@ -39,14 +40,24 @@ export function SessionsView() {
       <TerminalHeader tab={active} privileged={privileged} />
       <SnippetBar tab={active} />
       <div className="flex min-h-0 flex-1">
-        <div className="relative min-h-0 flex-1" onDoubleClick={(e) => e.stopPropagation()}>
-          {tabs
-            .filter((t) => t.protocol !== "rdp")
-            .map((t) => (
+        <div
+          data-session-area
+          className="relative min-h-0 flex-1"
+          onDoubleClick={(e) => e.stopPropagation()}
+        >
+          {tabs.map((t) =>
+            t.protocol === "rdp" ? (
+              <RdpPane key={t.id} tab={t} active={t.id === activeId} />
+            ) : (
               <TerminalPane key={t.id} tabId={t.id} active={t.id === activeId} />
-            ))}
-          <ReconnectOverlay tab={active} />
-          <SearchBar key={active.id} tabId={active.id} />
+            ),
+          )}
+          {active.protocol !== "rdp" && (
+            <>
+              <ReconnectOverlay tab={active} />
+              <SearchBar key={active.id} tabId={active.id} />
+            </>
+          )}
         </div>
         {active.protocol === "ssh" && sessionId && <FilePanel tab={active} sessionId={sessionId} />}
       </div>

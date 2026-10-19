@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 export type View = "sessions" | "inventory" | "map" | "audit" | "tools" | "settings";
 export type ToolsTab = "tftp" | "forwards";
-export type ConnectProtocol = "ssh" | "telnet" | "serial";
+export type ConnectProtocol = "ssh" | "telnet" | "serial" | "rdp";
 
 interface UiState {
   view: View;

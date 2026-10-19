@@ -186,6 +186,13 @@ export function coreActions(): Action[] {
       run: () => ui().openConnect("serial"),
     },
     {
+      id: "rdp.connect",
+      title: "New RDP connection…",
+      group: "Sessions",
+      keywords: ["rdp", "remote desktop", "windows", "xrdp", "mstsc"],
+      run: () => ui().openConnect("rdp"),
+    },
+    {
       id: "session.break",
       title: "Send BREAK",
       group: "Terminal",

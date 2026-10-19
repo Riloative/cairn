@@ -561,7 +561,22 @@ export type ConnectionMethod =
       localEcho: boolean;
     }
   | { kind: "console-server"; host: string; server: ConsoleServerKind; port: number; raw: boolean }
-  | { kind: "rdp"; port: number; username: string }
+  | {
+      kind: "rdp";
+      port: number;
+      username: string;
+      domain: string;
+      security: RdpSecurity;
+      /** 0×0 follows the window. */
+      width: number;
+      height: number;
+      colorDepth: 16 | 32;
+      clipboard: boolean;
+      /** SSH jump host (`user@host:port`); empty connects directly. */
+      tunnel: string;
+      /** Open in FreeRDP / the system RDP app instead of a tab. */
+      external: boolean;
+    }
   | { kind: "web"; url: string };
 
 export type CustomValue = string | number | boolean | string[] | null;
@@ -746,6 +761,113 @@ export const deviceConnect = (
   rows: number,
   cb: SessionCallbacks,
 ) => call<DeviceOpened>("device_connect", { deviceId, method, cols, rows, ...channels(cb) });
+
+// ── RDP ────────────────────────────────────────────────────────────────────────────
+
+export type RdpSecurity = "nla" | "tls";
+
+/** Ad-hoc RDP options (quick connect). Mirrors `commands::rdp::RdpOptions`. */
+export interface RdpOptions {
+  host: string;
+  port: number;
+  username: string;
+  /** Omit to be asked when connecting. */
+  password?: string | null;
+  domain: string;
+  security: RdpSecurity;
+  width: number;
+  height: number;
+  colorDepth: 16 | 32;
+  clipboard: boolean;
+  tunnel: string;
+}
+
+/** The view's size in CSS pixels and its device pixel ratio × 100. */
+export interface RdpViewSize {
+  width: number;
+  height: number;
+  scale: number;
+}
+
+export interface RdpOpened {
+  sessionId: string;
+  title: string;
+  width: number;
+  height: number;
+}
+
+/** Mirrors `cairn_proto_rdp::CertInfo`. */
+export interface CertInfo {
+  host: string;
+  port: number;
+  fingerprint: string;
+  digest: string;
+  subject: string;
+  issuer: string;
+  notBefore: number;
+  notAfter: number;
+  selfSigned: boolean;
+  expired: boolean;
+}
+
+export type RdpPhase = "connecting" | "securing" | "authenticating";
+
+/** Mirrors `cairn_proto_rdp::RdpEvent`. */
+export type RdpEvent =
+  | { type: "progress"; phase: RdpPhase }
+  | { type: "connected"; width: number; height: number }
+  | { type: "resized"; width: number; height: number }
+  | { type: "pointer_default" }
+  | { type: "pointer_hidden" }
+  | { type: "clipboard"; text: string }
+  | { type: "closed"; graceful: boolean; message: string };
+
+/** Mirrors `sessions::rdp::RdpMessage`. */
+export type RdpMessage =
+  | { type: "event"; event: RdpEvent }
+  | { type: "certificate"; promptId: number; cert: CertInfo; status: HostKeyStatus }
+  | { type: "credentials"; promptId: number; username: string; target: string }
+  | { type: "ssh"; message: SessionMessage };
+
+/** Mirrors `cairn_proto_rdp::RdpInput` (desktop coordinates). */
+export type RdpInput =
+  | { kind: "key"; code: string; down: boolean }
+  | { kind: "move"; x: number; y: number }
+  | { kind: "button"; button: number; down: boolean }
+  | { kind: "wheel"; vertical: boolean; units: number }
+  | { kind: "releaseAll" };
+
+export interface RdpCallbacks {
+  /** A binary frame or pointer message (see `rdp/frames.ts`). */
+  onFrame: (bytes: Uint8Array) => void;
+  onMessage: (msg: RdpMessage) => void;
+}
+
+function rdpChannels(cb: RdpCallbacks) {
+  const onFrame = new Channel<ArrayBuffer>((payload) => cb.onFrame(toBytes(payload)));
+  const onEvent = new Channel<RdpMessage>(cb.onMessage);
+  return { onFrame, onEvent };
+}
+
+export const rdpOpen = (options: RdpOptions, view: RdpViewSize, cb: RdpCallbacks) =>
+  call<RdpOpened>("rdp_open", { options, view, ...rdpChannels(cb) });
+export const deviceRdpOpen = (
+  deviceId: number,
+  method: number,
+  view: RdpViewSize,
+  cb: RdpCallbacks,
+) => call<RdpOpened>("device_rdp_open", { deviceId, method, view, ...rdpChannels(cb) });
+export const rdpInput = (sessionId: string, events: RdpInput[]) =>
+  call<null>("rdp_input", { sessionId, events });
+export const rdpResize = (sessionId: string, view: RdpViewSize) =>
+  call<null>("rdp_resize", { sessionId, view });
+export const rdpClipboard = (sessionId: string, text: string) =>
+  call<null>("rdp_clipboard", { sessionId, text });
+export const rdpCtrlAltDel = (sessionId: string) => call<null>("rdp_ctrl_alt_del", { sessionId });
+export const rdpClose = (sessionId: string) => call<null>("rdp_close", { sessionId });
+/** Launch the device in FreeRDP / the system RDP app; returns what was opened. */
+export const rdpExternal = (deviceId: number, method: number) =>
+  call<string>("rdp_external", { deviceId, method });
 
 // ── Map ────────────────────────────────────────────────────────────────────────────
 

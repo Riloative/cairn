@@ -41,7 +41,19 @@ export function defaultMethod(kind: Kind, ip: string): ConnectionMethod {
         localEcho: false,
       };
     case "rdp":
-      return { kind, port: 3389, username: "" };
+      return {
+        kind,
+        port: 3389,
+        username: "",
+        domain: "",
+        security: "nla",
+        width: 0,
+        height: 0,
+        colorDepth: 32,
+        clipboard: true,
+        tunnel: "",
+        external: false,
+      };
     case "web":
       return { kind, url: ip ? `https://${ip.includes(":") ? `[${ip}]` : ip}/` : "https://" };
   }
@@ -53,8 +65,17 @@ export function methodError(m: ConnectionMethod): string | undefined {
   switch (m.kind) {
     case "ssh":
     case "telnet":
-    case "rdp":
       return port(m.port) ? "The port must be 1–65535." : undefined;
+    case "rdp": {
+      if (port(m.port)) return "The port must be 1–65535.";
+      const side = (v: number) => Number.isInteger(v) && v >= 200 && v <= 8192;
+      const fit = m.width === 0 && m.height === 0;
+      if (!fit && !(side(m.width) && side(m.height)))
+        return "The resolution must be 200–8192 pixels per side.";
+      if (m.tunnel.trim() && /\s/.test(m.tunnel.trim()))
+        return "The SSH tunnel is user@host:port, without spaces.";
+      return undefined;
+    }
     case "console-server":
       if (!m.host.trim() || /\s/.test(m.host.trim())) return "Enter the console server address.";
       return consoleTcpPort(m.server, m.port) === null ? "Enter a valid port number." : undefined;

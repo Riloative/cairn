@@ -23,12 +23,12 @@ export function deviceActions(devices: readonly Device[]): Action[] {
         },
       },
     ];
-    if (first && first.kind !== "rdp")
+    if (first)
       out.unshift({
         id: `device.connect.${d.id}`,
         title: `Connect to ${d.hostname}`,
         group: "Devices",
-        keywords: [...keywords, methodLabel(first), "ssh", "telnet", "console"],
+        keywords: [...keywords, methodLabel(first), "ssh", "telnet", "console", "rdp"],
         run: () => connect(d, 0),
       });
     return out;

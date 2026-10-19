@@ -15,6 +15,16 @@ export function isTypingInField(target: EventTarget | null): boolean {
   );
 }
 
+/**
+ * While a remote desktop has focus every key goes to the server, except these: the
+ * palette, tab switching and lock stay reachable.
+ */
+const RDP_PASSTHROUGH = new Set(["palette.open", "tabs.next", "tabs.previous", "vault.lock"]);
+
+function inRemoteDesktop(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && target.closest("[data-rdp-capture]") !== null;
+}
+
 /** Run the action whose shortcut matches a keydown anywhere in the window. */
 export function useGlobalShortcuts() {
   useEffect(() => {
@@ -24,6 +34,7 @@ export function useGlobalShortcuts() {
       const actions = availableActions(useActions.getState().actions);
       const hit = actions.find((a) => a.shortcut && matchesShortcut(a.shortcut, e, mac));
       if (!hit) return;
+      if (inRemoteDesktop(e.target) && !RDP_PASSTHROUGH.has(hit.id)) return;
       if (hit.scope && hit.scope !== "global" && isTypingInField(e.target)) return;
       e.preventDefault();
       e.stopPropagation();

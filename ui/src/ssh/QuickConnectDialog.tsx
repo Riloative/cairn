@@ -2,10 +2,13 @@ import { useCallback, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/Dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+import { RdpFields } from "@/connect/RdpFields";
+import { buildRdp, EMPTY_RDP, validateRdp, type RdpForm } from "@/connect/rdpForm";
 import { SerialFields } from "@/connect/SerialFields";
 import { buildSerial, EMPTY_SERIAL, validateSerial, type SerialForm } from "@/connect/serialForm";
 import { TelnetFields } from "@/connect/TelnetFields";
 import { buildTelnet, EMPTY_TELNET, validateTelnet, type TelnetForm } from "@/connect/telnetForm";
+import { openRdp } from "@/rdp/controller";
 import { useUi, type ConnectProtocol } from "@/stores/ui";
 import { focusActiveTerminal, openSerial, openSsh, openTelnet } from "@/terminal/controller";
 import { buildOptions, EMPTY_FORM, validate, type QuickConnectForm } from "./buildOptions";
@@ -24,9 +27,10 @@ const DESCRIPTIONS: Record<ConnectProtocol, string> = {
   ssh: "Connect by address. Saved devices connect from the inventory or the palette.",
   telnet: "Telnet or raw TCP, including console-server ports (reverse Telnet).",
   serial: "A console cable on this machine. The port list follows plugging and unplugging.",
+  rdp: "A Windows or xrdp desktop. The server's certificate is checked before you sign in.",
 };
 
-/** Quick-connect dialog with SSH, Telnet and Serial tabs (`Mod+N`). */
+/** Quick-connect dialog with SSH, Telnet, Serial and RDP tabs (`Mod+N`). */
 export function QuickConnectDialog() {
   const open = useUi((s) => s.quickConnectOpen);
   const setOpen = useUi((s) => s.setQuickConnectOpen);
@@ -36,6 +40,7 @@ export function QuickConnectDialog() {
   const [ssh, setSsh, replaceSsh] = useForm<QuickConnectForm>(EMPTY_FORM);
   const [telnet, setTelnet] = useForm<TelnetForm>(EMPTY_TELNET);
   const [serial, setSerial] = useForm<SerialForm>(EMPTY_SERIAL);
+  const [rdp, setRdp] = useState<RdpForm>(EMPTY_RDP);
   const [touched, setTouched] = useState(false);
   // Focus the first field when the dialog opens, but not when switching tabs (keyboard
   // users stay on the tab list).
@@ -45,6 +50,7 @@ export function QuickConnectDialog() {
     setOpen(false);
     // Never keep a typed password around after the dialog closes.
     replaceSsh((f) => ({ ...f, password: "" }));
+    setRdp((f) => ({ ...f, password: "" }));
     setTouched(false);
     setFocusFields(true);
   }
@@ -77,6 +83,14 @@ export function QuickConnectDialog() {
         void openSerial(built.options, built.title, { vendor: serial.vendor });
         return;
       }
+      case "rdp": {
+        const built = buildRdp(rdp);
+        if (!built) return;
+        close();
+        setView("sessions");
+        openRdp(built);
+        return;
+      }
     }
   }
 
@@ -100,6 +114,7 @@ export function QuickConnectDialog() {
             <TabsTrigger value="ssh">SSH</TabsTrigger>
             <TabsTrigger value="telnet">Telnet</TabsTrigger>
             <TabsTrigger value="serial">Serial</TabsTrigger>
+            <TabsTrigger value="rdp">RDP</TabsTrigger>
           </TabsList>
           <form className="flex flex-col gap-4" onSubmit={submit} noValidate>
             <TabsContent value="ssh" className="flex flex-col gap-4">
@@ -124,6 +139,14 @@ export function QuickConnectDialog() {
                 form={serial}
                 set={setSerial}
                 errors={touched ? validateSerial(serial) : {}}
+              />
+            </TabsContent>
+            <TabsContent value="rdp" className="flex flex-col gap-4">
+              <RdpFields
+                autoFocus={focusFields}
+                form={rdp}
+                setForm={setRdp}
+                errors={touched ? validateRdp(rdp) : {}}
               />
             </TabsContent>
             <DialogFooter>

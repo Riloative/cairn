@@ -16,6 +16,7 @@ import { usePrompts } from "@/stores/prompts";
 import { backoffDelay, useReconnect } from "@/stores/reconnect";
 import { broadcastPeers, useBroadcast } from "@/stores/broadcast";
 import { useFiles } from "@/stores/files";
+import { closeRdpTab } from "@/rdp/controller";
 import { useSerial } from "@/stores/serial";
 import { highlightVendor } from "@/views/inventory/labels";
 import { useSessions, type SessionProtocol } from "@/stores/sessions";
@@ -526,6 +527,10 @@ export async function reconnectTab(tabId: string, opts: { automatic?: boolean } 
 }
 
 export function closeTab(tabId: string) {
+  if (tabOf(tabId)?.protocol === "rdp") {
+    closeRdpTab(tabId);
+    return;
+  }
   const id = backendIds.get(tabId);
   backendIds.delete(tabId);
   profiles.delete(tabId);

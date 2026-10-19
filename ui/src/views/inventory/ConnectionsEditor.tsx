@@ -14,6 +14,7 @@ import { BAUD_PRESETS } from "@/connect/serialForm";
 import { CONSOLE_SERVERS, consoleTcpPort } from "@/connect/telnetForm";
 import type { ConnectionMethod, ConsoleServerKind, LegacyAlgorithm } from "@/lib/ipc";
 import { ALL_LEGACY, LEGACY_LABELS } from "@/ssh/buildOptions";
+import { RdpSettingsFields } from "@/rdp/RdpSettingsFields";
 import { defaultMethod, methodError } from "./model";
 
 type Kind = ConnectionMethod["kind"];
@@ -204,18 +205,33 @@ function MethodFields({ m, set }: { m: ConnectionMethod; set: (m: ConnectionMeth
       );
     case "rdp":
       return (
-        <div className="grid grid-cols-[100px_1fr] gap-3">
-          <Field label="Port">
-            <NumberInput
-              min={1}
-              max={65535}
-              value={m.port}
-              onChange={(port) => set({ ...m, port })}
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-[100px_1fr] gap-3">
+            <Field label="Port">
+              <NumberInput
+                min={1}
+                max={65535}
+                value={m.port}
+                onChange={(port) => set({ ...m, port })}
+              />
+            </Field>
+            <Field label="Username" description="Empty uses the credential profile's.">
+              <Input
+                spellCheck={false}
+                value={m.username}
+                onChange={(e) => set({ ...m, username: e.target.value })}
+              />
+            </Field>
+          </div>
+          <RdpSettingsFields value={m} set={set} />
+          <label className="flex items-center gap-2 text-[13px]">
+            <Switch
+              checked={m.external}
+              onCheckedChange={(external) => set({ ...m, external })}
+              aria-label="Open in external client"
             />
-          </Field>
-          <Field label="Username">
-            <Input value={m.username} onChange={(e) => set({ ...m, username: e.target.value })} />
-          </Field>
+            Open in an external client (FreeRDP / the system RDP app)
+          </label>
         </div>
       );
     case "web":
