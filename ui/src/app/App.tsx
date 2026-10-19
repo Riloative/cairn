@@ -6,6 +6,7 @@ import { applyTheme, cachedThemePrefs, watchSystemTheme } from "@/lib/theme";
 import { LockScreen } from "@/screens/LockScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
 import { BackupOffer } from "@/backup/BackupOffer";
+import { DataDialogs } from "@/backup/DataDialogs";
 import { useInventory } from "@/stores/inventory";
 import { useMap } from "@/stores/map";
 import { useMapUi } from "@/views/map/mapUi";
@@ -83,6 +84,7 @@ function Gate() {
         <>
           <Shell />
           <BackupOffer />
+          <DataDialogs />
         </>
       );
   }

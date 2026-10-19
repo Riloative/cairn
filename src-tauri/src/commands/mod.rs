@@ -5,6 +5,7 @@ pub mod app;
 pub mod audit;
 pub mod backup;
 pub mod configs;
+pub mod dataexport;
 pub mod devices;
 pub mod files;
 pub mod forwards;

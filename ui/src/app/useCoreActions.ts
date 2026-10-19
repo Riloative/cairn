@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useDataDialog } from "@/stores/backupUi";
 import { useActions, type Action } from "@/lib/actions";
 import { auditVerify } from "@/lib/ipc";
 import { THEMES } from "@/lib/theme";
@@ -96,6 +97,27 @@ export function coreActions(): Action[] {
           .getState()
           .lock()
           .catch((e: unknown) => notifications().notifyError(e, "Could not lock")),
+    },
+    {
+      id: "data.backup",
+      title: "Create backup…",
+      group: "Data",
+      keywords: ["backup", "export", "encrypted", "save"],
+      run: () => useDataDialog.getState().set("backup"),
+    },
+    {
+      id: "data.restore",
+      title: "Restore backup…",
+      group: "Data",
+      keywords: ["backup", "restore", "import"],
+      run: () => useDataDialog.getState().set("restore"),
+    },
+    {
+      id: "data.export",
+      title: "Export inventory (JSON / CSV)…",
+      group: "Data",
+      keywords: ["export", "csv", "json", "spreadsheet", "inventory"],
+      run: () => useDataDialog.getState().set("export"),
     },
     {
       id: "audit.verify",

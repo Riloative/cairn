@@ -48,6 +48,7 @@ pub fn run() {
             commands::audit::audit_query,
             commands::audit::audit_facets,
             commands::audit::audit_export,
+            commands::dataexport::data_export,
             commands::backup::backup_create,
             commands::backup::backup_inspect,
             commands::backup::backup_restore,

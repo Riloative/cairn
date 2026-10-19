@@ -98,6 +98,12 @@ export interface BackupSummary {
 
 export const backupCreate = (path: string, password: string, recordings: boolean) =>
   call<BackupSummary>("backup_create", { path, password, recordings });
+/**
+ * Export the inventory as JSON (`path` is the file) or CSV (`path` is a new folder).
+ * Returns the files written.
+ */
+export const dataExport = (format: "json" | "csv", path: string, includeCredentials: boolean) =>
+  call<string[]>("data_export", { format, path, includeCredentials });
 /** What a backup file holds (no password needed). */
 export const backupInspect = (path: string) => call<BackupSummary>("backup_inspect", { path });
 /**

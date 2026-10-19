@@ -6,6 +6,7 @@
 pub mod audit;
 pub mod backup;
 pub mod csv;
+pub mod dataexport;
 pub mod db;
 pub mod diff;
 pub mod error;

@@ -564,6 +564,31 @@ export class FakeBackend {
         this.log("data_exported", { what: "full backup", format: "cairn-backup", path: args.path });
         return this.backupSummary(Boolean(args.recordings));
       }
+      case "data_export": {
+        this.requireUnlocked();
+        const creds = Boolean(args.includeCredentials);
+        this.exports.push({
+          what: creds ? "inventory+credentials" : "inventory",
+          format: args.format as string,
+          path: args.path as string,
+        });
+        this.log("data_exported", {
+          what: creds ? "inventory with credentials and their secrets" : "inventory",
+          format: args.format,
+          path: args.path,
+        });
+        const path = args.path as string;
+        return args.format === "json"
+          ? [path]
+          : [
+              "locations",
+              "devices",
+              "interfaces",
+              "links",
+              "vlans",
+              ...(creds ? ["credentials"] : []),
+            ].map((n) => `${path}/${n}.csv`);
+      }
       case "backup_inspect":
         if (!String(args.path).endsWith(".cairn-backup"))
           this.fail({

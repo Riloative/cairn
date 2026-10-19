@@ -3,12 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/Tooltip";
 import { useNotifications } from "@/stores/notifications";
+import { useDataDialog } from "@/stores/backupUi";
 import { useSessions } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
 import { useVault } from "@/stores/vault";
 import { FakeBackend } from "@/test/fakeBackend";
 import { SetupScreen } from "@/screens/SetupScreen";
 import { SettingsView } from "@/views/settings/SettingsView";
+import { DataDialogs } from "./DataDialogs";
 import { reloadApp } from "./reload";
 
 vi.mock("./reload", () => ({ reloadApp: vi.fn() }));
@@ -25,6 +27,7 @@ afterEach(async () => {
   vi.mocked(reloadApp).mockClear();
   useSessions.setState({ tabs: [], activeId: null });
   useVault.setState({ info: null, justCreated: false });
+  useDataDialog.setState({ open: null });
 });
 
 async function openBackupTab() {
@@ -34,6 +37,7 @@ async function openBackupTab() {
   render(
     <TooltipProvider>
       <SettingsView />
+      <DataDialogs />
     </TooltipProvider>,
   );
   await user.click(await screen.findByRole("tab", { name: "Backup" }));
@@ -132,5 +136,36 @@ describe("restore on first launch", () => {
     await waitFor(() => expect(reloadApp).toHaveBeenCalled());
     expect(backend.password).toBe(STRONG);
     expect(useVault.getState().info?.status).toBe("unlocked");
+  });
+});
+
+describe("inventory export", () => {
+  beforeEach(() => {
+    backend = new FakeBackend("unlocked");
+  });
+
+  it("exports CSV without credentials, and with them only after the warning is confirmed", async () => {
+    const user = await openBackupTab();
+    backend.dialogResult = "/home/me/inv";
+    await user.click(screen.getByRole("button", { name: "Export…" }));
+    let dialog = await screen.findByRole("dialog", { name: "Export inventory" });
+    await user.click(within(dialog).getByRole("radio", { name: "CSV (a folder of tables)" }));
+    await user.click(within(dialog).getByRole("button", { name: "Export" }));
+    await waitFor(() =>
+      expect(backend.exports).toEqual([{ what: "inventory", format: "csv", path: "/home/me/inv" }]),
+    );
+    expect(useNotifications.getState().items[0]?.description).toBe("5 files in /home/me/inv");
+
+    await user.click(screen.getByRole("button", { name: "Export…" }));
+    dialog = await screen.findByRole("dialog", { name: "Export inventory" });
+    await user.click(within(dialog).getByRole("switch", { name: "Include credentials" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(/plain text/);
+    const go = within(dialog).getByRole("button", { name: "Export with secrets" });
+    expect(go).toBeDisabled();
+    await user.click(within(dialog).getByRole("checkbox"));
+    await user.click(go);
+    await waitFor(() => expect(backend.exports).toHaveLength(2));
+    expect(backend.exports[1]).toMatchObject({ what: "inventory+credentials", format: "json" });
+    expect(backend.audit[0]?.payload.what).toBe("inventory with credentials and their secrets");
   });
 });
