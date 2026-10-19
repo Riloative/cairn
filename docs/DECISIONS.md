@@ -529,7 +529,7 @@ is 1.99).
   and the text on accent/danger fills, in all six themes. Several light-theme colors
   were darkened to pass.
 - **E2E via tauri-driver with a dependency-free client.** `e2e/webdriver.mjs` speaks
-  W3C WebDriver with `fetch` (~120 lines) instead of pulling WebdriverIO's large
+  W3C WebDriver with `fetch` (~110 lines) instead of pulling WebdriverIO's large
   dependency tree into the supply-chain audit. WebKitWebDriver reports empty text for
   some nested elements, so text lookups read `textContent` in the page. CI runs the
   smoke scenario against the release binary under `xvfb-run` (Linux only: there is no

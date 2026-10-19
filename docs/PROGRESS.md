@@ -315,7 +315,7 @@ export opened in LibreOffice/Excel/Numbers (formulas shown as text).
   cold start ~1.25 s warm / ~1.7 s cold under Xvfb. Inventory of 300 devices renders in
   ~0.2 s, the campus map in ~0.2 s, a saved building view in ~1 s. ELK runs in a worker
   with Brandes–Köpf placement for big views and wrapped rows; a building's first layout
-  (61 devices, never opened) takes ~3 s with an "Arranging…" pill. 30 local shells:
+  (59 devices, never opened) takes ~3 s with an "Arranging…" pill. 30 local shells:
   WebGL kept for the 8 most recent terminals, typing stays live, tab switch ~0.1 s.
 - **Accessibility:** `--accent-text` and `--danger-solid` tokens; WCAG AA contrast
   for text, focus rings and filled buttons tested in all six themes (light themes
