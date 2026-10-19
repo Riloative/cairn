@@ -2,7 +2,7 @@
 
 use super::session::{audited_output, require_unlocked};
 use crate::error::{CommandError, CommandResult};
-use crate::sessions::{autologin, Extra, SessionId, SessionManager, SessionMessage};
+use crate::sessions::{autologin, DeviceRef, Extra, SessionId, SessionManager, SessionMessage};
 use crate::state::AppState;
 use cairn_core::audit::AuditEvent;
 use cairn_core::login::LoginPlan;
@@ -112,7 +112,7 @@ pub(crate) fn start(
     state: &AppState,
     sessions: &Arc<SessionManager>,
     opts: TelnetOptions,
-    device: Option<String>,
+    device: Option<DeviceRef>,
     login: LoginPlan,
     cols: u16,
     rows: u16,
@@ -122,7 +122,17 @@ pub(crate) fn start(
     let protocol = if opts.raw { "raw" } else { "telnet" };
     let target = opts.target();
     let id = sessions.allocate_id();
-    let output = audited_output(state, &id, protocol, &target, on_data, on_event);
+    let output = audited_output(
+        state,
+        &id,
+        protocol,
+        &target,
+        device.as_ref(),
+        (cols, rows),
+        on_data,
+        on_event,
+    );
+    let device = device.map(|d| d.hostname);
     let output = autologin::wrap(output, login, sessions, &id);
     let (vault, audit) = (state.vault.clone(), state.audit.clone());
     let (out, sid, tgt) = (output.clone(), id.clone(), target.clone());

@@ -14,6 +14,7 @@ pub mod known_hosts;
 pub mod login;
 pub mod map;
 pub mod protocol;
+pub mod recording;
 pub mod secret;
 pub mod settings;
 pub mod terminal;

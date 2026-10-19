@@ -163,6 +163,16 @@ pub enum AuditEvent {
         root: String,
         allow_write: bool,
     },
+    /// A session recording was deleted.
+    #[serde(rename_all = "camelCase")]
+    RecordingDeleted {
+        recording_id: i64,
+        session_id: String,
+        protocol: String,
+        target: String,
+        device: Option<String>,
+        started_at: String,
+    },
     /// Entries older than the retention period were removed; the kept chain now starts
     /// at `keep_from` (see [`apply_retention`]).
     #[serde(rename_all = "camelCase")]
@@ -208,6 +218,7 @@ impl AuditEvent {
             AuditEvent::PortForward { .. } => "port_forward",
             AuditEvent::TftpServer { .. } => "tftp_server",
             AuditEvent::AuditPruned { .. } => "audit_pruned",
+            AuditEvent::RecordingDeleted { .. } => "recording_deleted",
         }
     }
 }

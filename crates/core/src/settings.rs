@@ -43,6 +43,9 @@ pub struct Settings {
     /// Notify when a command (OSC 133 shell integration) runs at least this long while
     /// its tab is in the background; 0 disables.
     pub long_command_notify_secs: u32,
+    /// Record every terminal session (asciicast, in the encrypted database). Devices can
+    /// also opt in one by one.
+    pub record_sessions: bool,
     /// Remove audit entries older than this many days (on unlock); 0 keeps everything.
     pub audit_retention_days: u32,
 }
@@ -61,6 +64,7 @@ impl Default for Settings {
             notify_on_disconnect: true,
             session_logging: false,
             long_command_notify_secs: 10,
+            record_sessions: false,
             audit_retention_days: 0,
         }
     }

@@ -3,7 +3,7 @@
 
 use super::session::require_unlocked;
 use crate::error::{CommandError, CommandResult};
-use crate::sessions::{SessionId, SessionManager, SessionMessage};
+use crate::sessions::{DeviceRef, SessionId, SessionManager, SessionMessage};
 use crate::state::AppState;
 use cairn_core::inventory::credentials::{self, CredentialProfile, Secrets};
 use cairn_core::inventory::{devices, ConnectionMethod, Device};
@@ -296,7 +296,11 @@ pub async fn device_connect(
     })?;
     let plan = plan(&device, method, profile.as_ref(), &secrets)?;
     drop(secrets);
-    let name = Some(device.hostname.clone());
+    let name = Some(DeviceRef {
+        id: device.id,
+        hostname: device.hostname.clone(),
+        record: device.record_sessions,
+    });
     let opened = |session_id, connection_id, protocol| DeviceOpened {
         session_id,
         connection_id,
@@ -356,6 +360,7 @@ mod tests {
             notes: String::new(),
             custom: BTreeMap::new(),
             interface_count: 0,
+            record_sessions: false,
             created_at: String::new(),
             updated_at: String::new(),
         }

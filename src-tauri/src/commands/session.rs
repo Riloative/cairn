@@ -4,9 +4,11 @@ use crate::error::{CommandError, CommandResult};
 use crate::prompts::PromptAnswer;
 use crate::sessions::log::{log_path, LoggingOutput};
 use crate::sessions::output::{AuditedOutput, ChannelOutput};
-use crate::sessions::{Extra, SessionId, SessionManager, SessionMessage, SessionOutput};
+use crate::sessions::record::RecordingOutput;
+use crate::sessions::{DeviceRef, Extra, SessionId, SessionManager, SessionMessage, SessionOutput};
 use crate::state::AppState;
 use cairn_core::audit::AuditEvent;
+use cairn_core::recording::NewRecording;
 use cairn_core::terminal::TerminalSession;
 use cairn_core::VaultStatus;
 use cairn_pty::{Container, LocalPty, ShellSpec};
@@ -18,12 +20,16 @@ use tauri::State;
 /// Header carrying the session id on raw-body `session_write` calls.
 pub const SESSION_HEADER: &str = "x-cairn-session";
 
-/// Channel output wrapped with session-end auditing.
+/// Channel output wrapped with logging and recording (when turned on) and session-end
+/// auditing.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn audited_output(
     state: &AppState,
     session_id: &str,
     protocol: &'static str,
     target: &str,
+    device: Option<&DeviceRef>,
+    (cols, rows): (u16, u16),
     on_data: Channel<InvokeResponseBody>,
     on_event: Channel<SessionMessage>,
 ) -> Arc<dyn SessionOutput> {
@@ -31,12 +37,12 @@ pub(crate) fn audited_output(
         data: on_data,
         events: on_event,
     });
-    let logging = state
+    let settings = state
         .vault
         .lock()
         .with_conn(cairn_core::settings::load)
-        .map(|s| s.session_logging)
-        .unwrap_or(false);
+        .unwrap_or_default();
+    let logging = settings.session_logging;
     let inner = match (logging, state.vault.lock().dir().to_path_buf()) {
         (true, dir) => {
             let path = log_path(&dir.join("logs"), protocol, target, session_id);
@@ -47,6 +53,32 @@ pub(crate) fn audited_output(
             }
         }
         (false, _) => channel,
+    };
+    let record = settings.record_sessions || device.is_some_and(|d| d.record);
+    let inner = match record {
+        true => {
+            let meta = NewRecording {
+                session_id: session_id.to_owned(),
+                protocol: protocol.to_owned(),
+                target: target.to_owned(),
+                device_id: device.map(|d| d.id),
+                device: device.map(|d| d.hostname.clone()).unwrap_or_default(),
+                cols,
+                rows,
+                started_at: cairn_core::audit::now(),
+            };
+            match state.recorders.start(&state.vault, &meta) {
+                Some(recording) => Arc::new(RecordingOutput {
+                    inner,
+                    recording,
+                    recorders: state.recorders.clone(),
+                    session_id: session_id.to_owned(),
+                }) as Arc<dyn SessionOutput>,
+                // Never block a session because its recording cannot be created.
+                None => inner,
+            }
+        }
+        false => inner,
     };
     Arc::new(AuditedOutput {
         inner,
@@ -90,7 +122,16 @@ pub fn session_open_local(
         .clone()
         .unwrap_or_else(cairn_pty::default_shell);
     let id = sessions.allocate_id();
-    let output = audited_output(&state, &id, "local", &program, on_data, on_event);
+    let output = audited_output(
+        &state,
+        &id,
+        "local",
+        &program,
+        None,
+        (cols, rows),
+        on_data,
+        on_event,
+    );
     let id = sessions.open_with_id(id, output, |sink| {
         LocalPty::spawn(&spec, cols, rows, sink)
             .map(|p| Arc::new(p) as Arc<dyn TerminalSession>)
@@ -138,12 +179,15 @@ pub fn session_write(
 
 #[tauri::command]
 pub fn session_resize(
+    state: State<'_, AppState>,
     sessions: State<'_, Arc<SessionManager>>,
     id: SessionId,
     cols: u16,
     rows: u16,
 ) -> CommandResult<()> {
-    Ok(session(&sessions, &id)?.resize(cols, rows)?)
+    session(&sessions, &id)?.resize(cols, rows)?;
+    state.recorders.resize(&id, cols, rows);
+    Ok(())
 }
 
 /// Send BREAK on a serial or Telnet session.

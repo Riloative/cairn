@@ -297,6 +297,9 @@ pub struct Device {
     pub notes: String,
     #[serde(default)]
     pub custom: BTreeMap<String, Value>,
+    /// Record terminal sessions to this device (also on when recording is on globally).
+    #[serde(default)]
+    pub record_sessions: bool,
     #[serde(default)]
     pub interface_count: u32,
     #[serde(default)]
@@ -320,7 +323,7 @@ pub struct SaveResult {
 const COLS: &str = "SELECT id, hostname, mgmt_ip, device_type, vendor, model, serial, firmware,
     building_id, floor_id, room_id, rack_id, rack_u, u_height, credential_id, connections,
     vlans, tags, notes, custom, created_at, updated_at,
-    (SELECT count(*) FROM interfaces i WHERE i.device_id = devices.id)
+    (SELECT count(*) FROM interfaces i WHERE i.device_id = devices.id), record_sessions
     FROM devices";
 
 fn row(r: &Row<'_>) -> rusqlite::Result<Device> {
@@ -349,6 +352,7 @@ fn row(r: &Row<'_>) -> rusqlite::Result<Device> {
         created_at: r.get(20)?,
         updated_at: r.get(21)?,
         interface_count: r.get(22)?,
+        record_sessions: r.get(23)?,
     })
 }
 
@@ -538,9 +542,9 @@ pub fn save(conn: &Connection, input: &Device) -> Result<SaveResult, CoreError> 
         tx.execute(
             "INSERT INTO devices (hostname, mgmt_ip, device_type, vendor, model, serial, firmware,
              building_id, floor_id, room_id, rack_id, rack_u, u_height, credential_id,
-             connections, vlans, tags, notes, custom, created_at, updated_at)
+             connections, vlans, tags, notes, custom, created_at, updated_at, record_sessions)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17,
-             ?18, ?19, ?20, ?20)",
+             ?18, ?19, ?20, ?20, ?21)",
             params![
                 d.hostname,
                 d.mgmt_ip,
@@ -561,7 +565,8 @@ pub fn save(conn: &Connection, input: &Device) -> Result<SaveResult, CoreError> 
                 to_json(&d.tags)?,
                 d.notes,
                 to_json(&d.custom)?,
-                now
+                now,
+                d.record_sessions
             ],
         )?;
         (None, tx.last_insert_rowid())
@@ -572,7 +577,7 @@ pub fn save(conn: &Connection, input: &Device) -> Result<SaveResult, CoreError> 
              model = ?6, serial = ?7, firmware = ?8, building_id = ?9, floor_id = ?10,
              room_id = ?11, rack_id = ?12, rack_u = ?13, u_height = ?14, credential_id = ?15,
              connections = ?16, vlans = ?17, tags = ?18, notes = ?19, custom = ?20,
-             updated_at = ?21 WHERE id = ?1",
+             updated_at = ?21, record_sessions = ?22 WHERE id = ?1",
             params![
                 d.id,
                 d.hostname,
@@ -594,7 +599,8 @@ pub fn save(conn: &Connection, input: &Device) -> Result<SaveResult, CoreError> 
                 to_json(&d.tags)?,
                 d.notes,
                 to_json(&d.custom)?,
-                now
+                now,
+                d.record_sessions
             ],
         )?;
         (Some(old), d.id)
@@ -721,6 +727,7 @@ mod tests {
             notes: String::new(),
             custom: BTreeMap::new(),
             interface_count: 0,
+            record_sessions: false,
             created_at: String::new(),
             updated_at: String::new(),
         }

@@ -4,7 +4,8 @@
 use super::session::{audited_output, require_unlocked};
 use crate::error::{CommandError, CommandResult};
 use crate::sessions::{
-    autologin, Extra, SerialControl, SessionId, SessionManager, SessionMessage, TransferStatus,
+    autologin, DeviceRef, Extra, SerialControl, SessionId, SessionManager, SessionMessage,
+    TransferStatus,
 };
 use crate::state::AppState;
 use cairn_core::audit::AuditEvent;
@@ -175,7 +176,7 @@ pub(crate) fn start(
     state: &AppState,
     sessions: &Arc<SessionManager>,
     options: SerialOptions,
-    device: Option<String>,
+    device: Option<DeviceRef>,
     login: LoginPlan,
     on_data: Channel<InvokeResponseBody>,
     on_event: Channel<SessionMessage>,
@@ -183,7 +184,18 @@ pub(crate) fn start(
     validate(&options)?;
     let target = format!("{} {}", options.path, options.settings.summary());
     let id = sessions.allocate_id();
-    let output = audited_output(state, &id, "serial", &target, on_data, on_event);
+    // Serial lines have no size of their own; the first resize from the tab sets it.
+    let output = audited_output(
+        state,
+        &id,
+        "serial",
+        &target,
+        device.as_ref(),
+        (80, 24),
+        on_data,
+        on_event,
+    );
+    let device = device.map(|d| d.hostname);
     let output = autologin::wrap(output, login, sessions, &id);
     let mut control = None;
     let id = sessions.open_with_id::<CommandError>(id, output, |sink| {

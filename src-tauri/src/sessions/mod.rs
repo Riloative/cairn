@@ -8,6 +8,7 @@ pub mod autologin;
 pub mod log;
 pub mod output;
 pub mod rdp;
+pub mod record;
 pub mod ssh;
 
 use cairn_core::known_hosts::HostKeyStatus;
@@ -21,6 +22,15 @@ use std::sync::Arc;
 
 /// Opaque session identifier shared with the frontend.
 pub type SessionId = String;
+
+/// The inventory device a session connects to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeviceRef {
+    pub id: i64,
+    pub hostname: String,
+    /// The device asks for its sessions to be recorded.
+    pub record: bool,
+}
 
 /// Lifecycle messages sent on a session's event channel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

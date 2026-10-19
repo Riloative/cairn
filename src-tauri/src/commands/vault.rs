@@ -60,6 +60,8 @@ pub async fn vault_unlock(
     state.touch();
     // Write audit events raised while locked (e.g. sessions that ended during auto-lock).
     state.audit.flush(&state.vault.lock());
+    // ...and recordings that buffered output meanwhile.
+    state.recorders.flush();
     info(&state)
 }
 

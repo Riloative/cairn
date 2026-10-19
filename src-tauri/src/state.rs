@@ -3,6 +3,7 @@
 use crate::audit_queue::AuditQueue;
 use crate::commands::ssh::SshTarget;
 use crate::prompts::PromptBroker;
+use crate::sessions::record::Recorders;
 use cairn_core::Vault;
 use cairn_proto_ssh::connect::Connection;
 use cairn_proto_ssh::{SshError, SshSession};
@@ -24,6 +25,8 @@ pub struct AppState {
     /// Open SSH sessions by session id, for SFTP, port forwards and config grab on
     /// their connection. Weak: the session manager owns them.
     pub ssh_sessions: Mutex<HashMap<String, Weak<SshSession>>>,
+    /// Sessions being recorded.
+    pub recorders: Arc<Recorders>,
 }
 
 impl AppState {
@@ -35,6 +38,7 @@ impl AppState {
             audit: Arc::new(AuditQueue::default()),
             ssh_connections: Mutex::new(HashMap::new()),
             ssh_sessions: Mutex::new(HashMap::new()),
+            recorders: Arc::new(Recorders::default()),
         }
     }
 

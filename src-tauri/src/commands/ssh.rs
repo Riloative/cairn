@@ -3,7 +3,7 @@
 use super::session::{audited_output, require_unlocked};
 use crate::error::{CommandError, CommandResult};
 use crate::sessions::ssh::{SessionContext, TauriInteract};
-use crate::sessions::{autologin, SessionId, SessionManager, SessionMessage};
+use crate::sessions::{autologin, DeviceRef, SessionId, SessionManager, SessionMessage};
 use crate::state::AppState;
 use cairn_core::known_hosts::{self, KnownHost};
 use cairn_core::login::LoginPlan;
@@ -18,8 +18,8 @@ use tauri::State;
 #[derive(Debug)]
 pub struct SshTarget {
     pub opts: ConnectOptions,
-    /// Inventory device name, for audit entries.
-    pub device: Option<String>,
+    /// The inventory device, for audit entries and recording.
+    pub device: Option<DeviceRef>,
     /// Enable-secret answering for devices with "auto-enter enable".
     pub login: LoginPlan,
 }
@@ -76,7 +76,16 @@ fn start(
         .ok_or_else(|| CommandError::internal("no destination"))?;
     let target_label = last.target();
     let id = sessions.allocate_id();
-    let output = audited_output(state, &id, "ssh", &target_label, on_data, on_event);
+    let output = audited_output(
+        state,
+        &id,
+        "ssh",
+        &target_label,
+        target.device.as_ref(),
+        (cols, rows),
+        on_data,
+        on_event,
+    );
     let output = autologin::wrap(output, target.login.clone(), sessions, &id);
     let interact = Arc::new(TauriInteract {
         output: output.clone(),
@@ -87,7 +96,7 @@ fn start(
             session_id: id.clone(),
             target: target_label,
             username: last.username.clone(),
-            device: target.device.clone(),
+            device: target.device.as_ref().map(|d| d.hostname.clone()),
         },
     });
     let runtime = tokio::runtime::Handle::current();
