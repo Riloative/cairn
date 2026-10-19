@@ -5,6 +5,7 @@ import type {
   RdpInput,
   RdpMessage,
   AuditEntry,
+  AuditFilter,
   ErrorPayload,
   PortInfo,
   PortsChanged,
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
   notifyOnDisconnect: true,
   sessionLogging: false,
   longCommandNotifySecs: 10,
+  auditRetentionDays: 0,
 };
 
 /**
@@ -92,6 +94,8 @@ export class FakeBackend {
   rdpClosed: string[] = [];
   rdpExternal: { deviceId: number; method: number }[] = [];
   promptReplies: { promptId: number; answer: unknown }[] = [];
+  /** Files written by export commands. */
+  exports: { what: string; format: string; path: string }[] = [];
   forwards: ForwardInfo[] = [];
   /** Remote folders for the SFTP panel, by path. Null = SFTP not available. */
   remoteFs: Record<string, RemoteEntry[]> | null = {
@@ -185,6 +189,48 @@ export class FakeBackend {
       payload: { kind, ...payload },
       prevHash: "0".repeat(64),
       hash: String(seq).padStart(64, "0"),
+    });
+  }
+
+  /** Same rules as `cairn_core::audit::query`, newest first. */
+  private auditMatching(f: AuditFilter): AuditEntry[] {
+    const eq = (a: unknown, b: string) =>
+      typeof a === "string" && a.toLowerCase() === b.toLowerCase();
+    const sessionsWith = (field: string, value: string) =>
+      new Set(
+        this.audit
+          .filter((e) => e.kind === "session_started" && eq(e.payload[field], value))
+          .map((e) => e.payload.sessionId),
+      );
+    const device = f.device?.trim();
+    const protocol = f.protocol?.trim();
+    const text = f.text?.trim().toLowerCase();
+    const deviceSessions = device ? sessionsWith("device", device) : null;
+    const protocolSessions = protocol ? sessionsWith("protocol", protocol) : null;
+    return this.audit.filter((e) => {
+      if (f.from && e.ts < new Date(f.from).toISOString()) return false;
+      if (f.to && e.ts >= new Date(f.to).toISOString()) return false;
+      if (f.kinds?.length && !f.kinds.includes(e.kind)) return false;
+      if (
+        device &&
+        !eq(e.payload.device, device) &&
+        !(
+          e.kind === "inventory_changed" &&
+          e.payload.entity === "device" &&
+          eq(e.payload.name, device)
+        ) &&
+        !deviceSessions?.has(e.payload.sessionId)
+      )
+        return false;
+      if (
+        protocol &&
+        !eq(e.payload.protocol, protocol) &&
+        !protocolSessions?.has(e.payload.sessionId)
+      )
+        return false;
+      if (text && !JSON.stringify(e.payload).toLowerCase().includes(text) && !e.kind.includes(text))
+        return false;
+      return true;
     });
   }
 
@@ -567,12 +613,42 @@ export class FakeBackend {
       }
       case "plugin:dialog|open":
         return this.dialogResult;
-      case "audit_recent":
-        this.requireUnlocked();
-        return this.audit.slice(0, Number(args.limit));
       case "audit_verify":
         this.requireUnlocked();
-        return { ok: true, entries: this.audit.length, firstBadSeq: null };
+        return { ok: true, entries: this.audit.length, firstBadSeq: null, prunedBefore: null };
+      case "audit_query": {
+        this.requireUnlocked();
+        const matching = this.auditMatching(args.filter as AuditFilter);
+        const before = (args.beforeSeq as number | null) ?? Infinity;
+        return {
+          entries: matching.filter((e) => e.seq < before).slice(0, Number(args.limit)),
+          total: matching.length,
+        };
+      }
+      case "audit_facets": {
+        this.requireUnlocked();
+        const str = (v: unknown) => (typeof v === "string" && v ? [v] : []);
+        const uniq = (xs: string[]) => [...new Set(xs)].sort();
+        return {
+          kinds: uniq(this.audit.map((e) => e.kind)),
+          devices: uniq(this.audit.flatMap((e) => str(e.payload.device))),
+          protocols: uniq(
+            this.audit
+              .filter((e) => e.kind === "session_started")
+              .flatMap((e) => str(e.payload.protocol)),
+          ),
+        };
+      }
+      case "audit_export": {
+        this.requireUnlocked();
+        const count = this.auditMatching(args.filter as AuditFilter).length;
+        this.exports.push({
+          what: "audit",
+          format: args.format as string,
+          path: args.path as string,
+        });
+        return count;
+      }
       default:
         throw new Error(`FakeBackend: unhandled command ${cmd}`);
     }

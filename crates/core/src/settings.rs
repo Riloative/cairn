@@ -43,6 +43,8 @@ pub struct Settings {
     /// Notify when a command (OSC 133 shell integration) runs at least this long while
     /// its tab is in the background; 0 disables.
     pub long_command_notify_secs: u32,
+    /// Remove audit entries older than this many days (on unlock); 0 keeps everything.
+    pub audit_retention_days: u32,
 }
 
 impl Default for Settings {
@@ -59,9 +61,13 @@ impl Default for Settings {
             notify_on_disconnect: true,
             session_logging: false,
             long_command_notify_secs: 10,
+            audit_retention_days: 0,
         }
     }
 }
+
+/// Longest audit retention we accept (100 years; 0 means keep everything).
+pub const MAX_AUDIT_RETENTION_DAYS: u32 = 36_500;
 
 /// Longest idle timeout we accept (24 h).
 pub const MAX_AUTO_LOCK_MINUTES: u32 = 24 * 60;
@@ -74,6 +80,11 @@ impl Settings {
         if self.auto_lock_minutes > MAX_AUTO_LOCK_MINUTES {
             return Err(CoreError::Validation(format!(
                 "Auto-lock must be between 0 (off) and {MAX_AUTO_LOCK_MINUTES} minutes."
+            )));
+        }
+        if self.audit_retention_days > MAX_AUDIT_RETENTION_DAYS {
+            return Err(CoreError::Validation(format!(
+                "Audit retention must be between 0 (keep everything) and {MAX_AUDIT_RETENTION_DAYS} days."
             )));
         }
         if !DARK.contains(&self.system_dark_theme) {
@@ -98,9 +109,15 @@ pub fn load(conn: &Connection) -> Result<Settings, CoreError> {
 }
 
 /// Validate and save settings, auditing a field-level diff. Returns the saved settings.
+/// A shorter audit retention takes effect at once.
 pub fn save(conn: &Connection, new: &Settings) -> Result<Settings, CoreError> {
     new.validate()?;
-    save_doc(conn, KEY, None, new)
+    let old_retention = load(conn)?.audit_retention_days;
+    let saved = save_doc(conn, KEY, None, new)?;
+    if saved.audit_retention_days != old_retention {
+        audit::apply_retention(conn, saved.audit_retention_days, &audit::now())?;
+    }
+    Ok(saved)
 }
 
 /// Load a JSON settings document stored under `key`, or its default.
@@ -198,6 +215,11 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(save(&c, &too_long), Err(CoreError::Validation(_))));
+        let forever = Settings {
+            audit_retention_days: MAX_AUDIT_RETENTION_DAYS + 1,
+            ..Default::default()
+        };
+        assert!(matches!(save(&c, &forever), Err(CoreError::Validation(_))));
         let wrong_kind = Settings {
             system_dark_theme: Theme::Paper,
             ..Default::default()
@@ -213,5 +235,30 @@ mod tests {
         let s: Settings = serde_json::from_str(r#"{"theme":"graphite"}"#).expect("parse");
         assert_eq!(s.theme, Theme::Graphite);
         assert_eq!(s.auto_lock_minutes, 15);
+    }
+
+    #[test]
+    fn shorter_retention_prunes_at_once() {
+        let c = conn();
+        audit::append_at(&c, &AuditEvent::VaultCreated, "2000-01-01T00:00:00.000Z").expect("old");
+        audit::append(&c, &AuditEvent::AppUnlocked).expect("new");
+        let s = Settings {
+            audit_retention_days: 365,
+            ..Default::default()
+        };
+        save(&c, &s).expect("save");
+        let report = audit::verify(&c).expect("verify");
+        assert!(report.ok);
+        assert_eq!(report.pruned_before, Some(2));
+        // The prune is recorded right after the settings change that caused it.
+        let kinds: Vec<String> = audit::recent(&c, 10)
+            .expect("recent")
+            .into_iter()
+            .map(|e| e.kind)
+            .collect();
+        assert_eq!(
+            kinds,
+            vec!["audit_pruned", "settings_changed", "app_unlocked"]
+        );
     }
 }

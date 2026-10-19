@@ -22,6 +22,7 @@ export const LABELS: Record<string, string> = {
   config_grabbed: "Config grabbed",
   port_forward: "Port forward",
   tftp_server: "TFTP server",
+  audit_pruned: "Old entries removed",
 };
 
 const list = (v: unknown) => ((v as string[] | undefined) ?? []).join(", ");
@@ -84,6 +85,8 @@ export function summarize(entry: AuditEntry): string {
       const what = `${String(p.entity).replace("_", " ")} ${String(p.name)} ${String(p.action)}`;
       return p.action === "updated" && fields.length ? `${what}: ${fields.join(", ")}` : what;
     }
+    case "audit_pruned":
+      return `${String(p.removed)} entries older than ${String(p.retentionDays)} days`;
     case "credential_revealed":
     case "credential_copied":
       return `${String(p.field)} of ${String(p.name)}`;

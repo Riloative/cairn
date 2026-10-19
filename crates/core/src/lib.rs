@@ -4,6 +4,7 @@
 //! [`UserFacingError`] values to messages shown in the frontend.
 
 pub mod audit;
+pub mod csv;
 pub mod db;
 pub mod diff;
 pub mod error;

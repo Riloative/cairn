@@ -420,3 +420,28 @@ is 1.99).
   experimental and there is no gateway to test against here. An SSH tunnel through a
   bastion covers the common "server behind a jump host" case; a gateway profile option
   can be added when the crate matures.
+
+## D-042 · Audit retention without breaking the hash chain; filtered queries (M8)
+
+- **Retention keeps the chain verifiable.** The log is append-only (triggers) and each
+  entry hashes the previous one, so deleting old entries would break verification from
+  entry 1. Pruning instead writes an `audit_pruned` entry into the chain (keep-from
+  position, count, cutoff), then moves a one-row anchor (`audit_anchor`: first kept seq
+  and the hash it continues from) and deletes only below it. The delete trigger now
+  allows deletes strictly below the anchor; the anchor can only move forward and cannot
+  be removed. `verify` starts at the anchor and requires the latest `audit_pruned`
+  entry to name the same position, so moving the anchor to hide entries means editing
+  a hashed entry, which is detected.
+- **When it runs:** on unlock and when the setting is shortened (after a confirmation
+  that says removed entries are gone for good). Default 0 = keep everything (SPEC §10).
+  Entries are kept from the first one newer than the cutoff, so a late-copied
+  `unlock_failed` with an old timestamp never punches a hole in the chain.
+- **Filters query the JSON payload** (`json_extract`) instead of new columns: rows
+  cannot be updated to backfill columns, and a single-user log stays small. A device
+  filter also matches everything that happened in that device's sessions (end,
+  transfers, forwards) by joining on `sessionId`, so `session_ended` needed no new
+  field. Device and protocol match ignore case. Search text is matched literally (`%`
+  and `_` escaped).
+- **CSV exports neutralize formulas** (`=`, `+`, `-`, `@`, tab, CR get a `'` prefix).
+  Hostnames, banners and file names come from devices, so opening an export in a
+  spreadsheet must not run anything. JSON exports keep entries whole, with hashes.

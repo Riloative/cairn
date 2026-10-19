@@ -104,6 +104,8 @@ export interface Settings {
   notifyOnDisconnect: boolean;
   sessionLogging: boolean;
   longCommandNotifySecs: number;
+  /** Audit entries older than this many days are removed on unlock; 0 keeps all. */
+  auditRetentionDays: number;
 }
 
 export const settingsGet = () => call<Settings>("settings_get");
@@ -125,10 +127,41 @@ export interface IntegrityReport {
   ok: boolean;
   entries: number;
   firstBadSeq: number | null;
+  /** Entries before this one were removed by retention. */
+  prunedBefore: number | null;
 }
 
-export const auditRecent = (limit: number) => call<AuditEntry[]>("audit_recent", { limit });
+/** Mirrors `cairn_core::audit::AuditFilter`; empty fields do not filter. */
+export interface AuditFilter {
+  /** Inclusive lower bound, RFC 3339. */
+  from?: string | null;
+  /** Exclusive upper bound, RFC 3339. */
+  to?: string | null;
+  kinds?: string[];
+  /** Device hostname; includes everything that happened in its sessions. */
+  device?: string | null;
+  protocol?: string | null;
+  text?: string | null;
+}
+
+export interface AuditPage {
+  entries: AuditEntry[];
+  total: number;
+}
+
+export interface AuditFacets {
+  kinds: string[];
+  devices: string[];
+  protocols: string[];
+}
+
 export const auditVerify = () => call<IntegrityReport>("audit_verify");
+export const auditQuery = (filter: AuditFilter, beforeSeq: number | null, limit: number) =>
+  call<AuditPage>("audit_query", { filter, beforeSeq, limit });
+export const auditFacets = () => call<AuditFacets>("audit_facets");
+/** Write matching entries to `path`; returns how many were written. */
+export const auditExport = (filter: AuditFilter, format: "csv" | "json", path: string) =>
+  call<number>("audit_export", { filter, format, path });
 
 // ── Sessions ───────────────────────────────────────────────────────────────────────
 

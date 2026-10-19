@@ -144,6 +144,8 @@ impl Vault {
         };
         self.flush_failures(&conn)?;
         audit::append(&conn, &AuditEvent::AppUnlocked)?;
+        let retention = crate::settings::load(&conn)?.audit_retention_days;
+        audit::apply_retention(&conn, retention, &audit::now())?;
         self.conn = Some(conn);
         Ok(())
     }

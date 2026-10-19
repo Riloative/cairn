@@ -14,6 +14,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0003_inventory.sql"),
     include_str!("migrations/0004_map.sql"),
     include_str!("migrations/0005_tools.sql"),
+    include_str!("migrations/0006_audit_retention.sql"),
 ];
 
 /// Latest schema version this build knows.

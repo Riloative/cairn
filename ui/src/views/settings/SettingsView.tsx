@@ -15,6 +15,7 @@ import {
   type ThemeId,
   type ThemeInfo,
 } from "@/lib/theme";
+import { confirmAction } from "@/stores/confirm";
 import { useNotifications } from "@/stores/notifications";
 import { useSettings } from "@/stores/settings";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
@@ -30,6 +31,36 @@ const AUTO_LOCK_OPTIONS = [
   { value: 240, label: "4 hours" },
   { value: 0, label: "Never" },
 ] as const;
+
+const RETENTION_OPTIONS = [
+  { value: 0, label: "Keep everything" },
+  { value: 90, label: "90 days" },
+  { value: 180, label: "6 months" },
+  { value: 365, label: "1 year" },
+  { value: 730, label: "2 years" },
+  { value: 1825, label: "5 years" },
+] as const;
+
+/** Ask before a retention change that removes entries now. */
+async function changeRetention(
+  current: number,
+  next: number,
+  update: (p: Partial<Settings>) => void,
+) {
+  const shorter = next !== 0 && (current === 0 || next < current);
+  if (shorter) {
+    const label = RETENTION_OPTIONS.find((o) => o.value === next)?.label ?? `${next} days`;
+    const ok = await confirmAction({
+      title: `Keep the audit log for ${label}?`,
+      description:
+        "Older entries are removed now and from then on each time Cairn unlocks. Removed entries cannot be recovered; export the audit log first if you need them. The integrity check still covers the kept entries.",
+      confirmLabel: "Remove older entries",
+      destructive: true,
+    });
+    if (!ok) return;
+  }
+  update({ auditRetentionDays: next });
+}
 
 function Row({
   title,
@@ -192,6 +223,28 @@ function Security({ s, update }: { s: Settings; update: (p: Partial<Settings>) =
           checked={s.lockOnSleep}
           onCheckedChange={(v) => update({ lockOnSleep: v })}
         />
+      </Row>
+      <Row
+        title="Audit retention"
+        description="Remove audit entries older than this when Cairn unlocks."
+      >
+        <select
+          aria-label="Audit retention"
+          value={s.auditRetentionDays}
+          onChange={(e) =>
+            void changeRetention(s.auditRetentionDays, Number(e.target.value), update)
+          }
+          className="h-8 rounded-md border border-border bg-surface px-2 text-[13px]"
+        >
+          {RETENTION_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+          {!RETENTION_OPTIONS.some((o) => o.value === s.auditRetentionDays) && (
+            <option value={s.auditRetentionDays}>{s.auditRetentionDays} days</option>
+          )}
+        </select>
       </Row>
       <Row
         title="Master password"
