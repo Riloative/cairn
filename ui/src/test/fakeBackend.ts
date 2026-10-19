@@ -6,14 +6,17 @@ import type {
   ErrorPayload,
   PortInfo,
   PortsChanged,
+  RemoteEntry,
   Settings,
   TerminalPrefs,
+  FileOp,
   ForwardInfo,
   ForwardPreset,
   ForwardSpec,
   Snippet,
   TftpPrefs,
   TftpStatus,
+  TransferRequest,
   TransferStatus,
   VaultStatus,
 } from "@/lib/ipc";
@@ -61,6 +64,31 @@ export class FakeBackend {
   );
   snippets: Snippet[] = [];
   forwards: ForwardInfo[] = [];
+  /** Remote folders for the SFTP panel, by path. Null = SFTP not available. */
+  remoteFs: Record<string, RemoteEntry[]> | null = {
+    "/home/admin": [
+      {
+        name: "configs",
+        path: "/home/admin/configs",
+        kind: "dir",
+        size: 0,
+        modified: 0,
+        mode: 0o755,
+        owner: "admin",
+      },
+      {
+        name: "notes.txt",
+        path: "/home/admin/notes.txt",
+        kind: "file",
+        size: 2048,
+        modified: 0,
+        mode: 0o644,
+        owner: "admin",
+      },
+    ],
+    "/home/admin/configs": [],
+  };
+  transfers: TransferRequest[] = [];
   forwardPresets: ForwardPreset[] = [];
   tftp: TftpStatus = {
     running: false,
@@ -165,6 +193,77 @@ export class FakeBackend {
       case "snippet_delete":
         this.snippets = this.snippets.filter((x) => x.id !== args.id);
         return null;
+      case "sftp_home":
+        if (!this.remoteFs)
+          this.fail({
+            code: "ssh.sftp_unavailable",
+            message: "SFTP is not available on this device: subsystem request failed",
+            hint: "Use SCP instead.",
+          });
+        return "/home/admin";
+      case "sftp_list": {
+        const list = this.remoteFs?.[args.path as string];
+        if (!list) this.fail({ code: "ssh.sftp", message: "No such file", hint: null });
+        return structuredClone(list);
+      }
+      case "sftp_op": {
+        const op = args.op as FileOp;
+        const fs = this.remoteFs ?? {};
+        const dirOf = (path: string) => path.slice(0, path.lastIndexOf("/")) || "/";
+        const nameOf = (path: string) => path.slice(path.lastIndexOf("/") + 1);
+        if (op.op === "mkdir") {
+          fs[dirOf(op.path)]?.push({
+            name: nameOf(op.path),
+            path: op.path,
+            kind: "dir",
+            size: 0,
+            modified: 0,
+            mode: 0o755,
+            owner: "admin",
+          });
+          fs[op.path] = [];
+        } else if (op.op === "remove") {
+          const dir = fs[dirOf(op.path)];
+          if (dir) fs[dirOf(op.path)] = dir.filter((e) => e.path !== op.path);
+        } else if (op.op === "rename") {
+          const dir = fs[dirOf(op.from)];
+          const e = dir?.find((x) => x.path === op.from);
+          if (e) Object.assign(e, { path: op.to, name: nameOf(op.to) });
+        } else {
+          const dir = fs[dirOf(op.path)];
+          const e = dir?.find((x) => x.path === op.path);
+          if (e) e.mode = op.mode;
+        }
+        return null;
+      }
+      case "file_transfer": {
+        const req = args.request as TransferRequest;
+        this.transfers.push(req);
+        this.log("file_transferred", {
+          protocol: req.protocol,
+          direction: req.direction,
+          file: req.remotePath,
+          ok: true,
+        });
+        if (req.direction === "upload" && req.protocol === "sftp") {
+          const dir = req.remotePath.slice(0, req.remotePath.lastIndexOf("/"));
+          const name = req.remotePath.slice(req.remotePath.lastIndexOf("/") + 1);
+          this.remoteFs?.[dir]?.push({
+            name,
+            path: req.remotePath,
+            kind: "file",
+            size: 10,
+            modified: 0,
+            mode: 0o644,
+            owner: "admin",
+          });
+        }
+        return 10;
+      }
+      case "file_transfer_cancel":
+        return null;
+      case "plugin:dialog|save":
+        return this.dialogResult;
       case "forward_start": {
         this.requireUnlocked();
         const spec = args.spec as ForwardSpec;
@@ -332,7 +431,6 @@ export class FakeBackend {
         return [`${String(args.dir)}/fw.bin`];
       }
       case "plugin:dialog|open":
-      case "plugin:dialog|save":
         return this.dialogResult;
       case "audit_recent":
         this.requireUnlocked();

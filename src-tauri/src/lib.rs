@@ -28,6 +28,7 @@ pub fn run() {
             app.manage(commands::serial::PortWatcher::default());
             app.manage(commands::tftp::TftpService::default());
             app.manage(commands::forwards::ForwardService::default());
+            app.manage(commands::files::FileService::default());
             autolock::spawn(app.handle().clone());
             Ok(())
         })
@@ -121,6 +122,11 @@ pub fn run() {
             commands::forwards::forward_presets_list,
             commands::forwards::forward_preset_save,
             commands::forwards::forward_preset_delete,
+            commands::files::sftp_home,
+            commands::files::sftp_list,
+            commands::files::sftp_op,
+            commands::files::file_transfer,
+            commands::files::file_transfer_cancel,
         ])
         .build(tauri::generate_context!())
         .map(|app| {

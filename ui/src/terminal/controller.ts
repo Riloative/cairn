@@ -15,6 +15,7 @@ import { useNotifications } from "@/stores/notifications";
 import { usePrompts } from "@/stores/prompts";
 import { backoffDelay, useReconnect } from "@/stores/reconnect";
 import { broadcastPeers, useBroadcast } from "@/stores/broadcast";
+import { useFiles } from "@/stores/files";
 import { useSerial } from "@/stores/serial";
 import { highlightVendor } from "@/views/inventory/labels";
 import { useSessions, type SessionProtocol } from "@/stores/sessions";
@@ -541,6 +542,7 @@ export function closeTab(tabId: string) {
   reopeners.delete(tabId);
   useSerial.getState().dropTab(tabId);
   useBroadcast.getState().removeTab(tabId);
+  useFiles.getState().dropTab(tabId);
   if (connectionId) ipc.sshForget(connectionId).catch(() => {});
   if (id) {
     // A running transfer would otherwise hold the port until it times out.

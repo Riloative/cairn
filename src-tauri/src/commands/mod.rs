@@ -4,6 +4,7 @@
 pub mod app;
 pub mod audit;
 pub mod devices;
+pub mod files;
 pub mod forwards;
 pub mod inventory;
 pub mod map;

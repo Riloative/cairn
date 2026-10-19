@@ -1002,3 +1002,49 @@ export const forwardPresetsList = () => call<ForwardPreset[]>("forward_presets_l
 export const forwardPresetSave = (preset: ForwardPreset) =>
   call<ForwardPreset>("forward_preset_save", { preset });
 export const forwardPresetDelete = (id: number) => call<null>("forward_preset_delete", { id });
+
+// ---- SFTP panel and file transfers (M6) ----
+
+export interface RemoteEntry {
+  name: string;
+  path: string;
+  kind: "dir" | "file" | "link" | "other";
+  size: number;
+  /** Unix seconds. */
+  modified: number | null;
+  /** Permission bits, e.g. 0o644. */
+  mode: number;
+  owner: string | null;
+}
+
+export type FileOp =
+  | { op: "mkdir"; path: string }
+  | { op: "rename"; from: string; to: string }
+  | { op: "remove"; path: string }
+  | { op: "chmod"; path: string; mode: number };
+
+export interface TransferRequest {
+  id: string;
+  protocol: "sftp" | "scp";
+  direction: "upload" | "download";
+  localPath: string;
+  remotePath: string;
+}
+
+export const sftpHome = (sessionId: string) => call<string>("sftp_home", { sessionId });
+export const sftpList = (sessionId: string, path: string) =>
+  call<RemoteEntry[]>("sftp_list", { sessionId, path });
+export const sftpOp = (sessionId: string, op: FileOp) => call<null>("sftp_op", { sessionId, op });
+
+/** Run a transfer; resolves with the byte count when done. */
+export async function fileTransfer(
+  sessionId: string,
+  request: TransferRequest,
+  onProgress: (bytes: number) => void,
+): Promise<number> {
+  const channel = new Channel<number>();
+  channel.onmessage = onProgress;
+  return call<number>("file_transfer", { sessionId, request, onProgress: channel });
+}
+
+export const fileTransferCancel = (id: string) => call<null>("file_transfer_cancel", { id });
