@@ -121,5 +121,15 @@ try {
 } finally {
   await d.quit();
   driverProc.kill();
-  rmSync(data, { recursive: true, force: true });
+  // The app and WebKit may still be writing to the data directory while they exit;
+  // wait for the driver to go, retry the removal, and never fail the run over it.
+  await new Promise((done) => {
+    if (driverProc.exitCode !== null || driverProc.signalCode !== null) done();
+    else driverProc.once("exit", done);
+  });
+  try {
+    rmSync(data, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  } catch (e) {
+    console.warn(`could not remove ${data}: ${e.message}`);
+  }
 }
