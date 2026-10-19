@@ -122,7 +122,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Broadcast from tabs and map with banner
 - [x] Grab config (vendor commands, paging) + snapshots + side-by-side diff + export
 - [x] Audit integration for all of the above
-- [ ] CI green on both platforms for M6
+- [x] CI green on both platforms for M6 (run 30)
 
 ## M7 – RDP
 

@@ -210,7 +210,7 @@ exports from a dark theme.
 - CI: the Linux Rust job ran out of disk once the M6 crates were added. Dev profile
   debug info is now off in CI, and unused preinstalled SDKs are removed.
 
-**Next:** M7 (RDP).
+**Next:** M7 (RDP). M6 CI run 30 is green on both platforms.
 
 **Test manually:** Grab config on real Cisco IOS/NX-OS, Junos, FortiOS, ArubaOS-CX,
 MikroTik and EdgeOS devices (enable secret, paging, long configs), then compare two
