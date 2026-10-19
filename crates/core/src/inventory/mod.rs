@@ -183,6 +183,16 @@ pub(crate) mod testutil {
         crate::db::open_in_memory(&Key256::new([3; 32])).expect("db")
     }
 
+    /// A bare device row (hostname only); returns its id.
+    pub fn device(conn: &Connection, hostname: &str) -> i64 {
+        conn.execute(
+            "INSERT INTO devices (hostname, created_at, updated_at) VALUES (?1, 'x', 'x')",
+            [hostname],
+        )
+        .expect("device");
+        conn.last_insert_rowid()
+    }
+
     /// Audit entries of kind `inventory_changed`, oldest first, as JSON payloads.
     pub fn changes(conn: &Connection) -> Vec<serde_json::Value> {
         let mut out: Vec<_> = crate::audit::recent(conn, 1000)

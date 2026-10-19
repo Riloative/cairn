@@ -12,6 +12,8 @@ export interface SessionTab {
   detail?: string;
   /** Vendor id selecting the highlighting rule set (see terminal/highlight/rulesets). */
   vendor?: string;
+  /** The inventory device this tab is connected to, if any. */
+  device?: { id: number; vendor: string };
 }
 
 interface SessionsStore {

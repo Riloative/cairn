@@ -14,6 +14,7 @@ import { THEMES } from "@/lib/theme";
 import { useNotifications } from "@/stores/notifications";
 import { usePrompts } from "@/stores/prompts";
 import { backoffDelay, useReconnect } from "@/stores/reconnect";
+import { broadcastPeers, useBroadcast } from "@/stores/broadcast";
 import { useSerial } from "@/stores/serial";
 import { highlightVendor } from "@/views/inventory/labels";
 import { useSessions, type SessionProtocol } from "@/stores/sessions";
@@ -221,14 +222,27 @@ function wireExtras(tabId: string, handle: TerminalHandle) {
   });
 }
 
+function sendTo(tabId: string, bytes: Uint8Array): Promise<void> {
+  const id = backendIds.get(tabId);
+  if (!id) return Promise.resolve();
+  return ipc.sessionWrite(id, bytes).catch(() => {
+    // The session may have just closed; the close message updates the tab.
+  });
+}
+
+/**
+ * Input for a tab: typed keys, pastes and snippets. While broadcast is on and the tab
+ * is a member, the same bytes go to every other member too.
+ */
+function deliver(tabId: string, bytes: Uint8Array): Promise<void> {
+  const others = broadcastPeers(tabId);
+  return Promise.all([sendTo(tabId, bytes), ...others.map((t) => sendTo(t, bytes))]).then(
+    () => undefined,
+  );
+}
+
 function wireInput(tabId: string, handle: TerminalHandle) {
-  const send = (bytes: Uint8Array) => {
-    const id = backendIds.get(tabId);
-    if (!id) return;
-    ipc.sessionWrite(id, bytes).catch(() => {
-      // The session may have just closed; the close message updates the tab.
-    });
-  };
+  const send = (bytes: Uint8Array) => void deliver(tabId, bytes);
   handle.term.onData((d) => {
     // Enter on a dropped session reconnects immediately.
     if (!backendIds.has(tabId) && reopeners.has(tabId) && d === "\r") {
@@ -264,6 +278,8 @@ interface OpenOptions {
   /** Highlighting vendor (defaults to generic). */
   vendor?: string;
   profileId?: string | null;
+  /** The inventory device, for snippets, SFTP, forwards and config grab. */
+  device?: { id: number; vendor: string };
   /** True when the session is usable as soon as `start` resolves (local shells). */
   readyOnStart: boolean;
   /** Starts the backend session; returns its id. */
@@ -293,6 +309,7 @@ export async function openTerminalTab(opts: OpenOptions): Promise<string> {
     protocol: opts.protocol,
     state: "connecting",
     vendor: opts.vendor ?? "generic",
+    device: opts.device,
   });
   try {
     const id = await opts.start(tabId, handle.term.cols, handle.term.rows, callbacks(tabId));
@@ -417,6 +434,7 @@ export function openDevice(
     protocol,
     profileId: extra.profileId,
     vendor: highlightVendor(device.vendor),
+    device: { id: device.id, vendor: device.vendor },
     readyOnStart: protocol === "serial",
     start: async (tabId, cols, rows, cb) => {
       const opened = await ipc.deviceConnect(device.id, method, cols, rows, cb);
@@ -503,6 +521,7 @@ export function closeTab(tabId: string) {
   connections.delete(tabId);
   reopeners.delete(tabId);
   useSerial.getState().dropTab(tabId);
+  useBroadcast.getState().removeTab(tabId);
   if (connectionId) ipc.sshForget(connectionId).catch(() => {});
   if (id) {
     // A running transfer would otherwise hold the port until it times out.
@@ -551,10 +570,9 @@ export function setTabVendor(tabId: string, vendor: string) {
   highlighters.get(tabId)?.reset();
 }
 
-/** Send bytes to a tab's session (used by paste, snippets and broadcast). */
+/** Send input to a tab's session (paste, snippets); mirrored while broadcasting. */
 export function writeToTab(tabId: string, bytes: Uint8Array): Promise<void> {
-  const id = backendIds.get(tabId);
-  return id ? ipc.sessionWrite(id, bytes) : Promise.resolve();
+  return deliver(tabId, bytes);
 }
 
 setPasteSender(writeToTab);

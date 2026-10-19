@@ -13,6 +13,10 @@ import { TabBar } from "./TabBar";
 import { useActivityPing } from "./useActivityPing";
 import { useCoreActions } from "./useCoreActions";
 import { useDeviceActions } from "./useDeviceActions";
+import { useToolActions } from "./useToolActions";
+import { BroadcastDialog } from "@/views/broadcast/BroadcastDialog";
+import { SnippetsManager } from "@/views/snippets/SnippetsManager";
+import { SnippetVariablesDialog } from "@/views/snippets/SnippetVariablesDialog";
 import { useInventory } from "@/stores/inventory";
 import { useGlobalShortcuts } from "./useGlobalShortcuts";
 import { useTerminalSetup } from "@/terminal/useTerminalSetup";
@@ -47,6 +51,7 @@ export function Shell() {
 
   useCoreActions();
   useDeviceActions();
+  useToolActions();
   useGlobalShortcuts();
   useActivityPing();
   useTerminalSetup();
@@ -76,6 +81,9 @@ export function Shell() {
       <PasteConfirmDialog />
       <TabOverview />
       <TransferDialog />
+      <SnippetsManager />
+      <SnippetVariablesDialog />
+      <BroadcastDialog />
       <ConfirmDialog />
     </div>
   );

@@ -101,6 +101,11 @@ pub fn run() {
             commands::map::map_export,
             commands::terminal::terminal_prefs_get,
             commands::terminal::terminal_prefs_update,
+            commands::tools::snippets_list,
+            commands::tools::snippet_save,
+            commands::tools::snippet_delete,
+            commands::tools::broadcast_started,
+            commands::tools::broadcast_ended,
         ])
         .build(tauri::generate_context!())
         .map(|app| {

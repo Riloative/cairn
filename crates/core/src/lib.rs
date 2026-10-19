@@ -17,6 +17,7 @@ pub mod secret;
 pub mod settings;
 pub mod terminal;
 pub mod terminal_prefs;
+pub mod tools;
 pub mod vault;
 
 pub use error::{CoreError, ErrorPayload, UserFacingError};

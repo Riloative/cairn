@@ -8,6 +8,7 @@ import { SetupScreen } from "@/screens/SetupScreen";
 import { useInventory } from "@/stores/inventory";
 import { useMap } from "@/stores/map";
 import { useMapUi } from "@/views/map/mapUi";
+import { useSnippets } from "@/stores/snippets";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
 import { useVault } from "@/stores/vault";
@@ -54,6 +55,7 @@ function Gate() {
       useInventory.getState().clear();
       useMap.getState().clear();
       useMapUi.getState().reset();
+      useSnippets.getState().clear();
       useUi.setState({ paletteOpen: false, notificationsOpen: false });
     });
     return () => void unlisten.then((fn) => fn());
@@ -65,6 +67,7 @@ function Gate() {
       useInventory.getState().clear();
       useMap.getState().clear();
       useMapUi.getState().reset();
+      useSnippets.getState().clear();
     }
   }, [info?.status]);
 

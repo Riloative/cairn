@@ -36,6 +36,7 @@ import { useMap, type HistoryEntry } from "@/stores/map";
 import { useNotifications } from "@/stores/notifications";
 import { connect } from "@/views/inventory/deviceActions";
 import { CanvasMenu, type CanvasMenuState } from "./CanvasMenu";
+import { SelectionBar } from "./SelectionBar";
 import { useMapUi } from "./mapUi";
 import { EDGE_TYPES, NODE_TYPES } from "./flowTypes";
 import { locate, whereLabel } from "./navigation";
@@ -575,6 +576,7 @@ export function MapCanvas({
           )}
         </ViewportPortal>
       </ReactFlow>
+      <SelectionBar selection={selection} inv={inv} />
       <CanvasMenu
         state={menu}
         onClose={() => setMenu(null)}

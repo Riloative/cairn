@@ -1,6 +1,7 @@
-import { Plus, X } from "lucide-react";
+import { Plus, RadioTower, X } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
+import { useBroadcast } from "@/stores/broadcast";
 import { useSessions } from "@/stores/sessions";
 import { useUi } from "@/stores/ui";
 import { closeTab as close } from "@/terminal/controller";
@@ -11,6 +12,7 @@ export function TabBar() {
   const tabs = useSessions((s) => s.tabs);
   const activeId = useSessions((s) => s.activeId);
   const activate = useSessions((s) => s.activate);
+  const members = useBroadcast((s) => s.members);
   const setView = useUi((s) => s.setView);
   const setPaletteOpen = useUi((s) => s.setPaletteOpen);
 
@@ -43,6 +45,9 @@ export function TabBar() {
                 title={PROTOCOL_LABEL[t.protocol]}
               />
               <span className="flex-1 truncate">{t.title}</span>
+              {members.includes(t.id) && (
+                <RadioTower size={12} aria-label="Broadcasting" className="shrink-0 text-warning" />
+              )}
               <SessionStateIcon state={t.state} />
               <button
                 type="button"

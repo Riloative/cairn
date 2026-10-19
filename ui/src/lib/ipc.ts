@@ -875,3 +875,33 @@ export async function floorPlanUpload(
 /** Render and write a map export; resolves with the written path. Audited. */
 export const mapExport = (svg: string, format: DiagramFormat, scale: number, path: string) =>
   call<string>("map_export", { svg, format, scale, path });
+
+// ---- Snippets and broadcast (M6) ----
+
+/** A `{{name}}` / `{{name:default}}` placeholder of a snippet. */
+export interface SnippetVariable {
+  name: string;
+  default: string;
+}
+
+/** Mirrors `cairn_core::tools::Snippet`; `variables` is derived from `body`. */
+export interface Snippet {
+  id: number;
+  name: string;
+  /** "/"-separated folder path; empty for the top level. */
+  folder: string;
+  /** Vendor the snippet is meant for; empty for any device. */
+  vendor: string;
+  body: string;
+  description: string;
+  variables: SnippetVariable[];
+}
+
+export const snippetsList = () => call<Snippet[]>("snippets_list");
+export const snippetSave = (snippet: Snippet) => call<Snippet>("snippet_save", { snippet });
+export const snippetDelete = (id: number) => call<null>("snippet_delete", { id });
+
+/** Audit broadcast mode (session labels only; typed input is never logged). */
+export const broadcastStarted = (targets: string[]) => call<null>("broadcast_started", { targets });
+export const broadcastEnded = (targets: string[], durationSecs: number) =>
+  call<null>("broadcast_ended", { targets, durationSecs });

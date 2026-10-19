@@ -8,6 +8,7 @@ import type {
   PortsChanged,
   Settings,
   TerminalPrefs,
+  Snippet,
   TransferStatus,
   VaultStatus,
 } from "@/lib/ipc";
@@ -53,6 +54,9 @@ export class FakeBackend {
     (kind, payload) => this.log(kind, payload),
     (payload) => this.fail(payload),
   );
+  snippets: Snippet[] = [];
+  /** Session ids written to, with the text, in order (broadcast assertions). */
+  writes: { sessionId: string; text: string }[] = [];
   /** What the native open/save dialog returns. */
   dialogResult: string | string[] | null = null;
 
@@ -125,6 +129,28 @@ export class FakeBackend {
       if (r.handled) return r.result;
     }
     switch (cmd) {
+      case "snippets_list":
+        this.requireUnlocked();
+        return structuredClone(this.snippets);
+      case "snippet_save": {
+        this.requireUnlocked();
+        const input = args.snippet as Snippet;
+        const variables = [...input.body.matchAll(/\{\{\s*([A-Za-z_][\w-]*)\s*(?::([^}]*))?\}\}/g)]
+          .map((m) => ({ name: m[1] ?? "", default: m[2] ?? "" }))
+          .filter((v, i, all) => all.findIndex((x) => x.name === v.name) === i);
+        const saved = { ...input, id: input.id || 9000 + this.snippets.length, variables };
+        this.snippets = [...this.snippets.filter((x) => x.id !== saved.id), saved];
+        return saved;
+      }
+      case "snippet_delete":
+        this.snippets = this.snippets.filter((x) => x.id !== args.id);
+        return null;
+      case "broadcast_started":
+        this.log("broadcast_started", { targets: args.targets });
+        return null;
+      case "broadcast_ended":
+        this.log("broadcast_ended", { targets: args.targets, durationSecs: args.durationSecs });
+        return null;
       case "app_info":
         return { name: "Cairn", version: "0.1.0", os: "linux", arch: "x86_64" };
       case "vault_status":

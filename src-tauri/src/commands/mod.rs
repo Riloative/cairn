@@ -12,4 +12,5 @@ pub mod settings;
 pub mod ssh;
 pub mod telnet;
 pub mod terminal;
+pub mod tools;
 pub mod vault;

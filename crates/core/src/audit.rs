@@ -81,7 +81,8 @@ pub enum AuditEvent {
         device: Option<String>,
         host_key_fingerprint: Option<String>,
     },
-    /// File sent or received over a session (Xmodem/Ymodem now; SFTP/SCP/TFTP later).
+    /// File sent or received over a session (Xmodem/Ymodem, SFTP, SCP) or by the TFTP
+    /// server (`session_id` is then the client address).
     #[serde(rename_all = "camelCase")]
     FileTransferred {
         session_id: String,
@@ -122,6 +123,44 @@ pub enum AuditEvent {
         name: String,
         field: String,
     },
+    /// Broadcast input was turned on for these sessions (typed text is never logged).
+    #[serde(rename_all = "camelCase")]
+    BroadcastStarted {
+        targets: Vec<String>,
+    },
+    #[serde(rename_all = "camelCase")]
+    BroadcastEnded {
+        targets: Vec<String>,
+        duration_secs: u64,
+    },
+    /// A device configuration was grabbed (stored as a snapshot when `ok`).
+    #[serde(rename_all = "camelCase")]
+    ConfigGrabbed {
+        device_id: i64,
+        device: String,
+        command: String,
+        bytes: u64,
+        changed: bool,
+        ok: bool,
+        error: Option<String>,
+    },
+    /// An SSH port forward was started, stopped or failed.
+    #[serde(rename_all = "camelCase")]
+    PortForward {
+        session_id: String,
+        target: String,
+        forward: String,
+        action: String,
+        error: Option<String>,
+    },
+    /// The built-in TFTP server was started or stopped.
+    #[serde(rename_all = "camelCase")]
+    TftpServer {
+        action: String,
+        bind: String,
+        root: String,
+        allow_write: bool,
+    },
     #[serde(rename_all = "camelCase")]
     SessionEnded {
         session_id: String,
@@ -152,6 +191,11 @@ impl AuditEvent {
             AuditEvent::CredentialRevealed { .. } => "credential_revealed",
             AuditEvent::DataExported { .. } => "data_exported",
             AuditEvent::CredentialCopied { .. } => "credential_copied",
+            AuditEvent::BroadcastStarted { .. } => "broadcast_started",
+            AuditEvent::BroadcastEnded { .. } => "broadcast_ended",
+            AuditEvent::ConfigGrabbed { .. } => "config_grabbed",
+            AuditEvent::PortForward { .. } => "port_forward",
+            AuditEvent::TftpServer { .. } => "tftp_server",
         }
     }
 }

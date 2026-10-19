@@ -1,7 +1,9 @@
 import type { Device } from "@/lib/ipc";
+import { useBroadcast } from "@/stores/broadcast";
 import { useInventory } from "@/stores/inventory";
+import { useNotifications } from "@/stores/notifications";
 import { useUi } from "@/stores/ui";
-import { openLocalShell } from "@/terminal/controller";
+import { openDevice, openLocalShell } from "@/terminal/controller";
 
 /** The address diagnostics use: management IP, else hostname. */
 export function target(d: Device): string {
@@ -42,4 +44,31 @@ export function showInInventory(d: Device, edit = false) {
   useInventory
     .getState()
     .setSheet(edit ? { mode: "edit", deviceId: d.id } : { mode: "view", deviceId: d.id });
+}
+
+/** Devices whose first connection method opens a terminal (SSH, Telnet, serial). */
+export function terminalDevices(devices: readonly Device[]): Device[] {
+  return devices.filter((d) => {
+    const kind = d.connections[0]?.kind;
+    return kind !== undefined && kind !== "web" && kind !== "rdp";
+  });
+}
+
+/**
+ * Open a session to each device (its default method) and, with `broadcast`, start
+ * broadcasting input to all of them.
+ */
+export async function openSessions(devices: readonly Device[], broadcast: boolean) {
+  const usable = terminalDevices(devices);
+  if (usable.length === 0) {
+    useNotifications.getState().notify({
+      variant: "info",
+      title: "No terminal connections",
+      description: "None of the selected devices has SSH, Telnet or a serial connection.",
+    });
+    return;
+  }
+  useUi.getState().setView("sessions");
+  const tabs = await Promise.all(usable.map((d) => openDevice(d, 0)));
+  if (broadcast && tabs.length >= 2) useBroadcast.getState().start(tabs);
 }

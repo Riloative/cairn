@@ -7,6 +7,8 @@ import { TerminalPane } from "@/terminal/TerminalPane";
 import { usePrivileged } from "@/terminal/privilege";
 import { ReconnectOverlay } from "@/terminal/ReconnectOverlay";
 import { SearchBar } from "@/terminal/SearchBar";
+import { SnippetBar } from "@/terminal/SnippetBar";
+import { BroadcastBanner } from "@/views/broadcast/BroadcastBanner";
 
 export function SessionsView() {
   const tabs = useSessions((s) => s.tabs);
@@ -31,7 +33,9 @@ export function SessionsView() {
 
   return (
     <div className="flex h-full flex-col">
+      <BroadcastBanner />
       <TerminalHeader tab={active} privileged={privileged} />
+      <SnippetBar tab={active} />
       <div className="relative min-h-0 flex-1" onDoubleClick={(e) => e.stopPropagation()}>
         {tabs
           .filter((t) => t.protocol !== "rdp")
