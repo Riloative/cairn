@@ -138,19 +138,22 @@ impl Grabber {
         let screen = clean_screen(&self.buf);
         let last = last_line(&screen);
         match self.phase {
+            // Only trust the first prompt after a quiet period: a prompt split across
+            // reads (`[admin@MikroTik]` + ` >`) would otherwise be recorded half-way and
+            // the final prompt would never match it.
+            Phase::Prompt { .. } if !idle => Vec::new(),
             Phase::Prompt { nudged } => match last.filter(|l| looks_like_prompt(l)) {
                 Some(prompt) => {
                     let prompt = prompt.to_owned();
                     self.prompt_found(prompt)
                 }
-                None if idle && !nudged => {
+                None if !nudged => {
                     self.phase = Phase::Prompt { nudged: true };
                     vec![self.send_line("")]
                 }
-                None if idle => self.fail(
+                None => self.fail(
                     "No command prompt appeared. The device may need a different login or a pager key.",
                 ),
-                None => Vec::new(),
             },
             Phase::Enable { sent_secret } => {
                 let lower = last.map(str::to_ascii_lowercase).unwrap_or_default();
@@ -514,6 +517,18 @@ mod tests {
         assert_eq!(g.idle(), vec![Step::Send(b"\n".to_vec())]);
         assert!(matches!(g.idle().as_slice(), [Step::Fail(_)]));
         assert!(g.is_finished());
+    }
+
+    #[test]
+    fn prompt_split_across_reads_is_recorded_whole() {
+        let mut g = Grabber::new(plan("MikroTik"), None);
+        assert_eq!(g.feed(b"\r\n[admin@MikroTik]"), vec![]);
+        assert_eq!(g.feed(b" > "), vec![]);
+        assert_eq!(g.idle(), vec![Step::Send(b"/export\n".to_vec())]);
+        assert_eq!(
+            g.feed(b"/export\r\n/system identity\r\nset name=r1\r\n[admin@MikroTik] > "),
+            vec![Step::Done("/system identity\nset name=r1\n".into())]
+        );
     }
 
     #[test]

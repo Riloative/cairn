@@ -252,6 +252,10 @@ with a mix of SSH and serial devices.
   start and end, and a second connection reattaching without a certificate prompt.
 - Found on the way: `parse_target("user@")` accepted an empty host (also affected SSH
   jump hosts); fixed. Raising the MSRV turned on a clippy lint in two older tests.
+- CI run 35 hit a 5-minute hang in the config-grab integration test: the grabber took
+  the first chunk whose last line looked like a prompt, so a prompt split across reads
+  (`[admin@MikroTik]` + ` >`) was recorded half-way and the real prompt never matched.
+  The first prompt is now taken only after the output goes quiet; regression test added.
 
 **Next:** M8 (audit and data).
 
