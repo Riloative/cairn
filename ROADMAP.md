@@ -133,7 +133,7 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] RDP profiles (resolution, color depth, SSH tunnel; RD Gateway not feasible yet, D-041)
 - [x] External client fallback (FreeRDP on Linux, `.rdp` on macOS)
 - [x] xrdp integration test
-- [ ] CI green on both platforms for M7
+- [x] CI green on both platforms for M7 (run 37)
 
 ## M8 – Audit and data
 

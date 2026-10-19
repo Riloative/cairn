@@ -257,7 +257,7 @@ with a mix of SSH and serial devices.
   (`[admin@MikroTik]` + ` >`) was recorded half-way and the real prompt never matched.
   The first prompt is now taken only after the output goes quiet; regression test added.
 
-**Next:** M8 (audit and data).
+**Next:** M8 (audit and data). M7 CI green on both platforms (run 37).
 
 **Test manually:** RDP to Windows 10/11 and Server 2019/2022 with NLA (local and domain
 accounts, `DOMAIN\user`), a dynamic resize and the Retina sharpness on macOS, ⌘C/⌘V
