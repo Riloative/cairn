@@ -156,19 +156,16 @@ pub async fn serial_open(
     state: State<'_, AppState>,
     sessions: State<'_, Arc<SessionManager>>,
     options: SerialOptions,
+    credential_id: Option<i64>,
     on_data: Channel<InvokeResponseBody>,
     on_event: Channel<SessionMessage>,
 ) -> CommandResult<SessionId> {
     require_unlocked(&state)?;
-    start(
-        &state,
-        &sessions,
-        options,
-        None,
-        LoginPlan::default(),
-        on_data,
-        on_event,
-    )
+    let login = match super::saved::credential(&state, credential_id)? {
+        Some((profile, secrets)) => super::devices::full_login(Some(&profile), &secrets),
+        None => LoginPlan::default(),
+    };
+    start(&state, &sessions, options, None, login, on_data, on_event)
 }
 
 /// Open a serial session (also used for inventory devices).

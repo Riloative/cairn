@@ -5,10 +5,11 @@ use crate::error::{CommandError, CommandResult};
 use crate::sessions::ssh::{SessionContext, TauriInteract};
 use crate::sessions::{autologin, DeviceRef, SessionId, SessionManager, SessionMessage};
 use crate::state::AppState;
+use cairn_core::inventory::credentials::{CredentialProfile, Secrets};
 use cairn_core::known_hosts::{self, KnownHost};
 use cairn_core::login::LoginPlan;
 use cairn_core::terminal::TerminalSession;
-use cairn_proto_ssh::{ConnectOptions, SshSession};
+use cairn_proto_ssh::{AuthMethod, ConnectOptions, SshSession};
 use serde::Serialize;
 use std::sync::Arc;
 use tauri::ipc::{Channel, InvokeResponseBody};
@@ -148,22 +149,54 @@ pub(crate) fn open(
     })
 }
 
+/// Use a credential profile for the destination (last hop): its username when the form
+/// left it empty, its key and password before the form's own methods, and its enable
+/// secret for the login.
+fn with_profile(
+    mut options: ConnectOptions,
+    profile: &CredentialProfile,
+    secrets: &Secrets,
+) -> (ConnectOptions, LoginPlan) {
+    if let Some(hop) = options.hops.last_mut() {
+        if hop.username.trim().is_empty() {
+            hop.username = profile.username.clone();
+        }
+        let mut auth = super::devices::ssh_auth(Some(profile), secrets);
+        // The form's own choices (a key file, the agent) still follow; methods of a kind
+        // the profile already tries are dropped, except key files (other keys).
+        let tried: Vec<_> = auth.iter().map(std::mem::discriminant).collect();
+        auth.extend(hop.auth.drain(..).filter(|m| {
+            matches!(m, AuthMethod::KeyFile { .. }) || !tried.contains(&std::mem::discriminant(m))
+        }));
+        hop.auth = auth;
+    }
+    (options, super::devices::enable_only(Some(profile), secrets))
+}
+
 /// Open an SSH session. Progress, host-key and credential prompts arrive on `on_event`.
+/// With `credential_id` (a saved connection's profile) the profile's username, key,
+/// password and enable secret are used first, filled in here in Rust.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn ssh_open(
     state: State<'_, AppState>,
     sessions: State<'_, Arc<SessionManager>>,
     options: ConnectOptions,
+    credential_id: Option<i64>,
     cols: u16,
     rows: u16,
     on_data: Channel<InvokeResponseBody>,
     on_event: Channel<SessionMessage>,
 ) -> CommandResult<SshOpened> {
     require_unlocked(&state)?;
+    let (options, login) = match super::saved::credential(&state, credential_id)? {
+        Some((profile, secrets)) => with_profile(options, &profile, &secrets),
+        None => (options, LoginPlan::default()),
+    };
     let target = SshTarget {
         opts: options,
         device: None,
-        login: LoginPlan::default(),
+        login,
     };
     open(&state, &sessions, target, cols, rows, on_data, on_event)
 }
@@ -216,6 +249,7 @@ pub fn known_hosts_remove(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cairn_core::SecretString;
     use cairn_proto_ssh::{AuthMethod, Hop};
 
     fn opts(host: &str, user: &str) -> ConnectOptions {
@@ -233,6 +267,59 @@ mod tests {
             connect_timeout_secs: 15,
             agent_forwarding: false,
         }
+    }
+
+    #[test]
+    fn a_credential_profile_fills_username_auth_and_enable() {
+        let profile = CredentialProfile {
+            id: 7,
+            name: "netops".into(),
+            username: "admin".into(),
+            key_path: None,
+            auto_enable: true,
+            notes: String::new(),
+            has_password: true,
+            has_key_data: false,
+            has_key_passphrase: false,
+            has_enable_secret: true,
+        };
+        let secrets = Secrets {
+            password: Some(SecretString::new("pw".into())),
+            enable_secret: Some(SecretString::new("en".into())),
+            ..Secrets::default()
+        };
+        let mut form = opts("sw1", "");
+        form.hops[0].auth = vec![
+            AuthMethod::KeyFile {
+                path: "/home/me/.ssh/id_ed25519".into(),
+                passphrase: None,
+            },
+            AuthMethod::KeyboardInteractive,
+        ];
+        let (o, login) = with_profile(form, &profile, &secrets);
+        let hop = &o.hops[0];
+        assert_eq!(hop.username, "admin");
+        assert!(validate(&o).is_ok());
+        // The profile's password first; the form's key file kept; no duplicate kinds.
+        assert!(matches!(
+            &hop.auth[0],
+            AuthMethod::Password { password: Some(_) }
+        ));
+        assert!(hop
+            .auth
+            .iter()
+            .any(|m| matches!(m, AuthMethod::KeyFile { .. })));
+        let interactive = hop
+            .auth
+            .iter()
+            .filter(|m| matches!(m, AuthMethod::KeyboardInteractive))
+            .count();
+        assert_eq!(interactive, 1);
+        assert!(login.enable_secret.is_some());
+
+        // A username typed in the form wins over the profile's.
+        let (o, _) = with_profile(opts("sw1", "ops"), &profile, &secrets);
+        assert_eq!(o.hops[0].username, "ops");
     }
 
     #[test]

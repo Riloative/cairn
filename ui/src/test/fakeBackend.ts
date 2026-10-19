@@ -18,6 +18,7 @@ import type {
   ForwardInfo,
   ForwardPreset,
   ForwardSpec,
+  SavedConnection,
   Snippet,
   SnapshotInfo,
   TftpPrefs,
@@ -85,6 +86,7 @@ export class FakeBackend {
     (payload) => this.fail(payload),
   );
   snippets: Snippet[] = [];
+  saved: SavedConnection[] = [];
   /** Opened RDP sessions with their channels, for tests to drive. */
   rdpSessions: {
     sessionId: string;
@@ -315,6 +317,30 @@ export class FakeBackend {
         this.requireUnlocked();
         this.rdpExternal.push({ deviceId: args.deviceId as number, method: args.method as number });
         return "Opened in xfreerdp3";
+      case "saved_connections_list":
+        this.requireUnlocked();
+        return structuredClone(this.saved);
+      case "saved_connection_save": {
+        this.requireUnlocked();
+        const input = args.connection as SavedConnection;
+        if (JSON.stringify(input.settings).includes('"password":"'))
+          this.fail({
+            code: "validation",
+            message: "Passwords are not stored with a saved connection.",
+            hint: null,
+          });
+        const saved = { ...input, id: input.id || 7000 + this.saved.length };
+        this.saved = [...this.saved.filter((x) => x.id !== saved.id), saved];
+        return structuredClone(saved);
+      }
+      case "saved_connection_delete":
+        this.saved = this.saved.filter((x) => x.id !== args.id);
+        return null;
+      case "saved_connection_used":
+        this.saved = this.saved.map((x) =>
+          x.id === args.id ? { ...x, lastUsedAt: new Date().toISOString() } : x,
+        );
+        return null;
       case "snippets_list":
         this.requireUnlocked();
         return structuredClone(this.snippets);

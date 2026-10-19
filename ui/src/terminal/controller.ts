@@ -398,7 +398,7 @@ export function openLocalShell(spec: ShellSpec | null = null, title = "Local she
 export function openSsh(
   options: ConnectOptions,
   title: string,
-  extra: { profileId?: string | null; vendor?: string } = {},
+  extra: { profileId?: string | null; vendor?: string; credentialId?: number | null } = {},
 ) {
   return openTerminalTab({
     title,
@@ -407,7 +407,7 @@ export function openSsh(
     vendor: extra.vendor,
     readyOnStart: false,
     start: async (tabId, cols, rows, cb) => {
-      const opened = await ipc.sshOpen(options, cols, rows, cb);
+      const opened = await ipc.sshOpen(options, cols, rows, cb, extra.credentialId ?? null);
       connections.set(tabId, opened.connectionId);
       reopeners.set(tabId, (c, r, callbacks) =>
         ipc.sshReconnect(opened.connectionId, c, r, callbacks),
@@ -421,9 +421,10 @@ export function openSsh(
 export function openTelnet(
   request: TelnetRequest,
   title: string,
-  extra: { profileId?: string | null; vendor?: string } = {},
+  extra: { profileId?: string | null; vendor?: string; credentialId?: number | null } = {},
 ) {
-  const start: Starter = (cols, rows, cb) => ipc.telnetOpen(request, cols, rows, cb);
+  const start: Starter = (cols, rows, cb) =>
+    ipc.telnetOpen(request, cols, rows, cb, extra.credentialId ?? null);
   return openTerminalTab({
     title,
     protocol: "telnet",
@@ -441,9 +442,10 @@ export function openTelnet(
 export function openSerial(
   options: SerialOptions,
   title: string,
-  extra: { profileId?: string | null; vendor?: string } = {},
+  extra: { profileId?: string | null; vendor?: string; credentialId?: number | null } = {},
 ) {
-  const start: Starter = (_cols, _rows, cb) => ipc.serialOpen(options, cb);
+  const start: Starter = (_cols, _rows, cb) =>
+    ipc.serialOpen(options, cb, extra.credentialId ?? null);
   return openTerminalTab({
     title,
     protocol: "serial",

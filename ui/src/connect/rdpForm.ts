@@ -25,17 +25,19 @@ export const EMPTY_RDP: RdpForm = {
 
 export type RdpErrors = Partial<Record<"destination" | "username", string>>;
 
-export function validateRdp(form: RdpForm): RdpErrors {
+/** `userFromProfile`: a credential profile supplies the username when it is empty. */
+export function validateRdp(form: RdpForm, userFromProfile = false): RdpErrors {
   const errors: RdpErrors = {};
   const target = parseTarget(form.destination);
   if (!target) errors.destination = "Enter a host or host:port.";
-  if (!(target?.user ?? form.username).trim()) errors.username = "Enter a username.";
+  if (!(target?.user ?? form.username).trim() && !userFromProfile)
+    errors.username = "Enter a username.";
   return errors;
 }
 
-export function buildRdp(form: RdpForm): RdpOptions | null {
+export function buildRdp(form: RdpForm, userFromProfile = false): RdpOptions | null {
   const target = parseTarget(form.destination);
-  if (!target || Object.keys(validateRdp(form)).length > 0) return null;
+  if (!target || Object.keys(validateRdp(form, userFromProfile)).length > 0) return null;
   return {
     host: target.host,
     port: target.port ?? 3389,

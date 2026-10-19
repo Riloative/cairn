@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { SavedConnection } from "@/lib/ipc";
 
 export type View = "sessions" | "inventory" | "map" | "audit" | "tools" | "settings";
 export type ToolsTab = "tftp" | "forwards";
@@ -16,6 +17,10 @@ interface UiState {
   setConnectProtocol: (protocol: ConnectProtocol) => void;
   /** Open the connect dialog on a protocol's tab. */
   openConnect: (protocol: ConnectProtocol) => void;
+  /** The saved connection loaded into the connect dialog, if any. */
+  editingSaved: SavedConnection | null;
+  /** Open the connect dialog filled with a saved connection, to edit or connect. */
+  editSaved: (saved: SavedConnection) => void;
   setView: (view: View) => void;
   setPaletteOpen: (open: boolean) => void;
   setNotificationsOpen: (open: boolean) => void;
@@ -33,9 +38,14 @@ export const useUi = create<UiState>((set) => ({
   shortcutsOpen: false,
   quickConnectOpen: false,
   connectProtocol: "ssh",
-  setQuickConnectOpen: (quickConnectOpen) => set({ quickConnectOpen }),
+  setQuickConnectOpen: (quickConnectOpen) =>
+    set(quickConnectOpen ? { quickConnectOpen } : { quickConnectOpen, editingSaved: null }),
   setConnectProtocol: (connectProtocol) => set({ connectProtocol }),
-  openConnect: (connectProtocol) => set({ connectProtocol, quickConnectOpen: true }),
+  openConnect: (connectProtocol) =>
+    set({ connectProtocol, quickConnectOpen: true, editingSaved: null }),
+  editingSaved: null,
+  editSaved: (editingSaved) =>
+    set({ editingSaved, connectProtocol: editingSaved.protocol, quickConnectOpen: true }),
   setView: (view) => set({ view }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setNotificationsOpen: (notificationsOpen) => set({ notificationsOpen }),
