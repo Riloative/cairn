@@ -99,10 +99,12 @@ export function RecordingPlayer({
       <DialogContent
         title={`${recordingTitle(recording)} · ${recording.protocol.toUpperCase()}`}
         description={new Date(recording.startedAt).toLocaleString()}
-        className="flex max-h-[calc(100vh-48px)] w-[min(1100px,calc(100vw-32px))] flex-col"
+        className="w-[min(1100px,calc(100vw-32px))]"
       >
         <div
-          className="min-h-[200px] flex-1 overflow-auto rounded-lg bg-bg p-2"
+          // The recorded terminal can be taller than the window; it scrolls so the
+          // controls below stay visible.
+          className="max-h-[calc(100vh-260px)] min-h-[200px] overflow-auto rounded-lg bg-bg p-2"
           onKeyDown={(e) => {
             if (e.key === " ") {
               e.preventDefault();

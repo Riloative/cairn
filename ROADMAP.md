@@ -137,11 +137,12 @@ both platforms, and there are no stubs/TODOs left inside it.
 
 ## M8 – Audit and data
 
-- [ ] Audit view: filters (time, device, event, protocol), verify integrity, CSV/JSON export, retention
-- [ ] asciicast v2 recording (per device / global), replay player (seek, speed), transcript export
-- [ ] Encrypted `.cairn-backup` full backup + restore
-- [ ] Offer an encrypted backup right after first-run setup (moved here from M1, see D-012)
-- [ ] JSON/CSV readable export (credentials opt-in with warning)
+- [x] Audit view: filters (time, device, event, protocol), verify integrity, CSV/JSON export, retention
+- [x] asciicast v2 recording (per device / global), replay player (seek, speed), transcript export
+- [x] Encrypted `.cairn-backup` full backup + restore
+- [x] Offer an encrypted backup right after first-run setup (moved here from M1, see D-012)
+- [x] JSON/CSV readable export (credentials opt-in with warning)
+- [ ] CI green on both platforms for M8
 
 ## M9 – Polish
 

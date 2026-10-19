@@ -146,7 +146,7 @@ export function RecordingsList() {
               <th className="w-24 px-2 py-2 font-medium">Protocol</th>
               <th className="w-24 px-2 py-2 font-medium">Length</th>
               <th className="w-24 px-2 py-2 font-medium">Size</th>
-              <th className="w-24" aria-hidden />
+              <th className="w-36" aria-hidden />
             </tr>
           </thead>
           <tbody>
@@ -174,7 +174,7 @@ export function RecordingsList() {
                     </span>
                   )}
                 </td>
-                <td className="px-2 py-1 text-right">
+                <td className="px-2 py-1 text-right whitespace-nowrap">
                   <Button
                     size="sm"
                     variant="ghost"

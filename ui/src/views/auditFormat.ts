@@ -24,6 +24,7 @@ export const LABELS: Record<string, string> = {
   tftp_server: "TFTP server",
   audit_pruned: "Old entries removed",
   recording_deleted: "Recording deleted",
+  backup_restored: "Backup restored",
 };
 
 const list = (v: unknown) => ((v as string[] | undefined) ?? []).join(", ");
@@ -86,6 +87,8 @@ export function summarize(entry: AuditEntry): string {
       const what = `${String(p.entity).replace("_", " ")} ${String(p.name)} ${String(p.action)}`;
       return p.action === "updated" && fields.length ? `${what}: ${fields.join(", ")}` : what;
     }
+    case "backup_restored":
+      return `backup from ${dateFormat.format(new Date(String(p.backupCreatedAt)))} (Cairn ${String(p.appVersion)})${p.recordings ? ", with recordings" : ""}`;
     case "recording_deleted":
       return `${String(p.protocol)} ${String(p.device ?? p.target)} from ${dateFormat.format(new Date(String(p.startedAt)))}`;
     case "audit_pruned":
