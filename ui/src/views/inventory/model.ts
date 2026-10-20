@@ -116,6 +116,7 @@ export const NEW_DEVICE: Device = {
   model: "",
   serial: "",
   firmware: "",
+  assetNumber: "",
   buildingId: null,
   floorId: null,
   roomId: null,

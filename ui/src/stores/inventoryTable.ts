@@ -6,6 +6,7 @@ import { EMPTY_FACETS, type Facets, type GroupBy } from "@/views/inventory/query
 export const DEFAULT_COLUMNS: VisibilityState = {
   serial: false,
   firmware: false,
+  assetNumber: false,
   credential: false,
   interfaces: false,
   vlans: false,

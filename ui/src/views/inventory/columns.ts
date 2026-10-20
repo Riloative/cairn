@@ -45,6 +45,7 @@ export function useColumns(snapshot: InventorySnapshot): ColumnDef<Device, strin
       col.accessor((d) => d.tags.join(", "), { id: "tags", header: "Tags", size: 160 }),
       col.accessor("serial", { id: "serial", header: "Serial", size: 140 }),
       col.accessor("firmware", { id: "firmware", header: "Firmware", size: 120 }),
+      col.accessor("assetNumber", { id: "assetNumber", header: "Asset number", size: 130 }),
       col.accessor((d) => snapshot.credentials.find((c) => c.id === d.credentialId)?.name ?? "", {
         id: "credential",
         header: "Credentials",

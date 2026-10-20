@@ -361,3 +361,19 @@ path from the README on a machine that has never run Cairn.
   click or drag to move the view.
 - **Icons:** the original designs, polished to one grid and corner radius; the IP phone
   and access point redrawn.
+
+### M11: mouse comfort and inventory
+
+- Tabs aligned with the card: the first tab starts at the card edge and the active tab
+  has the same colour as the session header below it (translucent tints drawn over the
+  card surface). In other views the selected tab is shown detached.
+- "+" opens a New session menu instead of the command palette: local shell, container
+  shells, SSH/Telnet/Serial/RDP and saved connections. A Search button (Ctrl/⌘ K) opens
+  the command search.
+- Tab right-click menu (reconnect, close, close others, close to the right), drag to
+  reorder, close button always visible on the active tab, double-click the empty tab
+  bar for a local shell.
+- Devices have an Asset number (form, details, optional table column, search, CSV/JSON
+  export, audited).
+- Verified in the release build under Xvfb: tab/header colour match, the New session
+  menu and the Search button.

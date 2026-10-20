@@ -214,6 +214,13 @@ export function DeviceForm({
           <Field label="Firmware">
             <Input value={d.firmware} onChange={(e) => set("firmware", e.target.value)} />
           </Field>
+          <Field label="Asset number">
+            <Input
+              spellCheck={false}
+              value={d.assetNumber}
+              onChange={(e) => set("assetNumber", e.target.value)}
+            />
+          </Field>
           <Field label="Credentials">
             <NativeSelect
               value={d.credentialId ?? ""}
