@@ -632,7 +632,7 @@ dependencies = [
 
 [[package]]
 name = "cairn"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cairn-core",
  "cairn-export",
@@ -663,7 +663,7 @@ dependencies = [
 
 [[package]]
 name = "cairn-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "argon2",
  "chrono",
@@ -682,7 +682,7 @@ dependencies = [
 
 [[package]]
 name = "cairn-export"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cairn-core",
  "resvg",
@@ -695,7 +695,7 @@ dependencies = [
 
 [[package]]
 name = "cairn-proto-rdp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cairn-core",
  "futures",
@@ -712,7 +712,7 @@ dependencies = [
 
 [[package]]
 name = "cairn-proto-serial"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cairn-core",
  "parking_lot",
@@ -725,7 +725,7 @@ dependencies = [
 
 [[package]]
 name = "cairn-proto-ssh"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cairn-core",
  "futures",
@@ -741,7 +741,7 @@ dependencies = [
 
 [[package]]
 name = "cairn-proto-telnet"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cairn-core",
  "serde",
@@ -752,7 +752,7 @@ dependencies = [
 
 [[package]]
 name = "cairn-pty"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cairn-core",
  "parking_lot",
@@ -764,7 +764,7 @@ dependencies = [
 
 [[package]]
 name = "cairn-tftp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cairn-core",
  "serde",
