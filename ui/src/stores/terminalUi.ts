@@ -18,6 +18,8 @@ interface TerminalUiState {
   /** The colour scheme picker in the active terminal's header. */
   schemePickerOpen: boolean;
   setSchemePickerOpen: (open: boolean) => void;
+  /** Close every terminal overlay and cancel a paste awaiting confirmation (on lock). */
+  reset: () => void;
 }
 
 export const useTerminalUi = create<TerminalUiState>((set, get) => ({
@@ -38,4 +40,10 @@ export const useTerminalUi = create<TerminalUiState>((set, get) => ({
   setOverviewOpen: (overviewOpen) => set({ overviewOpen }),
   schemePickerOpen: false,
   setSchemePickerOpen: (schemePickerOpen) => set({ schemePickerOpen }),
+  reset: () => {
+    const p = get().pendingPaste;
+    set({ searchOpen: false, pendingPaste: null, overviewOpen: false, schemePickerOpen: false });
+    // Settle the awaiting paste so `pasteIntoTab` returns instead of hanging past the lock.
+    p?.resolve("cancel");
+  },
 }));

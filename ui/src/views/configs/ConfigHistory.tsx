@@ -1,4 +1,4 @@
-import { FileDiff, FileText, Loader2, ScrollText, Trash2 } from "lucide-react";
+import { FileDiff, FileText, ScrollText, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -73,7 +73,7 @@ export function ConfigHistory({ device }: { device: Device }) {
           disabled={running}
           onClick={() => void grabConfig(device)}
         >
-          {running ? <Loader2 size={13} className="animate-spin" /> : <ScrollText size={13} />}
+          {running ? <Skeleton className="size-3.5 rounded-full" /> : <ScrollText size={13} />}
           {running ? "Grabbing…" : "Grab config"}
         </Button>
         <Button size="sm" variant="secondary" disabled={!canCompare} onClick={compare}>

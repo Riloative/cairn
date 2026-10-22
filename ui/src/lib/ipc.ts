@@ -1194,7 +1194,11 @@ export interface LocalAddress {
   address: string;
 }
 
-export const TFTP_TRANSFER_EVENT = "tftp://transfer";
+const TFTP_TRANSFER_EVENT = "tftp://transfer";
+/** Live transfer updates from the TFTP server (one entry per change). */
+export function onTftpTransfer(handler: (entry: TftpLogEntry) => void): Promise<UnlistenFn> {
+  return listen<TftpLogEntry>(TFTP_TRANSFER_EVENT, (e) => handler(e.payload));
+}
 export const tftpStatus = () => call<TftpStatus>("tftp_status");
 export const tftpPrefsUpdate = (prefs: TftpPrefs) =>
   call<TftpPrefs>("tftp_prefs_update", { prefs });

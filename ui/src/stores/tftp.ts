@@ -1,4 +1,3 @@
-import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import * as ipc from "@/lib/ipc";
 import type { TftpLogEntry, TftpPrefs, TftpStatus } from "@/lib/ipc";
@@ -65,7 +64,5 @@ export const useTftp = create<TftpState>((set, get) => ({
 
 /** Subscribe to live transfer updates; returns the unlisten function. */
 export function watchTftp(): Promise<() => void> {
-  return listen<TftpLogEntry>(ipc.TFTP_TRANSFER_EVENT, (e) =>
-    useTftp.getState().applyEntry(e.payload),
-  );
+  return ipc.onTftpTransfer((entry) => useTftp.getState().applyEntry(entry));
 }

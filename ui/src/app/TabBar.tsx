@@ -1,5 +1,5 @@
 import { RadioTower, Search, X } from "lucide-react";
-import { useState, type DragEvent } from "react";
+import { useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -36,11 +36,28 @@ function closeAll(ids: string[]) {
   for (const id of ids) close(id);
 }
 
+/** Index of the tab an arrow/Home/End key moves to from `index`, or null for other keys. */
+function keyTarget(key: string, index: number, count: number): number | null {
+  switch (key) {
+    case "ArrowLeft":
+      return (index - 1 + count) % count;
+    case "ArrowRight":
+      return (index + 1) % count;
+    case "Home":
+      return 0;
+    case "End":
+      return count - 1;
+    default:
+      return null;
+  }
+}
+
 /**
  * Session tabs above the main card. The first tab lines up with the card's left edge
  * and the active one takes the colour of the header right below it, so tab and session
  * read as one piece. Mouse: click, middle-click to close, drag to reorder, right-click
- * for more, "+" for a new session, the magnifier for the command search.
+ * for more, "+" for a new session, the magnifier for the command search. Keyboard: the
+ * active tab is the one tab stop; arrows, Home and End move to (and show) a neighbour.
  */
 export function TabBar() {
   const tabs = useSessions((s) => s.tabs);
@@ -53,6 +70,7 @@ export function TabBar() {
   const setPaletteOpen = useUi((s) => s.setPaletteOpen);
   const privileged = usePrivileged(activeId);
   const [dropAt, setDropAt] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // In Sessions the active tab continues the header below it; outside Sessions the
   // card is another view, so the tab is selected but not attached.
@@ -67,9 +85,32 @@ export function TabBar() {
     move(id, from >= 0 && from < index ? index - 1 : index);
   }
 
+  function show(id: string) {
+    activate(id);
+    setView("sessions");
+  }
+
+  function onTabKey(e: KeyboardEvent, index: number) {
+    const t = tabs[index];
+    if (!t) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      show(t.id);
+      return;
+    }
+    const target = keyTarget(e.key, index, tabs.length);
+    if (target === null) return;
+    e.preventDefault();
+    const next = tabs[target];
+    if (!next) return;
+    show(next.id);
+    listRef.current?.querySelectorAll<HTMLElement>('[role="tab"]')[target]?.focus();
+  }
+
   return (
     <div className="flex h-10 shrink-0 items-end gap-1 pr-2">
       <div
+        ref={listRef}
         role="tablist"
         aria-label="Sessions"
         className="flex min-w-0 items-end gap-1 overflow-x-auto"
@@ -102,13 +143,8 @@ export function TabBar() {
                   onDragLeave={() => setDropAt(null)}
                   onDrop={(e) => onDrop(e, dropAt ?? i)}
                   onDragEnd={() => setDropAt(null)}
-                  onClick={() => {
-                    activate(t.id);
-                    setView("sessions");
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") activate(t.id);
-                  }}
+                  onClick={() => show(t.id)}
+                  onKeyDown={(e) => onTabKey(e, i)}
                   onAuxClick={(e) => e.button === 1 && close(t.id)}
                   style={
                     active && attached ? tintOverSurface(headerTint(t, privileged)) : undefined
@@ -138,10 +174,18 @@ export function TabBar() {
                     />
                   )}
                   <SessionStateIcon state={t.state} />
-                  <button
-                    type="button"
+                  {/* Not a <button>: interactive content may not nest inside a tab. */}
+                  <span
+                    role="button"
+                    tabIndex={-1}
                     aria-label={`Close ${t.title}`}
                     onClick={(e) => {
+                      e.stopPropagation();
+                      close(t.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
                       e.stopPropagation();
                       close(t.id);
                     }}
@@ -152,7 +196,7 @@ export function TabBar() {
                     )}
                   >
                     <X size={12} />
-                  </button>
+                  </span>
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent>

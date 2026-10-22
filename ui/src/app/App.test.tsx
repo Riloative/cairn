@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useActions } from "@/lib/actions";
 import { useNotifications } from "@/stores/notifications";
 import { useSessions } from "@/stores/sessions";
+import { usePrompts } from "@/stores/prompts";
 import { useSettings } from "@/stores/settings";
+import { useTerminalUi } from "@/stores/terminalUi";
 import { useUi } from "@/stores/ui";
 import { useVault } from "@/stores/vault";
 import { FakeBackend } from "@/test/fakeBackend";
@@ -15,7 +17,14 @@ let backend: FakeBackend;
 function resetStores() {
   useVault.setState({ info: null, lockReason: null, justCreated: false });
   useSettings.setState({ settings: null });
-  useUi.setState({ view: "sessions", paletteOpen: false, notificationsOpen: false });
+  useUi.setState({
+    view: "sessions",
+    paletteOpen: false,
+    notificationsOpen: false,
+    shortcutsOpen: false,
+    quickConnectOpen: false,
+    editingSaved: null,
+  });
   useNotifications.setState({ items: [] });
   useSessions.setState({ tabs: [], activeId: null });
   useActions.setState({ actions: new Map() });
@@ -99,6 +108,55 @@ describe("lock screen", () => {
     await screen.findByRole("navigation", { name: "Sections" });
     await act(() => backend.autoLock("idle"));
     expect(await screen.findByText("Cairn locked after a period of inactivity.")).toBeVisible();
+  });
+
+  it("closes dialogs and settles pending prompts and pastes when locking", async () => {
+    backend = new FakeBackend("unlocked");
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("navigation", { name: "Sections" });
+    act(() => useUi.getState().openConnect("ssh"));
+    expect(await screen.findByRole("dialog", { name: "New connection" })).toBeVisible();
+    act(() => useUi.getState().setShortcutsOpen(true));
+    const paste = useTerminalUi.getState().confirmPaste("t1", "line1\nline2");
+    act(() =>
+      usePrompts.getState().push({
+        id: 7,
+        tabId: "t1",
+        type: "prompt",
+        prompt: { kind: "password", user: "admin", target: "10.0.0.1" },
+      }),
+    );
+
+    await act(() => backend.autoLock("idle"));
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(useUi.getState()).toMatchObject({
+      quickConnectOpen: false,
+      shortcutsOpen: false,
+      editingSaved: null,
+    });
+    await expect(paste).resolves.toBe("cancel");
+    expect(useTerminalUi.getState().pendingPaste).toBeNull();
+    expect(usePrompts.getState().queue).toEqual([]);
+    expect(backend.promptReplies).toEqual([{ promptId: 7, answer: { kind: "cancel" } }]);
+
+    await user.type(screen.getByLabelText("Master password"), backend.password);
+    await user.click(screen.getByRole("button", { name: "Unlock" }));
+    expect(await screen.findByRole("heading", { name: "No open sessions" })).toBeVisible();
+    expect(screen.queryByRole("dialog", { name: "New connection" })).toBeNull();
+  });
+
+  it("also resets the UI on a manual lock", async () => {
+    backend = new FakeBackend("unlocked");
+    render(<App />);
+    await screen.findByRole("navigation", { name: "Sections" });
+    act(() => useUi.getState().openConnect("telnet"));
+    expect(await screen.findByRole("dialog", { name: "New connection" })).toBeVisible();
+    // The `vault.lock` action and the sidebar button both go through the store.
+    await act(() => useVault.getState().lock());
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeVisible();
+    expect(useUi.getState().quickConnectOpen).toBe(false);
+    expect(screen.queryByRole("dialog", { name: "New connection" })).toBeNull();
   });
 });
 

@@ -107,10 +107,41 @@ describe("tab bar", () => {
     expect(titles()).toEqual(["a", "c", "b"]);
   });
 
-  it("keeps the active tab's close button visible and closes on middle-click", () => {
+  it("moves between tabs with the arrow keys, Home and End", async () => {
+    const user = userEvent.setup();
     renderBar();
-    expect(screen.getByRole("button", { name: "Close a" })).toHaveClass("opacity-100");
+    const a = screen.getByRole("tab", { name: /^a/ });
+    expect(a).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tab", { name: /^b/ })).toHaveAttribute("tabindex", "-1");
+    a.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(useSessions.getState().activeId).toBe("b");
+    expect(screen.getByRole("tab", { name: /^b/ })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: /^b/ })).toHaveAttribute("aria-selected", "true");
+    await user.keyboard("{ArrowLeft}{ArrowLeft}");
+    expect(useSessions.getState().activeId).toBe("c");
+    expect(screen.getByRole("tab", { name: /^c/ })).toHaveFocus();
+    await user.keyboard("{Home}");
+    expect(useSessions.getState().activeId).toBe("a");
+    await user.keyboard("{End}");
+    expect(useSessions.getState().activeId).toBe("c");
+    expect(screen.getByRole("tab", { name: /^c/ })).toHaveFocus();
+  });
+
+  it("keeps the active tab's close control visible, outside the tab's own tab stop", async () => {
+    const user = userEvent.setup();
+    renderBar();
+    const closeA = screen.getByRole("button", { name: "Close a" });
+    expect(closeA).toHaveClass("opacity-100");
+    expect(closeA.tagName).not.toBe("BUTTON");
+    expect(closeA).toHaveAttribute("tabindex", "-1");
     expect(screen.getByRole("button", { name: "Close b" })).toHaveClass("opacity-0");
+    await user.click(closeA);
+    expect(closeTab).toHaveBeenCalledWith("a");
+  });
+
+  it("closes on middle-click", () => {
+    renderBar();
     act(() => {
       fireEvent(
         screen.getByRole("tab", { name: /^b/ }),
