@@ -170,3 +170,16 @@ both platforms, and there are no stubs/TODOs left inside it.
 - [x] Tabs: right-click menu (reconnect, close, close others, close to the right), drag to reorder, close button always on the active tab, double-click the empty bar for a shell
 - [x] Asset number field for devices (form, details, table column, search, export)
 - [x] CI green on both platforms for M11 (run 69)
+
+## M12 – Audit fixes and quick wins (v0.1.2)
+
+- [ ] SSH: an unavailable agent or unreadable key file is a skipped method, not a failed connection; shell setup, SCP acks, SOCKS handshakes and RDP reactivation have timeouts and honour close
+- [ ] Vault: `vault.json` is fsynced before rename, a stale `vault.json.next` is cleaned up, a failed setup leaves no orphan database
+- [ ] Secrets: the enable secret and keyboard-interactive answers stay in zeroized buffers
+- [ ] Terminals: only rendering-related settings restyle terminals; only the visible pane refits and resize IPC is debounced; settings updates are serialised
+- [ ] Lock resets dialogs, pending pastes and prompts
+- [ ] Accessibility: sidebar names, tab arrow keys, main landmark label
+- [ ] Quick fixes: stale RDP tooltip, search/overview colours from tokens, grab skeleton, TFTP events via `ipc.ts`, `test-sshd.sh stop <dir>`, `check.sh` supply-chain checks, CLAUDE.md layout
+- [ ] CI: one run per PR and per merge, job timeouts, least-privilege permissions, SHA-pinned actions with Dependabot, shared release cache, `--locked` bundles, release gated on green CI and cleaned up on failure
+- [ ] Tests: IPC parity test (Rust handlers = `ipc.ts` = fakes), terminal controller and settings-store tests, Vitest `vmThreads` pool
+- [ ] CI green on both platforms for M12

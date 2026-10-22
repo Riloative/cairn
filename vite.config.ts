@@ -34,6 +34,9 @@ export default defineConfig({
     root: ".",
     include: ["ui/src/**/*.test.{ts,tsx}"],
     environment: "jsdom",
+    // One jsdom per worker instead of one per file (was ~40% of the run time);
+    // files stay isolated from each other.
+    pool: "vmThreads",
     globals: true,
     setupFiles: ["ui/src/test/setup.ts"],
     css: false,

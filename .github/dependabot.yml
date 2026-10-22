@@ -1,0 +1,35 @@
+version: 2
+updates:
+  # Actions are pinned by commit SHA in the workflows; Dependabot moves the pins.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      cargo-minor:
+        update-types: ["minor", "patch"]
+    ignore:
+      # IronRDP's connector is vendored with a patched dependency set (D-039);
+      # bumping its crates needs a manual re-vendor.
+      - dependency-name: "ironrdp*"
+      - dependency-name: "sspi"
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      npm-minor:
+        update-types: ["minor", "patch"]
+    ignore:
+      # Deliberately on the 6.x bridge release (D-002).
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]

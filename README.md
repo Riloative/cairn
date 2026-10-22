@@ -101,7 +101,7 @@ there. To start over, quit Cairn and delete the folder (make a backup first).
 
 ## Develop
 
-Prerequisites: Rust (stable), Node 22, and on Linux the packages in
+Prerequisites: Rust (the version pinned in `rust-toolchain.toml`; rustup installs it), Node 22, and on Linux the packages in
 `scripts/install-linux-deps.sh`.
 
 ```sh
