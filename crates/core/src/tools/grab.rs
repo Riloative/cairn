@@ -6,6 +6,7 @@
 //! after a quiet period, and sends whatever [`Step::Send`] asks for.
 
 use crate::secret::SecretString;
+use zeroize::Zeroizing;
 
 /// What to run on a vendor's CLI.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,7 +45,8 @@ pub fn plan(vendor: &str) -> GrabPlan {
 /// What the transport should do next.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Step {
-    Send(Vec<u8>),
+    /// Bytes to type on the device. Zeroed on drop: it may carry the enable secret.
+    Send(Zeroizing<Vec<u8>>),
     /// The configuration, cleaned of echo, prompts and pager artifacts.
     Done(String),
     /// A user-facing reason the grab failed.
@@ -106,7 +108,7 @@ impl Grabber {
 
     fn send_line(&mut self, line: &str) -> Step {
         self.buf.clear();
-        Step::Send(format!("{line}\n").into_bytes())
+        Step::Send(Zeroizing::new(format!("{line}\n").into_bytes()))
     }
 
     fn fail(&mut self, msg: impl Into<String>) -> Vec<Step> {
@@ -159,13 +161,13 @@ impl Grabber {
                 let lower = last.map(str::to_ascii_lowercase).unwrap_or_default();
                 if !sent_secret && lower.trim_end().ends_with("password:") {
                     self.phase = Phase::Enable { sent_secret: true };
-                    let secret = self
-                        .enable
-                        .as_ref()
-                        .map(|s| s.expose().to_owned())
-                        .unwrap_or_default();
                     self.buf.clear();
-                    let mut bytes = secret.into_bytes();
+                    let mut bytes = Zeroizing::new(
+                        self.enable
+                            .as_ref()
+                            .map(|s| s.expose().as_bytes().to_vec())
+                            .unwrap_or_default(),
+                    );
                     bytes.push(b'\n');
                     return vec![Step::Send(bytes)];
                 }
@@ -185,14 +187,14 @@ impl Grabber {
                 if self.at_prompt(&screen) {
                     self.next_setup(n + 1)
                 } else if idle && last.is_some_and(is_pager) {
-                    vec![Step::Send(b" ".to_vec())]
+                    vec![Step::Send(Zeroizing::new(b" ".to_vec()))]
                 } else {
                     Vec::new()
                 }
             }
             Phase::Command => {
                 if last.is_some_and(is_pager) {
-                    return vec![Step::Send(b" ".to_vec())];
+                    return vec![Step::Send(Zeroizing::new(b" ".to_vec()))];
                 }
                 if self.at_prompt(&screen) {
                     let config = extract(&screen, self.prompt.as_deref().unwrap_or_default());
@@ -407,7 +409,7 @@ mod tests {
             };
             match step {
                 Step::Send(bytes) => {
-                    let sent = String::from_utf8(bytes).expect("utf8");
+                    let sent = String::from_utf8(bytes.to_vec()).expect("utf8");
                     let (expect, reply) = script
                         .next()
                         .unwrap_or_else(|| panic!("unexpected send {sent:?}"));
@@ -514,7 +516,7 @@ mod tests {
         assert!(matches!(out, Step::Fail(m) if m.contains("% Invalid input")));
         let mut g = Grabber::new(plan("Cisco"), None);
         assert_eq!(g.feed(b"Welcome\r\n"), vec![]);
-        assert_eq!(g.idle(), vec![Step::Send(b"\n".to_vec())]);
+        assert_eq!(g.idle(), vec![Step::Send(Zeroizing::new(b"\n".to_vec()))]);
         assert!(matches!(g.idle().as_slice(), [Step::Fail(_)]));
         assert!(g.is_finished());
     }
@@ -524,7 +526,10 @@ mod tests {
         let mut g = Grabber::new(plan("MikroTik"), None);
         assert_eq!(g.feed(b"\r\n[admin@MikroTik]"), vec![]);
         assert_eq!(g.feed(b" > "), vec![]);
-        assert_eq!(g.idle(), vec![Step::Send(b"/export\n".to_vec())]);
+        assert_eq!(
+            g.idle(),
+            vec![Step::Send(Zeroizing::new(b"/export\n".to_vec()))]
+        );
         assert_eq!(
             g.feed(b"/export\r\n/system identity\r\nset name=r1\r\n[admin@MikroTik] > "),
             vec![Step::Done("/system identity\nset name=r1\n".into())]

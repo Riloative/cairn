@@ -348,7 +348,17 @@ async fn socks5(
     conn: &Connection,
     stats: &ForwardStats,
 ) -> Result<(), String> {
-    let (host, port) = socks_handshake(&mut stream).await?;
+    // A client that opens the socket but never sends the SOCKS request must not hold the
+    // task (and the SSH channel it would open) open forever.
+    let (host, port) = match tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        socks_handshake(&mut stream),
+    )
+    .await
+    {
+        Ok(r) => r?,
+        Err(_) => return Err("the SOCKS handshake timed out".into()),
+    };
     let channel = conn
         .handle
         .channel_open_direct_tcpip(

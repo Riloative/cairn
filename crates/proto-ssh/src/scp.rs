@@ -4,10 +4,31 @@
 use crate::connect::Connection;
 use crate::error::SshError;
 use std::path::Path;
+use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::sync::watch;
 
 const CHUNK: usize = 32 * 1024;
+/// A single protocol handshake read (ack, header, time record) must arrive within this.
+const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Run a handshake read so a cancel request or a silent device cannot wedge it: like
+/// [`pump`], it gives up on cancel and, unlike the raw read, also on a timeout.
+async fn guarded<T>(
+    cancel: &watch::Receiver<bool>,
+    fut: impl std::future::Future<Output = Result<T, SshError>>,
+) -> Result<T, SshError> {
+    if *cancel.borrow() {
+        return Err(SshError::Cancelled);
+    }
+    let mut cancel = cancel.clone();
+    tokio::select! {
+        r = tokio::time::timeout(HANDSHAKE_TIMEOUT, fut) => {
+            r.map_err(|_| SshError::Scp("the device stopped responding".into()))?
+        }
+        _ = cancel.changed() => Err(SshError::Cancelled),
+    }
+}
 
 /// Quote a remote path for the server's shell only when needed: network OSes such
 /// as IOS do not understand quotes (`flash:ios.bin` must stay as is).
@@ -143,35 +164,39 @@ pub async fn download(
     let mut s = exec(conn, format!("scp -f {}", quote(remote))).await?;
     let io = |e: std::io::Error| SshError::Scp(e.to_string());
     s.write_all(&[0]).await.map_err(io)?;
-    // Skip a `T` (times) record if the server sends one.
-    let header = loop {
-        let mut first = [0u8; 1];
-        s.read_exact(&mut first).await.map_err(io)?;
-        match first[0] {
-            b'C' => break format!("C{}", read_line(&mut s).await?),
-            b'T' => {
-                read_line(&mut s).await?;
-                s.write_all(&[0]).await.map_err(io)?;
-            }
-            1 | 2 => {
-                let msg = read_line(&mut s).await?;
-                return Err(SshError::Scp(
-                    msg.trim().trim_start_matches("scp: ").to_owned(),
-                ));
-            }
-            b'D' => {
-                return Err(SshError::Scp(
-                    "folders are not supported over SCP; choose a file".into(),
-                ))
-            }
-            other => {
-                let rest = read_line(&mut s).await.unwrap_or_default();
-                return Err(SshError::Scp(
-                    format!("{}{}", char::from(other), rest).trim().to_owned(),
-                ));
+    // Skip a `T` (times) record if the server sends one. Guarded so a cancel or a silent
+    // device cannot wedge the handshake.
+    let header = guarded(&cancel, async {
+        loop {
+            let mut first = [0u8; 1];
+            s.read_exact(&mut first).await.map_err(io)?;
+            match first[0] {
+                b'C' => break Ok(format!("C{}", read_line(&mut s).await?)),
+                b'T' => {
+                    read_line(&mut s).await?;
+                    s.write_all(&[0]).await.map_err(io)?;
+                }
+                1 | 2 => {
+                    let msg = read_line(&mut s).await?;
+                    return Err(SshError::Scp(
+                        msg.trim().trim_start_matches("scp: ").to_owned(),
+                    ));
+                }
+                b'D' => {
+                    return Err(SshError::Scp(
+                        "folders are not supported over SCP; choose a file".into(),
+                    ))
+                }
+                other => {
+                    let rest = read_line(&mut s).await.unwrap_or_default();
+                    return Err(SshError::Scp(
+                        format!("{}{}", char::from(other), rest).trim().to_owned(),
+                    ));
+                }
             }
         }
-    };
+    })
+    .await?;
     let (_, size, _) = parse_header(&header)?;
     s.write_all(&[0]).await.map_err(io)?;
     let part = local.with_file_name(format!(
@@ -186,7 +211,7 @@ pub async fn download(
         .map_err(|e| SshError::Scp(format!("Could not create {} ({e})", part.display())))?;
     let result = async {
         pump(&mut s, &mut file, size, &progress, &cancel).await?;
-        ack(&mut s).await?;
+        guarded(&cancel, ack(&mut s)).await?;
         s.write_all(&[0]).await.map_err(io)?;
         file.flush().await.map_err(io)
     }
@@ -228,14 +253,14 @@ pub async fn upload(
         .unwrap_or_else(|| "file".into());
     let io = |e: std::io::Error| SshError::Scp(e.to_string());
     let mut s = exec(conn, format!("scp -t {}", quote(remote))).await?;
-    ack(&mut s).await?;
+    guarded(&cancel, ack(&mut s)).await?;
     s.write_all(format!("C0644 {size} {name}\n").as_bytes())
         .await
         .map_err(io)?;
-    ack(&mut s).await?;
+    guarded(&cancel, ack(&mut s)).await?;
     pump(&mut file, &mut s, size, &progress, &cancel).await?;
     s.write_all(&[0]).await.map_err(io)?;
-    ack(&mut s).await?;
+    guarded(&cancel, ack(&mut s)).await?;
     let _ = s.shutdown().await;
     Ok(size)
 }

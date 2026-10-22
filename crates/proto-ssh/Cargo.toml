@@ -18,6 +18,7 @@ serde.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["net", "io-util", "macros", "rt", "fs", "time", "sync"] }
+zeroize.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
