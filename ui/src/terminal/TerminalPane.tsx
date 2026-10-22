@@ -5,9 +5,18 @@ import { ensureOpened, getTerminal, paintHost, promoteRenderer } from "./registr
 /**
  * Hosts a tab's xterm element. Mounting attaches the persistent element; unmounting only
  * detaches it, so scrollback survives tab and view switches.
+ *
+ * Only the active pane is fitted while the window resizes: hidden panes keep their
+ * layout (`visibility: hidden`), so without this every open terminal would refit, and
+ * resize its pty, on every observer tick. A pane is fitted again when it becomes active.
  */
 export function TerminalPane({ tabId, active }: { tabId: string; active: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  // Read by the resize observer, which outlives any one render.
+  const activeRef = useRef(active);
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -21,7 +30,9 @@ export function TerminalPane({ tabId, active }: { tabId: string; active: boolean
       if (host.clientWidth > 0 && host.clientHeight > 0) handle.fit.fit();
     };
     fit();
-    const ro = new ResizeObserver(fit);
+    const ro = new ResizeObserver(() => {
+      if (activeRef.current) fit();
+    });
     ro.observe(host);
     return () => {
       ro.disconnect();
@@ -34,11 +45,14 @@ export function TerminalPane({ tabId, active }: { tabId: string; active: boolean
     const handle = getTerminal(tabId);
     if (!handle) return;
     promoteRenderer(handle);
-    // Refit after becoming visible, then focus for typing.
-    requestAnimationFrame(() => {
-      if (hostRef.current && hostRef.current.clientWidth > 0) handle.fit.fit();
+    // Refit after becoming visible (the window may have changed size while the pane
+    // was hidden), then focus for typing.
+    const frame = requestAnimationFrame(() => {
+      const host = hostRef.current;
+      if (host && host.clientWidth > 0 && host.clientHeight > 0) handle.fit.fit();
       handle.term.focus();
     });
+    return () => cancelAnimationFrame(frame);
   }, [active, tabId]);
 
   return (
