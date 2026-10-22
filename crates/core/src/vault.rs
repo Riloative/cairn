@@ -17,6 +17,7 @@ use crate::secret::SecretString;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 /// Minimum master password length enforced by the backend (the UI also shows strength).
@@ -108,7 +109,13 @@ impl Vault {
             created_at: audit::now(),
             kdf: params,
         };
-        write_json_atomic(&self.dir.join(VAULT_FILE), &file)?;
+        if let Err(e) = write_json_atomic(&self.dir.join(VAULT_FILE), &file) {
+            // Never strand a database without its metadata: nobody could open it, and
+            // the next setup would refuse to overwrite it.
+            drop(conn);
+            remove_orphan_db(&self.dir);
+            return Err(e);
+        }
         audit::append(&conn, &AuditEvent::VaultCreated)?;
         audit::append(&conn, &AuditEvent::AppUnlocked)?;
         self.conn = Some(conn);
@@ -124,6 +131,13 @@ impl Vault {
             VaultStatus::Locked => {}
         }
         let conn = match self.open_with(password, VAULT_FILE) {
+            Ok(conn) => {
+                // The current parameters still open the database, so any pending file
+                // is from a password change interrupted before the rekey (or is
+                // unreadable). Either way it is stale: the current file is authoritative.
+                self.remove_stale_pending();
+                Ok(conn)
+            }
             Err(CoreError::WrongPassword) if self.dir.join(PENDING_VAULT_FILE).exists() => {
                 // An interrupted password change: the database may already use the new key.
                 let conn = self.open_with(password, PENDING_VAULT_FILE);
@@ -281,7 +295,13 @@ impl Vault {
                 created_at: audit::now(),
                 kdf: params,
             };
-            write_json_atomic(&self.dir.join(VAULT_FILE), &file)?;
+            if let Err(e) = write_json_atomic(&self.dir.join(VAULT_FILE), &file) {
+                // As in setup: a database without its metadata must not be left behind
+                // (there was no previous database on first launch).
+                drop(conn);
+                remove_orphan_db(&self.dir);
+                return Err(e);
+            }
         }
         audit::append(
             &conn,
@@ -313,7 +333,19 @@ impl Vault {
     fn finish_pending_change(&self) -> Result<(), CoreError> {
         let from = self.dir.join(PENDING_VAULT_FILE);
         let to = self.dir.join(VAULT_FILE);
-        fs::rename(&from, &to).map_err(|e| CoreError::io(&to, e))
+        fs::rename(&from, &to).map_err(|e| CoreError::io(&to, e))?;
+        sync_dir(&self.dir);
+        Ok(())
+    }
+
+    /// Delete a leftover `vault.json.next` once the current `vault.json` has proven to
+    /// open the database (see D-011: the pending file only matters after the rekey).
+    /// Best effort: a file that cannot be removed must not keep the user out of a
+    /// vault whose password just worked; it is retried on the next unlock.
+    fn remove_stale_pending(&self) {
+        if fs::remove_file(self.dir.join(PENDING_VAULT_FILE)).is_ok() {
+            sync_dir(&self.dir);
+        }
     }
 
     fn read_vault_file(&self, name: &str) -> Result<VaultFile, CoreError> {
@@ -378,11 +410,51 @@ fn check_password_policy(password: &SecretString) -> Result<(), CoreError> {
     Ok(())
 }
 
+/// Write `value` to `path` so that a crash leaves either the old or the new content:
+/// write and fsync `<path>.tmp`, rename it over `path`, then fsync the directory.
 fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), CoreError> {
-    let tmp = path.with_extension("tmp");
+    // `<name>.tmp` appended to the full name, so `vault.json` and `vault.json.next`
+    // never share a temporary file.
+    let mut tmp_name = path.as_os_str().to_os_string();
+    tmp_name.push(".tmp");
+    let tmp = PathBuf::from(tmp_name);
     let data = serde_json::to_vec_pretty(value)?;
-    fs::write(&tmp, data).map_err(|e| CoreError::io(&tmp, e))?;
-    fs::rename(&tmp, path).map_err(|e| CoreError::io(path, e))
+    let written = fs::File::create(&tmp).and_then(|mut file| {
+        file.write_all(&data)?;
+        file.sync_all()
+    });
+    if let Err(e) = written {
+        let _ = fs::remove_file(&tmp);
+        return Err(CoreError::io(&tmp, e));
+    }
+    fs::rename(&tmp, path).map_err(|e| CoreError::io(path, e))?;
+    if let Some(dir) = path.parent() {
+        sync_dir(dir);
+    }
+    Ok(())
+}
+
+/// Flush a directory's entries (a rename or delete is only durable once the directory
+/// is synced). Best effort: some platforms and filesystems refuse to open or fsync a
+/// directory, and that only weakens durability, never correctness.
+fn sync_dir(dir: &Path) {
+    if let Ok(handle) = fs::File::open(dir) {
+        let _ = handle.sync_all();
+    }
+}
+
+/// Remove a `cairn.db` (and its WAL sidecars) created by a setup or first-launch
+/// restore whose `vault.json` could not be written. Best effort: the caller is already
+/// returning the original error.
+fn remove_orphan_db(dir: &Path) {
+    for name in [
+        DB_FILE.to_owned(),
+        format!("{DB_FILE}-wal"),
+        format!("{DB_FILE}-shm"),
+    ] {
+        let _ = fs::remove_file(dir.join(name));
+    }
+    sync_dir(dir);
 }
 
 #[cfg(test)]
@@ -523,6 +595,101 @@ mod tests {
         assert!(!v.dir().join(PENDING_VAULT_FILE).exists());
         v.lock(LockReason::Manual).expect("lock");
         v.unlock(&new.into()).expect("unlock via promoted params");
+    }
+
+    #[test]
+    fn stale_pending_file_is_removed_when_current_params_work() {
+        let (_d, mut v) = setup();
+        let new = "an even better passphrase";
+        // Simulate a crash after the pending file was written but before the rekey.
+        let created_at = v.read_vault_file(VAULT_FILE).expect("read").created_at;
+        write_json_atomic(
+            &v.dir().join(PENDING_VAULT_FILE),
+            &VaultFile {
+                version: FORMAT_VERSION,
+                created_at,
+                kdf: fast_params(),
+            },
+        )
+        .expect("write pending");
+        v.lock(LockReason::Manual).expect("lock");
+
+        // The new password never took effect.
+        assert!(matches!(
+            v.unlock(&new.into()),
+            Err(CoreError::WrongPassword)
+        ));
+        assert!(v.dir().join(PENDING_VAULT_FILE).exists());
+        // The old one still works and the leftover is cleaned up.
+        v.unlock(&PW.into()).expect("unlock with old password");
+        assert!(!v.dir().join(PENDING_VAULT_FILE).exists());
+        assert!(v.dir().join(VAULT_FILE).exists());
+        v.lock(LockReason::Manual).expect("lock");
+        v.unlock(&PW.into()).expect("unlock again");
+    }
+
+    #[test]
+    fn corrupt_pending_file_is_removed_when_current_params_work() {
+        let (_d, mut v) = setup();
+        fs::write(v.dir().join(PENDING_VAULT_FILE), b"{ not json").expect("write");
+        v.lock(LockReason::Manual).expect("lock");
+        v.unlock(&PW.into()).expect("unlock");
+        assert!(!v.dir().join(PENDING_VAULT_FILE).exists());
+        assert!(v.dir().join(VAULT_FILE).exists());
+    }
+
+    #[test]
+    fn remove_orphan_db_removes_database_and_wal_sidecars_only() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        for name in [DB_FILE, "cairn.db-wal", "cairn.db-shm", VAULT_FILE] {
+            fs::write(dir.path().join(name), b"x").expect("write");
+        }
+        remove_orphan_db(dir.path());
+        for name in [DB_FILE, "cairn.db-wal", "cairn.db-shm"] {
+            assert!(!dir.path().join(name).exists(), "{name} should be gone");
+        }
+        assert!(dir.path().join(VAULT_FILE).exists());
+        // Nothing to remove is not an error.
+        remove_orphan_db(dir.path());
+    }
+
+    #[test]
+    fn failed_setup_leaves_no_orphan_database() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        // A directory where the temporary file must go makes writing vault.json fail
+        // after the database has been created.
+        fs::create_dir(dir.path().join(format!("{VAULT_FILE}.tmp"))).expect("mkdir");
+        let mut v = Vault::new(dir.path());
+        assert!(matches!(
+            v.setup_with_params(&PW.into(), fast_params()),
+            Err(CoreError::Io { .. })
+        ));
+        assert!(!v.db_path().exists());
+        assert!(!dir.path().join(format!("{DB_FILE}-wal")).exists());
+        assert_eq!(v.status(), VaultStatus::Uninitialized);
+    }
+
+    #[test]
+    fn write_json_atomic_leaves_no_temporary_files() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let a = dir.path().join(VAULT_FILE);
+        let b = dir.path().join(PENDING_VAULT_FILE);
+        write_json_atomic(&a, &vec![1, 2]).expect("write a");
+        write_json_atomic(&b, &vec![3]).expect("write b");
+        // Overwriting goes through the same path.
+        write_json_atomic(&a, &vec![4]).expect("rewrite a");
+        let a_val: Vec<u32> =
+            serde_json::from_str(&fs::read_to_string(&a).expect("read a")).expect("json");
+        let b_val: Vec<u32> =
+            serde_json::from_str(&fs::read_to_string(&b).expect("read b")).expect("json");
+        assert_eq!(a_val, [4]);
+        assert_eq!(b_val, [3]);
+        let names: Vec<String> = fs::read_dir(dir.path())
+            .expect("read_dir")
+            .map(|e| e.expect("entry").file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names.len(), 2, "{names:?}");
+        assert!(names.iter().all(|n| !n.ends_with(".tmp")), "{names:?}");
     }
 
     #[test]
