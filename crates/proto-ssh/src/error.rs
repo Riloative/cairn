@@ -28,6 +28,9 @@ pub enum SshError {
         target: String,
         /// Methods the server would still accept.
         remaining: Vec<String>,
+        /// Methods that could not even be attempted (agent missing, key file
+        /// unreadable), with the reason each was skipped.
+        skipped: Vec<String>,
     },
     #[error("Authentication was cancelled.")]
     AuthCancelled,
@@ -131,11 +134,26 @@ impl UserFacingError for SshError {
             SshError::HostKeyRejected { .. } => {
                 "Verify the device's host key fingerprint out of band before trusting it.".into()
             }
-            SshError::AuthFailed { remaining, .. } if !remaining.is_empty() => format!(
-                "Check the username and credentials. The server accepts: {}.",
-                remaining.join(", ")
-            ),
-            SshError::AuthFailed { .. } => "Check the username and credentials.".into(),
+            SshError::AuthFailed {
+                remaining, skipped, ..
+            } => {
+                let mut parts = Vec::new();
+                if !skipped.is_empty() {
+                    parts.push(format!(
+                        "Some methods could not be tried: {}.",
+                        skipped.join("; ")
+                    ));
+                }
+                if remaining.is_empty() {
+                    parts.push("Check the username and credentials.".into());
+                } else {
+                    parts.push(format!(
+                        "Check the username and credentials. The server accepts: {}.",
+                        remaining.join(", ")
+                    ));
+                }
+                parts.join(" ")
+            }
             SshError::Key { .. } => {
                 "Check the key path and passphrase. Supported: OpenSSH and PEM keys (ed25519, ECDSA, RSA).".into()
             }
@@ -208,7 +226,21 @@ mod tests {
             user: "admin".into(),
             target: "sw1:22".into(),
             remaining: vec!["publickey".into(), "keyboard-interactive".into()],
+            skipped: Vec::new(),
         };
         assert!(e.hint().unwrap_or_default().contains("publickey"));
+    }
+
+    #[test]
+    fn auth_failure_reports_skipped_methods() {
+        let e = SshError::AuthFailed {
+            user: "admin".into(),
+            target: "sw1:22".into(),
+            remaining: vec!["password".into()],
+            skipped: vec!["SSH agent not available (SSH_AUTH_SOCK is not set)".into()],
+        };
+        let hint = e.hint().unwrap_or_default();
+        assert!(hint.contains("SSH_AUTH_SOCK is not set"), "{hint}");
+        assert!(hint.contains("password"), "{hint}");
     }
 }

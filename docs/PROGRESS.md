@@ -377,3 +377,41 @@ path from the README on a machine that has never run Cairn.
   export, audited).
 - Verified in the release build under Xvfb: tab/header colour match, the New session
   menu and the Search button.
+
+### M12 (session 6): audit fixes and quick wins
+
+- **Audit first.** A read-only review of the whole repository (core, protocols, Tauri
+  layer, frontend, CI) produced a prioritised proposal; this milestone is its first
+  stage. The rest (session ergonomics, inventory bulk edit, import, reachability,
+  discovery, signing) waits for a decision.
+- **SSH** (D-048): a missing agent socket or unreadable key file no longer fails the
+  connection before password/OTP; shell setup, SCP acks, SOCKS handshakes and RDP
+  reactivation have timeouts and honour close.
+- **Vault:** `vault.json` writes are fsynced, a stale `vault.json.next` is cleaned up,
+  a failed setup leaves no orphan database.
+- **Secrets:** the enable secret and keyboard-interactive answers stay in zeroized
+  buffers.
+- **Terminals:** only theme changes restyle them; only the visible pane refits and pty
+  resizes are debounced; settings updates are serialised.
+- **Lock** resets dialogs, pending pastes and prompts and cancels automatic reconnects.
+- **Accessibility:** sidebar names, tab arrow keys, main landmark label.
+- **Quick fixes:** stale RDP tooltip, search/overview colours from tokens, grab
+  skeleton, TFTP events via `ipc.ts`, `test-sshd.sh stop <dir>`, `check.sh` runs the
+  supply-chain audits, CLAUDE.md layout.
+- **CI:** one run per PR and per merge, timeouts, least-privilege token, SHA-pinned
+  actions with Dependabot, shared release cache, `--locked` bundles, release gated on
+  green CI and cleaned up on failure.
+- **Tests:** IPC parity, terminal controller, settings queue, settings subscription,
+  vault crash paths; Vitest on the `vmThreads` pool.
+
+**Follow-ups noted during the audit:** automatic reconnects do not resume after unlock
+(manual Reconnect works); `backup::tests::without_recordings_and_into_an_unlocked_vault`
+failed once in seven local runs with "no such function: sqlcipher_export" and passed on
+every rerun.
+
+**Next:** stage 2 of the proposal, on the user's pick.
+
+**Test manually:** connect to a device with no credential profile from a desktop
+session without an SSH agent (should reach the password prompt); resize the window with
+20+ tabs open; lock with Quick Connect open and unlock; a tag push after a merge (the
+release waits for CI).

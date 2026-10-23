@@ -11,10 +11,13 @@ import { getTerminal } from "./registry";
 
 const THUMB_ROWS = 14;
 
+/** Thumbnail colours when a tab has no terminal yet (or its palette is unset). */
+const FALLBACK = { bg: "var(--bg)", fg: "var(--fg)" };
+
 /** Plain-text snapshot of the bottom of a terminal's viewport (never rendered as HTML). */
 function snapshot(tabId: string): { lines: string[]; bg: string; fg: string } {
   const h = getTerminal(tabId);
-  if (!h) return { lines: [], bg: "#000000", fg: "#ffffff" };
+  if (!h) return { lines: [], ...FALLBACK };
   const buf = h.term.buffer.active;
   // Show the lines ending at the cursor (the most recent output), not the empty rows below.
   const end = buf.baseY + buf.cursorY + 1;
@@ -25,8 +28,9 @@ function snapshot(tabId: string): { lines: string[]; bg: string; fg: string } {
   const theme = h.term.options.theme ?? {};
   return {
     lines,
-    bg: (theme.background ?? "#000000").slice(0, 7),
-    fg: theme.foreground ?? "#ffffff",
+    // Palette colours may carry alpha (#RRGGBBAA); the thumbnail wants them opaque.
+    bg: theme.background ? theme.background.slice(0, 7) : FALLBACK.bg,
+    fg: theme.foreground ?? FALLBACK.fg,
   };
 }
 

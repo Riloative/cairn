@@ -65,7 +65,8 @@ impl TftpService {
         }
     }
 
-    /// Stop the server (also on app exit and vault lock).
+    /// Stop the server (also called on app exit; the server keeps running across vault
+    /// locks).
     pub fn stop(&self, vault: &Mutex<Vault>, audit: &AuditQueue) {
         if let Some((server, prefs)) = self.server.lock().take() {
             server.stop();

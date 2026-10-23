@@ -1,5 +1,16 @@
 import { create } from "zustand";
 import type { SavedConnection } from "@/lib/ipc";
+import { useMapUi } from "@/views/map/mapUi";
+import { useDataDialog } from "./backupUi";
+import { useBroadcast } from "./broadcast";
+import { useConfirm } from "./confirm";
+import { useInventory } from "./inventory";
+import { useMap } from "./map";
+import { usePrompts } from "./prompts";
+import { useSavedConnections } from "./savedConnections";
+import { useSettings } from "./settings";
+import { useSnippets } from "./snippets";
+import { useTerminalUi } from "./terminalUi";
 
 export type View = "sessions" | "inventory" | "map" | "audit" | "tools" | "settings";
 export type ToolsTab = "tftp" | "forwards";
@@ -54,3 +65,30 @@ export const useUi = create<UiState>((set) => ({
   setToolsTab: (toolsTab) => set({ toolsTab }),
   openTool: (toolsTab) => set({ toolsTab, view: "tools" }),
 }));
+
+/**
+ * Forget everything the unlocked UI held: close dialogs and overlays, settle pending
+ * prompts and pastes, drop cached vault data. Called when the vault locks, whether by the
+ * user (`vault.lock`) or by the backend (idle, sleep), so nothing reopens after unlock
+ * and nothing keeps waiting on an answer the locked backend will never see.
+ */
+export function resetOnLock() {
+  useUi.setState({
+    paletteOpen: false,
+    notificationsOpen: false,
+    shortcutsOpen: false,
+    quickConnectOpen: false,
+    editingSaved: null,
+  });
+  useTerminalUi.getState().reset();
+  usePrompts.getState().cancelAll();
+  useConfirm.getState().answer(false);
+  useBroadcast.getState().setPickerOpen(false);
+  useDataDialog.getState().set(null);
+  useSettings.getState().clear();
+  useInventory.getState().clear();
+  useMap.getState().clear();
+  useMapUi.getState().reset();
+  useSnippets.getState().clear();
+  useSavedConnections.getState().clear();
+}

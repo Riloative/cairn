@@ -73,6 +73,11 @@
   --danger: #ef6b63;
   /* Filled danger buttons and badges: white text stays readable. */
   --danger-solid: #bf564f;
+  /* Terminal search matches (xterm decorations need opaque #RRGGBB values). */
+  --terminal-match: #5c4a00;
+  --terminal-match-border: #a68a00;
+  --terminal-match-active: #b8860b;
+  --terminal-match-active-border: #ffd75e;
   --focus-ring: #9d90f8;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md: 0 4px 16px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.4);
@@ -100,6 +105,11 @@
   --danger: #f0716a;
   /* Filled danger buttons and badges: white text stays readable. */
   --danger-solid: #b95752;
+  /* Terminal search matches (xterm decorations need opaque #RRGGBB values). */
+  --terminal-match: #5c4a00;
+  --terminal-match-border: #a68a00;
+  --terminal-match-active: #b8860b;
+  --terminal-match-active-border: #ffd75e;
   --focus-ring: #7aa5f5;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
   --shadow-md: 0 4px 16px rgb(0 0 0 / 0.3), 0 1px 2px rgb(0 0 0 / 0.35);
@@ -127,6 +137,11 @@
   --danger: #f06a62;
   /* Filled danger buttons and badges: white text stays readable. */
   --danger-solid: #c0554e;
+  /* Terminal search matches (xterm decorations need opaque #RRGGBB values). */
+  --terminal-match: #5c4a00;
+  --terminal-match-border: #a68a00;
+  --terminal-match-active: #b8860b;
+  --terminal-match-active-border: #ffd75e;
   --focus-ring: #4fd0c0;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.6);
   --shadow-md: 0 4px 16px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.6);
@@ -154,6 +169,11 @@
   --danger: #c83931;
   /* Filled danger buttons and badges: white text stays readable. */
   --danger-solid: #c83931;
+  /* Terminal search matches (xterm decorations need opaque #RRGGBB values). */
+  --terminal-match: #ffe9a3;
+  --terminal-match-border: #d4a017;
+  --terminal-match-active: #ffc53d;
+  --terminal-match-active-border: #9e5e09;
   --focus-ring: #6253e1;
   --shadow-sm: 0 1px 2px rgb(16 18 30 / 0.06);
   --shadow-md: 0 4px 16px rgb(16 18 30 / 0.08), 0 1px 2px rgb(16 18 30 / 0.06);
@@ -181,6 +201,11 @@
   --danger: #c0352e;
   /* Filled danger buttons and badges: white text stays readable. */
   --danger-solid: #c0352e;
+  /* Terminal search matches (xterm decorations need opaque #RRGGBB values). */
+  --terminal-match: #ffe9a3;
+  --terminal-match-border: #d4a017;
+  --terminal-match-active: #ffc53d;
+  --terminal-match-active-border: #9e5e09;
   --focus-ring: #2d6fd6;
   --shadow-sm: 0 1px 2px rgb(20 30 50 / 0.06);
   --shadow-md: 0 4px 16px rgb(20 30 50 / 0.08), 0 1px 2px rgb(20 30 50 / 0.06);
@@ -208,6 +233,11 @@
   --danger: #b8372d;
   /* Filled danger buttons and badges: white text stays readable. */
   --danger-solid: #b8372d;
+  /* Terminal search matches (xterm decorations need opaque #RRGGBB values). */
+  --terminal-match: #ffe9a3;
+  --terminal-match-border: #d4a017;
+  --terminal-match-active: #ffc53d;
+  --terminal-match-active-border: #9e5e09;
   --focus-ring: #b4532a;
   --shadow-sm: 0 1px 2px rgb(60 40 20 / 0.07);
   --shadow-md: 0 4px 16px rgb(60 40 20 / 0.09), 0 1px 2px rgb(60 40 20 / 0.07);

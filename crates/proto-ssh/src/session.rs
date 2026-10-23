@@ -148,27 +148,44 @@ async fn run(
         }
     }
 
-    let mut channel = match conn.handle.channel_open_session().await {
-        Ok(ch) => ch,
-        Err(e) => {
+    // Opening the channel and requesting the PTY/shell can hang on a wedged server;
+    // bound it by the same timeout used for the connect/handshake.
+    let setup_timeout = std::time::Duration::from_secs(u64::from(opts.connect_timeout_secs.max(1)));
+    let setup = async {
+        let channel = conn
+            .handle
+            .channel_open_session()
+            .await
+            .map_err(|e| SshError::Channel(e.to_string()))?;
+        channel
+            .request_pty(false, TERM, u32::from(cols), u32::from(rows), 0, 0, &[])
+            .await
+            .map_err(|e| SshError::from_russh(e, &target))?;
+        if opts.agent_forwarding {
+            // Servers may refuse forwarding (AllowAgentForwarding no); the shell still works.
+            let _ = channel.agent_forward(false).await;
+        }
+        channel
+            .request_shell(false)
+            .await
+            .map_err(|e| SshError::from_russh(e, &target))?;
+        Ok::<_, SshError>(channel)
+    };
+    let mut channel = match tokio::time::timeout(setup_timeout, setup).await {
+        Ok(Ok(ch)) => ch,
+        Ok(Err(e)) => {
             return CloseReason::Error {
-                message: describe(&SshError::Channel(e.to_string())),
+                message: describe(&e),
+            }
+        }
+        Err(_) => {
+            return CloseReason::Error {
+                message: describe(&SshError::Timeout {
+                    target: target.clone(),
+                }),
             }
         }
     };
-    if let Err(e) = channel
-        .request_pty(false, TERM, u32::from(cols), u32::from(rows), 0, 0, &[])
-        .await
-    {
-        return fail(e);
-    }
-    if opts.agent_forwarding {
-        // Servers may refuse forwarding (AllowAgentForwarding no); the shell still works.
-        let _ = channel.agent_forward(false).await;
-    }
-    if let Err(e) = channel.request_shell(false).await {
-        return fail(e);
-    }
     if let Ok(mut slot) = link.lock() {
         *slot = Some(conn.clone());
     }

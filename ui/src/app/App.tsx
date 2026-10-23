@@ -7,15 +7,12 @@ import { LockScreen } from "@/screens/LockScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
 import { BackupOffer } from "@/backup/BackupOffer";
 import { DataDialogs } from "@/backup/DataDialogs";
-import { useInventory } from "@/stores/inventory";
-import { useMap } from "@/stores/map";
-import { useMapUi } from "@/views/map/mapUi";
-import { useSavedConnections } from "@/stores/savedConnections";
-import { useSnippets } from "@/stores/snippets";
+import { useReconnect } from "@/stores/reconnect";
 import { useSettings } from "@/stores/settings";
-import { useUi } from "@/stores/ui";
+import { resetOnLock } from "@/stores/ui";
 import { useVault } from "@/stores/vault";
 import { useNotifications } from "@/stores/notifications";
+import { cancelAutoReconnect } from "@/terminal/controller";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { Shell } from "./Shell";
 import { Toaster } from "./Toaster";
@@ -45,6 +42,16 @@ function OutsideShell() {
   );
 }
 
+/**
+ * Runs whenever the vault locks (manually or by the backend): drops everything the
+ * unlocked UI held and stops automatic reconnects, which the locked backend would refuse
+ * until they gave up. The overlay keeps its Reconnect button for after unlock.
+ */
+function onLocked() {
+  resetOnLock();
+  for (const tabId of Object.keys(useReconnect.getState().byTab)) cancelAutoReconnect(tabId);
+}
+
 function Gate() {
   const info = useVault((s) => s.info);
   const refresh = useVault((s) => s.refresh);
@@ -54,26 +61,14 @@ function Gate() {
     refresh().catch((e: unknown) => console.error(CommandError.from(e).message));
     const unlisten = onVaultLocked((reason) => {
       lockedByBackend(reason);
-      useSettings.getState().clear();
-      useInventory.getState().clear();
-      useMap.getState().clear();
-      useMapUi.getState().reset();
-      useSnippets.getState().clear();
-      useSavedConnections.getState().clear();
-      useUi.setState({ paletteOpen: false, notificationsOpen: false });
+      onLocked();
     });
     return () => void unlisten.then((fn) => fn());
   }, [refresh, lockedByBackend]);
 
+  // Manual lock changes the status without an event; both paths end up here.
   useEffect(() => {
-    if (info?.status === "locked") {
-      useSettings.getState().clear();
-      useInventory.getState().clear();
-      useMap.getState().clear();
-      useMapUi.getState().reset();
-      useSnippets.getState().clear();
-      useSavedConnections.getState().clear();
-    }
+    if (info?.status === "locked") onLocked();
   }, [info?.status]);
 
   if (!info) return <Loading />;

@@ -4,21 +4,69 @@ on:
   push:
     tags: ["v*"]
 
+# One release at a time per tag; a re-pushed tag cancels the run for the old commit.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  contents: write
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
+  # Keep in step with rust-toolchain.toml.
+  RUST_TOOLCHAIN: "1.99.1"
 
 jobs:
+  check-ci:
+    name: Require green CI for the tagged commit
+    runs-on: ubuntu-24.04
+    # Long enough to wait for a CI run that is still going on the tagged commit.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            const describe = (r) => `${r.event}: ${r.status}/${r.conclusion ?? "-"} ${r.html_url}`;
+            for (;;) {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: "ci.yml",
+                head_sha: context.sha,
+                per_page: 20,
+              });
+              const runs = data.workflow_runs;
+              if (runs.some((r) => r.status === "completed" && r.conclusion === "success")) {
+                core.info(`CI passed for ${context.sha}.`);
+                return;
+              }
+              const pending = runs.filter((r) => r.status !== "completed");
+              if (pending.length === 0) {
+                core.setFailed(
+                  `No successful CI run for ${context.sha}. Tag a commit on main that CI has ` +
+                    `passed, then push the tag again.\n` +
+                    (runs.length ? `Runs seen:\n${runs.map(describe).join("\n")}` : "No CI runs found for this commit."),
+                );
+                return;
+              }
+              core.info(`Waiting for CI to finish:\n${pending.map(describe).join("\n")}`);
+              await sleep(30_000);
+            }
+
   create-release:
     name: Create draft release
+    needs: check-ci
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
     outputs:
       release_id: ${{ steps.create.outputs.id }}
     steps:
       - id: create
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const tag = context.ref.replace("refs/tags/", "");
@@ -47,26 +95,33 @@ jobs:
         include:
           - name: linux-deb
             os: ubuntu-24.04
-            args: --bundles deb
+            args: --bundles deb -- --locked
           - name: macos-dmg
             os: macos-14
-            args: --target aarch64-apple-darwin --bundles dmg
+            args: --target aarch64-apple-darwin --bundles dmg -- --locked
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    permissions:
+      # tauri-action uploads the bundles to the draft release.
+      contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - if: runner.os == 'Linux'
         run: scripts/install-linux-deps.sh
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master 2026-10
         with:
-          toolchain: "1.99.1"
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin' || '' }}
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v5
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          # Same release profile as CI's bundle jobs, so their cache is reused here.
+          shared-key: bundle-${{ runner.os }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -77,8 +132,11 @@ jobs:
     name: Publish release
     needs: [create-release, build]
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             await github.rest.repos.updateRelease({
@@ -87,3 +145,23 @@ jobs:
               release_id: ${{ needs.create-release.outputs.release_id }},
               draft: false,
             });
+
+  cleanup:
+    name: Remove the draft after a failed or cancelled build
+    needs: [create-release, build]
+    if: always() && needs.create-release.result == 'success' && needs.build.result != 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const release_id = ${{ needs.create-release.outputs.release_id }};
+            await github.rest.repos.deleteRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id,
+            });
+            core.info(`Deleted draft release ${release_id}; the tag is left in place.`);

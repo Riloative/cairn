@@ -5,15 +5,31 @@ import { cn } from "@/lib/cn";
 import { useTerminalUi } from "@/stores/terminalUi";
 import { getTerminal } from "./registry";
 
-/** Search decoration colors (xterm only accepts #RRGGBB). */
-const DECORATIONS: NonNullable<ISearchOptions["decorations"]> = {
-  matchBackground: "#5c4a00",
-  matchBorder: "#a68a00",
-  matchOverviewRuler: "#a68a00",
-  activeMatchBackground: "#b8860b",
-  activeMatchBorder: "#ffd75e",
-  activeMatchColorOverviewRuler: "#ffd75e",
-};
+/** A colour token's current value (`tokens.css`), or null when the sheet is not loaded. */
+function token(name: string): string | null {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || null;
+}
+
+/**
+ * Search decoration colours for the active theme. xterm only accepts #RRGGBB strings, so
+ * the `--terminal-match*` tokens are read at open time rather than referenced by name.
+ */
+function decorations(): ISearchOptions["decorations"] {
+  const match = token("--terminal-match");
+  const matchBorder = token("--terminal-match-border");
+  const active = token("--terminal-match-active");
+  const activeBorder = token("--terminal-match-active-border");
+  if (!match || !matchBorder || !active || !activeBorder) return undefined;
+  return {
+    matchBackground: match,
+    matchBorder,
+    matchOverviewRuler: matchBorder,
+    activeMatchBackground: active,
+    activeMatchBorder: activeBorder,
+    activeMatchColorOverviewRuler: activeBorder,
+  };
+}
 
 function Toggle({
   label,
@@ -70,7 +86,7 @@ export function SearchBar({ tabId }: { tabId: string }) {
 
   if (!open || !handle) return null;
 
-  const options: ISearchOptions = { regex, caseSensitive, wholeWord, decorations: DECORATIONS };
+  const options: ISearchOptions = { regex, caseSensitive, wholeWord, decorations: decorations() };
 
   function find(direction: "next" | "previous", incremental = false, q = query) {
     if (!handle) return;

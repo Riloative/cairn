@@ -10,9 +10,14 @@
 #
 # Usage: sudo scripts/test-sshd.sh [dir]     Stop: sudo scripts/test-sshd.sh stop [dir]
 set -euo pipefail
-DIR=${2:-${1:-/tmp/cairn-sshd}}
-[ "${1:-}" = "stop" ] && { pkill -F "$DIR/modern.pid" 2>/dev/null || true; pkill -F "$DIR/legacy.pid" 2>/dev/null || true; exit 0; }
-DIR=${1:-/tmp/cairn-sshd}
+DEFAULT_DIR=/tmp/cairn-sshd
+if [ "${1:-}" = "stop" ]; then
+  DIR=${2:-$DEFAULT_DIR}
+  pkill -F "$DIR/modern.pid" 2>/dev/null || true
+  pkill -F "$DIR/legacy.pid" 2>/dev/null || true
+  exit 0
+fi
+DIR=${1:-$DEFAULT_DIR}
 USER_NAME=cairntest
 PASSWORD=cairn-test-pw
 KEY_PW=cairn-key-pw

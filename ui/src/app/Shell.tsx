@@ -21,6 +21,7 @@ import { SnippetsManager } from "@/views/snippets/SnippetsManager";
 import { SnippetVariablesDialog } from "@/views/snippets/SnippetVariablesDialog";
 import { useInventory } from "@/stores/inventory";
 import { useGlobalShortcuts } from "./useGlobalShortcuts";
+import { NAV_ITEMS } from "./nav";
 import { useTerminalSetup } from "@/terminal/useTerminalSetup";
 import { QuickConnectDialog } from "@/ssh/QuickConnectDialog";
 import { TransferDialog } from "@/terminal/TransferDialog";
@@ -106,7 +107,7 @@ export function Shell() {
       <div className="flex min-w-0 flex-1 flex-col bg-bg-subtle">
         <TabBar />
         <main
-          aria-label={view}
+          aria-label={NAV_ITEMS.find((n) => n.view === view)?.label ?? view}
           className={cn(
             "mr-2 mb-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-surface shadow-sm",
             // The active first tab sits flush on the card's corner.

@@ -47,6 +47,8 @@ export function Sidebar() {
             <button
               key={item.view}
               type="button"
+              // The visible label is hidden when collapsed; the name must survive that.
+              aria-label={item.label}
               aria-current={active ? "page" : undefined}
               onClick={() => setView(item.view)}
               className={cn(
@@ -82,6 +84,7 @@ export function Sidebar() {
                 <button
                   key={t.id}
                   type="button"
+                  aria-current={t.id === activeId ? "true" : undefined}
                   onClick={() => {
                     activate(t.id);
                     setView("sessions");

@@ -58,6 +58,51 @@ type Starter = (cols: number, rows: number, cb: ipc.SessionCallbacks) => Promise
 const reopeners = new Map<string, Starter>();
 const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const highlighters = new Map<string, Highlighter>();
+/** Pending pty resizes per tab (see `wireInput`). */
+const resizers = new Map<string, TrailingDebounce<[number, number]>>();
+
+/** How long a terminal must keep one size before the pty is told (a drag emits many). */
+export const RESIZE_DEBOUNCE_MS = 75;
+
+export interface TrailingDebounce<A extends unknown[]> {
+  /** Replace any pending call; `fn` runs with these arguments once `ms` passes quietly. */
+  call: (...args: A) => void;
+  /** Run the pending call now, if any. */
+  flush: () => void;
+  /** Drop the pending call, if any. */
+  cancel: () => void;
+}
+
+/**
+ * Trailing debounce: a burst of calls collapses into one, made with the last arguments
+ * `ms` after the burst ends. The final call is never lost (short of `cancel`).
+ */
+export function trailingDebounce<A extends unknown[]>(
+  fn: (...args: A) => void,
+  ms: number,
+): TrailingDebounce<A> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let pending: A | undefined;
+  const cancel = () => {
+    clearTimeout(timer);
+    timer = undefined;
+    pending = undefined;
+  };
+  const flush = () => {
+    const args = pending;
+    cancel();
+    if (args) fn(...args);
+  };
+  return {
+    call: (...args) => {
+      pending = args;
+      clearTimeout(timer);
+      timer = setTimeout(flush, ms);
+    },
+    flush,
+    cancel,
+  };
+}
 /** Compiled rules per vendor, invalidated when prefs change. */
 const ruleCache = new Map<string, CompiledRule[]>();
 
@@ -300,10 +345,15 @@ function wireInput(tabId: string, handle: TerminalHandle) {
     send(encodeInput(d));
   });
   handle.term.onBinary((d) => send(encodeBinary(d)));
-  handle.term.onResize(({ cols, rows }) => {
+  // A window drag refits the terminal on every frame; the pty only needs the size it
+  // settles on. The backend id is looked up when the call fires, so a size reached
+  // while the session was still starting is sent once it is up.
+  const resize = trailingDebounce((cols: number, rows: number) => {
     const id = backendIds.get(tabId);
     if (id) ipc.sessionResize(id, cols, rows).catch(() => {});
-  });
+  }, RESIZE_DEBOUNCE_MS);
+  resizers.set(tabId, resize);
+  handle.term.onResize(({ cols, rows }) => resize.call(cols, rows));
 }
 
 function openLink(url: string) {
@@ -369,6 +419,7 @@ export async function openTerminalTab(opts: OpenOptions): Promise<string> {
     backendIds.set(tabId, id);
     checkRecording(tabId, id);
     // The pane may have been fitted while the session was starting.
+    resizers.get(tabId)?.cancel();
     ipc.sessionResize(id, handle.term.cols, handle.term.rows).catch(() => {});
     if (opts.readyOnStart) useSessions.getState().setState(tabId, "connected");
   } catch (e) {
@@ -569,6 +620,8 @@ export function closeTab(tabId: string) {
   untrack.delete(tabId);
   highlighters.get(tabId)?.dispose();
   highlighters.delete(tabId);
+  resizers.get(tabId)?.cancel();
+  resizers.delete(tabId);
   clearTimeout(reconnectTimers.get(tabId));
   reconnectTimers.delete(tabId);
   useReconnect.getState().clear(tabId);

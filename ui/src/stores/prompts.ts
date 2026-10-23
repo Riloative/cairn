@@ -22,6 +22,11 @@ interface PromptsState {
   answer: (id: number, answer: PromptAnswer) => Promise<void>;
   /** Forget prompts of a closed tab (the backend already dropped them). */
   dropTab: (tabId: string) => void;
+  /**
+   * Reject every pending prompt (on lock): host keys and certificates are refused,
+   * credential prompts cancelled, so the waiting connections fail instead of hanging.
+   */
+  cancelAll: () => void;
 }
 
 export const usePrompts = create<PromptsState>((set, get) => ({
@@ -32,4 +37,14 @@ export const usePrompts = create<PromptsState>((set, get) => ({
     await ipc.sessionPromptReply(id, answer);
   },
   dropTab: (tabId) => set({ queue: get().queue.filter((p) => p.tabId !== tabId) }),
+  cancelAll: () => {
+    const queue = get().queue;
+    set({ queue: [] });
+    for (const p of queue) {
+      const answer: PromptAnswer =
+        p.type === "prompt" ? { kind: "cancel" } : { kind: "hostKey", accept: false };
+      // Best effort: an unknown id means the session already went away.
+      ipc.sessionPromptReply(p.id, answer).catch(() => {});
+    }
+  },
 }));

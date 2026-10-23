@@ -591,3 +591,46 @@ is 1.99).
   the empty bar for a local shell.
 - **Asset number** is a plain device column (migration 0010) rather than a custom field:
   it is common enough to deserve search, a table column and a place in the export.
+
+## D-048 · Audit fixes: skipped auth methods, durable vault files, one CI run per change (M12)
+
+- **An unavailable method is skipped, not fatal.** `authenticate()` used to `?` on the
+  first method's error, so a missing agent socket (no `SSH_AUTH_SOCK`, common for a
+  desktop app started outside a shell) failed every agent-first chain before password
+  or keyboard-interactive ran. Now `SshError::Agent` and an unreadable key file are
+  recorded as skipped and the chain continues, as OpenSSH does; a wrong password or an
+  undecodable key still aborts, since retrying would only lock the account. The final
+  `AuthFailed` carries the skip notes so the hint says why a method never ran.
+- **Vault metadata is written durably.** D-011's crash-safe password change assumed
+  `vault.json.next` was on disk before `PRAGMA rekey`; without `fsync` a power loss
+  could leave an empty pending file next to a rekeyed database, which no password
+  opens. `write_json_atomic` now syncs the file and the directory, each target has its
+  own temporary name, a pending file left by an interrupted change is removed (best
+  effort) once the current password works, and a failed setup removes the database it
+  created so the next launch can set up again.
+- **Lock resets the UI in one place.** `resetOnLock()` closes dialogs, settles pending
+  pastes and prompts (credential prompts cancelled, host-key and certificate prompts
+  refused, matching the backend's reject-while-locked rule) and cancels automatic
+  reconnects, which the locked backend would refuse until they gave up. Sessions,
+  forwards and the TFTP server keep running across a lock (unchanged; a policy for them
+  is a separate decision).
+- **Terminals react to three settings.** The "follow app" palette resolves through
+  `data-theme`, which `theme`, `systemDarkTheme` and `systemLightTheme` decide; nothing
+  else in `Settings` reaches xterm, so only those trigger a restyle. Only the visible
+  pane fits on resize (hidden panes keep layout and would otherwise each resize their
+  pty per tick); pty resizes are debounced 75 ms, trailing. Settings updates are queued
+  so each patch applies to the last saved state.
+- **CI runs on pull requests and `main` only.** `push: ["**"]` plus `pull_request` cost
+  four runs per change (push, PR, main, and the fast-forwarded branch), half of them
+  macOS. The concurrency group now keys on the PR branch. Actions are pinned by commit
+  SHA with the version in a comment and Dependabot moves the pins; every job has a
+  timeout; the workflow token is read-only except for the release jobs that upload or
+  publish. Bundle and release builds share a `rust-cache` key per OS and pass
+  `--locked`.
+- **A release needs green CI.** The release workflow waits for CI on the tagged commit
+  and fails with instructions if there is none or it failed; one release runs per tag
+  at a time; a failed or cancelled build deletes its draft release (the stray draft
+  from the first v0.1.1 tag had to be removed by hand).
+- **IPC parity is a test.** The Rust `generate_handler!` list, the `ipc.ts` wrappers
+  and the fake backend's cases must agree; the session-plumbing commands the fake does
+  not implement are listed explicitly because the UI smoke and e2e exercise them.

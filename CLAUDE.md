@@ -30,6 +30,7 @@ crates/
   proto-serial/  serial ports, line settings, X/Ymodem
   proto-telnet/  telnet IAC/option negotiation, NAWS
   proto-rdp/     IronRDP session: connect, certificate pin, frames, input, clipboard
+  pty/           local shell sessions (pseudo-terminals), container discovery
   tftp/          TFTP server
   export/        SVG→PDF, CSV/JSON export, backups
 src-tauri/       Tauri app: commands, events, capabilities, bundling config
@@ -41,8 +42,15 @@ ui/              React frontend (Vite root)
   src/stores/    Zustand stores (vault, settings, sessions, notifications, ui)
   src/screens/   setup and lock screens
   src/views/     main-area views (sessions, audit, settings, …)
+  src/terminal/  terminal pane (xterm.js), controls, palettes, paste/privilege guards
+  src/ssh/       SSH connection fields, host-key and credential prompts, quick connect
+  src/connect/   connect dialog, serial/telnet/RDP fields, saved connections
+  src/rdp/       RDP pane, frame decoding, input, certificate prompt
+  src/map/       network map model, geometry/routing, rack elevation, SVG export
+  src/recordings/  session recordings list and asciicast player
+  src/backup/    backup, restore and data export dialogs
   src/test/      test setup and FakeBackend (mockIPC stand-in for src-tauri)
-  public/fonts/  bundled Inter + JetBrains Mono (OFL licenses alongside)
+  public/licenses/  OFL texts for the fonts (bundled via @fontsource-variable, D-004)
 vendor/         ironrdp-connector patched for dependency resolution (D-039)
 docs/            SPEC.md, DECISIONS.md, PROGRESS.md
 .github/workflows/  ci.yml, release.yml
@@ -68,6 +76,7 @@ Run from the repo root.
 | Typecheck | `npm run typecheck` |
 | Frontend tests | `npm test` |
 | SSH integration tests (Linux, root) | `sudo scripts/test-sshd.sh && source /tmp/cairn-sshd/env && CAIRN_SSH_TESTS=1 cargo test -p cairn-proto-ssh` |
+| Telnet integration tests (Linux, root; inetutils-telnetd + socat) | `sudo scripts/test-telnetd.sh 2323 && CAIRN_TELNET_PORT=2323 cargo test -p cairn-proto-telnet` |
 | RDP integration tests (Linux, root; xrdp + xorgxrdp) | `sudo scripts/test-xrdp.sh && source /tmp/cairn-xrdp/env && CAIRN_RDP_TESTS=1 cargo test -p cairn-proto-rdp` |
 | Demo data (map, inventory) | `echo "<password>" \| cargo run -p cairn-core --example seed_demo -- <vault dir>` |
 | UI smoke test (Linux, needs Xvfb + xdotool) | `npm run tauri build -- --bundles deb && scripts/ui-smoke.sh target/release/cairn screenshots` |

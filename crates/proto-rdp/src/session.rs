@@ -212,6 +212,9 @@ impl NetworkClient for NoNetwork {
 const STEP_TIMEOUT: Duration = Duration::from_secs(20);
 /// At most one frame flush per this interval (~60 fps).
 const FRAME_INTERVAL: Duration = Duration::from_millis(16);
+/// A Deactivation-Reactivation (desktop resize) must finish within this, or the session
+/// ends rather than looping forever on a server that never reaches Finalized.
+const REACTIVATION_TIMEOUT: Duration = Duration::from_secs(30);
 
 fn connector_config(config: &RdpConfig) -> connector::Config {
     let codecs = client_codecs_capabilities(&[]).unwrap_or_default();
@@ -587,14 +590,36 @@ async fn run(
                     // Deactivation-Reactivation: the server is applying a new desktop size.
                     let mut sequence = activation.create();
                     let mut buf = WriteBuf::new();
+                    let deadline = Instant::now() + REACTIVATION_TIMEOUT;
                     loop {
                         buf.clear();
-                        let written = ironrdp_tokio::single_sequence_step_read(
-                            &mut reader,
-                            &mut sequence,
-                            &mut buf,
-                        )
-                        .await?;
+                        let written = tokio::select! {
+                            r = ironrdp_tokio::single_sequence_step_read(
+                                &mut reader,
+                                &mut sequence,
+                                &mut buf,
+                            ) => r?,
+                            // A Close (or dropped sender) during reactivation ends the
+                            // session cleanly instead of blocking on the server.
+                            command = commands.recv() => match command {
+                                None | Some(Command::Close) => {
+                                    let frames = s.stage.graceful_shutdown()?;
+                                    for f in frames {
+                                        if let ActiveStageOutput::ResponseFrame(bytes) = f {
+                                            let _ = writer.write_all(&bytes).await;
+                                        }
+                                    }
+                                    break 'session "The session was closed.".to_owned();
+                                }
+                                // Input/resize/clipboard are dropped during the brief resize.
+                                _ => continue,
+                            },
+                            _ = tokio::time::sleep_until(deadline) => {
+                                return Err(RdpError::Protocol(
+                                    "the server did not finish resizing the desktop in time".into(),
+                                ));
+                            }
+                        };
                         if written.size().is_some() {
                             writer.write_all(buf.filled()).await.map_err(|e| {
                                 RdpError::Protocol(format!("the connection was lost ({e})"))

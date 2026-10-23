@@ -18,6 +18,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
+use zeroize::Zeroizing;
 
 /// How to authenticate on one hop. Methods are tried in order.
 #[derive(Debug, Clone, Deserialize)]
@@ -413,6 +414,16 @@ fn remaining(methods: &russh::MethodSet) -> Vec<String> {
         .collect()
 }
 
+/// A method that cannot be attempted at all (no ssh-agent socket) is recorded and
+/// skipped so the next method still runs; a real failure (bad key, wrong password)
+/// still aborts. Returns the note to remember, or `None` to abort the chain.
+fn skip_note(err: &SshError) -> Option<String> {
+    match err {
+        SshError::Agent(msg) => Some(format!("the SSH agent is unavailable ({msg})")),
+        _ => None,
+    }
+}
+
 async fn authenticate(
     handle: &mut Handle<ClientHandler>,
     hop: &Hop,
@@ -420,15 +431,28 @@ async fn authenticate(
 ) -> Result<(), SshError> {
     let target = hop.target();
     let mut left: Vec<String> = Vec::new();
+    let mut skipped: Vec<String> = Vec::new();
     for method in &hop.auth {
         let outcome = match method {
-            AuthMethod::Agent => auth_agent(handle, hop).await?,
+            AuthMethod::Agent => match auth_agent(handle, hop).await {
+                Ok(r) => r,
+                Err(e) => match skip_note(&e) {
+                    Some(note) => {
+                        skipped.push(note);
+                        continue;
+                    }
+                    None => return Err(e),
+                },
+            },
             AuthMethod::KeyFile { path, passphrase } => {
                 let label = path.display().to_string();
-                let data = std::fs::read_to_string(path).map_err(|e| SshError::Key {
-                    path: label.clone(),
-                    message: e.to_string(),
-                })?;
+                let data = match tokio::fs::read_to_string(path).await {
+                    Ok(d) => d,
+                    Err(e) => {
+                        skipped.push(format!("the key file {label} could not be read ({e})"));
+                        continue;
+                    }
+                };
                 auth_key(handle, hop, &label, &data, passphrase.as_ref(), interact).await?
             }
             AuthMethod::KeyData {
@@ -481,6 +505,7 @@ async fn authenticate(
         user: hop.username.clone(),
         target,
         remaining: left,
+        skipped,
     })
 }
 
@@ -547,6 +572,9 @@ async fn auth_key(
 
 #[cfg(unix)]
 async fn auth_agent(handle: &mut Handle<ClientHandler>, hop: &Hop) -> Result<AuthResult, SshError> {
+    if std::env::var_os("SSH_AUTH_SOCK").is_none() {
+        return Err(SshError::Agent("SSH_AUTH_SOCK is not set".into()));
+    }
     let mut agent = russh::keys::agent::client::AgentClient::connect_env()
         .await
         .map_err(|e| SshError::Agent(e.to_string()))?;
@@ -612,34 +640,62 @@ async fn auth_kbd(
                 instructions,
                 prompts,
             } => {
-                let answers: Vec<String> = if prompts.is_empty() {
-                    Vec::new()
+                // The answers often carry an OTP/password; keep them in a zeroized Vec.
+                // russh takes an owned `Vec<String>`, so one clone leaves our scope at
+                // the call; our copy here is wiped on drop.
+                let answers: Zeroizing<Vec<String>> = if prompts.is_empty() {
+                    Zeroizing::new(Vec::new())
                 } else {
-                    interact
-                        .prompt(Prompt::KeyboardInteractive {
-                            user: hop.username.clone(),
-                            target: target.clone(),
-                            name,
-                            instructions,
-                            prompts: prompts
-                                .into_iter()
-                                .map(|p| crate::interact::InteractivePrompt {
-                                    text: p.prompt,
-                                    echo: p.echo,
-                                })
-                                .collect(),
-                        })
-                        .await
-                        .ok_or(SshError::AuthCancelled)?
-                        .iter()
-                        .map(|s| s.expose().to_owned())
-                        .collect()
+                    Zeroizing::new(
+                        interact
+                            .prompt(Prompt::KeyboardInteractive {
+                                user: hop.username.clone(),
+                                target: target.clone(),
+                                name,
+                                instructions,
+                                prompts: prompts
+                                    .into_iter()
+                                    .map(|p| crate::interact::InteractivePrompt {
+                                        text: p.prompt,
+                                        echo: p.echo,
+                                    })
+                                    .collect(),
+                            })
+                            .await
+                            .ok_or(SshError::AuthCancelled)?
+                            .iter()
+                            .map(|s| s.expose().to_owned())
+                            .collect(),
+                    )
                 };
                 response = handle
-                    .authenticate_keyboard_interactive_respond(answers)
+                    .authenticate_keyboard_interactive_respond(answers.to_vec())
                     .await
                     .map_err(map)?;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn agent_errors_are_skipped_not_fatal() {
+        let note = skip_note(&SshError::Agent("SSH_AUTH_SOCK is not set".into()))
+            .expect("agent errors skip the method");
+        assert!(note.contains("SSH_AUTH_SOCK is not set"), "{note}");
+    }
+
+    #[test]
+    fn real_failures_abort_the_chain() {
+        // A bad key or a cancelled prompt must surface, not be swallowed as a skip.
+        assert!(skip_note(&SshError::Key {
+            path: "id_rsa".into(),
+            message: "bad passphrase".into(),
+        })
+        .is_none());
+        assert!(skip_note(&SshError::AuthCancelled).is_none());
     }
 }

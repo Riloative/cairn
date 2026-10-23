@@ -26,6 +26,7 @@ import { InterfacesPanel } from "./InterfacesPanel";
 import { ConfigHistory } from "@/views/configs/ConfigHistory";
 import { DEVICE_TYPE_LABEL } from "./labels";
 import { Markdown } from "./Markdown";
+import { methodError } from "./model";
 import { customDisplay, locationLabel } from "./query";
 import { formatVlanList } from "./validate";
 import { finishEdit, NEW_DEVICE } from "./model";
@@ -117,7 +118,8 @@ function Overview({ device, snapshot }: { device: Device; snapshot: InventorySna
                 size="sm"
                 variant={i === 0 ? "primary" : "secondary"}
                 disabled={!canOpen(m)}
-                title={canOpen(m) ? undefined : "RDP sessions arrive in a later version"}
+                // Disabled only while the method's settings are incomplete; say which.
+                title={canOpen(m) ? undefined : `Edit the device to fix this: ${methodError(m)}`}
                 onClick={() => connect(device, i)}
               >
                 {m.kind === "web" ? <Globe size={14} /> : <PlugZap size={14} />}
